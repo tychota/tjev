@@ -54,7 +54,7 @@ import numpy as np
 from jax.experimental import pallas as pl
 from jax.experimental.pallas import tpu as pltpu
 
-from .xla import PRECISIONS, doubling_masks, mm, unit_lower_inverse
+from tjev.kernels.gated_delta_rule.xla import PRECISIONS, doubling_masks, mm, unit_lower_inverse
 
 F32 = jnp.float32
 _LAX_PRECISION = {

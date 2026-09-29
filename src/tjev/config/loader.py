@@ -15,7 +15,7 @@ from typing import Any, Literal, Union, get_args, get_origin, get_type_hints
 
 import yaml
 
-from .schema import RunConfig
+from tjev.config.schema import RunConfig
 
 CONFIG_DIR = Path(__file__).with_name("configs")
 REPLACED_WHOLE = frozenset({"mixture"})
