@@ -12,6 +12,7 @@ from typing import Any
 
 import numpy as np
 
+from tjev.data.pack import Batch, stack_batches
 from tjev.model import ModelConfig, expected_shapes
 
 SPECIALS = ["<|endoftext|>", "<|im_start|>", "<|im_end|>", "<think>", "</think>"]
@@ -120,3 +121,38 @@ def tiny_items(n: int, seed: int = 0, lang: str = "en") -> list[dict]:
                 }
             )
     return rows
+
+
+def synthetic_batch(rows: int, length: int, accumulation: int, seg_len: int = 256,
+                    slots: int = 32, labels: int = 26, seed: int = 0) -> Batch:  # fmt: skip
+    """A packed [A, R, T] step of ``seg_len``-token segments with random tokens (benchmarks)."""
+    rng = np.random.default_rng(seed)
+    n_seg = length // seg_len
+
+    def one() -> Batch:
+        b = Batch(
+            tokens=rng.integers(0, 1000, (rows, length)).astype(np.int32),
+            segment_ids=np.repeat(np.arange(1, n_seg + 1), seg_len)[None]
+            .repeat(rows, 0)
+            .astype(np.int32),
+            positions=np.tile(np.arange(seg_len), n_seg)[None].repeat(rows, 0).astype(np.int32),
+            slots=np.zeros((rows, slots), np.int32),
+            label_ids=np.tile(np.arange(32, 32 + labels), (rows, slots, 1)).astype(np.int32),
+            label_mask=np.zeros((rows, slots, labels), bool),
+            target=np.zeros((rows, slots, labels), np.float32),
+            weight=np.zeros((rows, slots), np.float32),
+            type_id=np.zeros((rows, slots), np.int32),
+            source_id=np.zeros((rows, slots), np.int32),
+            lang_id=np.zeros((rows, slots), np.int32),
+            family_id=np.zeros((rows, slots), np.int32),
+            index=np.full((rows, slots), -1, np.int32),
+        )
+        for r in range(rows):
+            for s in range(min(slots, n_seg)):
+                b.slots[r, s] = (s + 1) * seg_len - 1
+                b.label_mask[r, s, :4] = True
+                b.target[r, s, 0] = 1.0
+                b.weight[r, s] = 1.0
+        return b
+
+    return stack_batches([one() for _ in range(accumulation)])

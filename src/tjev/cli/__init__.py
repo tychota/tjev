@@ -13,7 +13,7 @@ from typing import Annotated
 
 import typer
 
-from tjev.cli import data, evaluation, export, training
+from tjev.cli import campaign, data, evaluation, export, training
 from tjev.cli.common import echo_json
 
 app = typer.Typer(
@@ -23,6 +23,7 @@ app = typer.Typer(
     pretty_exceptions_show_locals=False,
 )
 app.add_typer(data.app, name="data")
+app.add_typer(campaign.app, name="campaign")
 training.register(app)
 evaluation.register(app)
 export.register(app)
