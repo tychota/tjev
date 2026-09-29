@@ -1,0 +1,139 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tjev"
+version = "0.1.0"
+description = "Calibrated typed decisions (yes/no, choice, score) from Qwen3.5 label logits, LoRA-trained in JAX / Flax NNX on TPU"
+readme = "README.md"
+requires-python = ">=3.12,<3.14"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+authors = [{ name = "tychota" }]
+keywords = ["jax", "flax", "nnx", "tpu", "pallas", "lora", "qwen", "gated-deltanet", "calibration"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Typing :: Typed",
+]
+dependencies = [
+  "jax>=0.11,<0.12",
+  "flax>=0.12.10,<0.13",
+  "optax>=0.2.8,<0.3",
+  "orbax-checkpoint>=0.12.6,<0.13",
+  # exact: iterator and prefetch semantics are version-bound (our checkpointed state is not)
+  "grain==0.2.18",
+  "absl-py>=2",
+  "huggingface-hub>=0.34,<2",
+  "safetensors>=0.6,<1",
+  "ml-dtypes>=0.5",
+  "tokenizers>=0.22,<0.24",
+  "numpy>=2.0,<2.4",
+  "scipy>=1.14,<2",
+  "pyyaml>=6,<7",
+]
+
+[project.optional-dependencies]
+tpu = ["jax[tpu]>=0.11,<0.12"]
+data = ["datasets>=4,<5"]
+log = ["tensorboardX>=2.6", "wandb>=0.20"]
+mlx = ["mlx-lm>=0.28; sys_platform == 'darwin'"]
+parity = ["torch>=2.6,<3", "transformers>=5.17,<6"]
+
+[project.scripts]
+tjev = "tjev.cli:main"
+
+[project.urls]
+Repository = "https://github.com/tychota/tjev"
+
+[dependency-groups]
+dev = [
+  "pytest>=8,<10",
+  "pytest-xdist>=3.6",
+  "ruff>=0.16,<0.17",
+  "ty>=0.0.84",
+  "pre-commit>=4",
+  "tjev[data,log,parity]",
+]
+
+[tool.uv]
+default-groups = ["dev"]
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/tjev"]
+
+# ------------------------------------------------------------------------------------------
+# Lint, format, types, tests
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+  "E", "W", "F", "I", "B", "UP", "C4", "SIM", "RET", "PIE", "PERF", "PTH", "NPY",
+  "RUF", "TID", "PT", "LOG", "G", "ISC", "N", "A", "FURB", "TC",
+]
+ignore = [
+  "E501",    # the formatter owns line length (long strings and URLs are fine)
+  "N803",    # math names in kernels and shapes: B, T, H, K, S, R …
+  "N806",
+  "RUF001",  # Greek letters and math symbols in strings, comments and docstrings
+  "RUF002",
+  "RUF003",
+  "TC001",   # runtime-evaluated annotations (dataclasses, jax pytrees) need real imports
+  "TC002",
+  "TC003",
+  "ISC001",  # conflicts with the formatter
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["N802", "PT011"]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "parents"
+
+[tool.ruff.lint.isort]
+known-first-party = ["tjev"]
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.ty.environment]
+python-version = "3.12"
+
+[tool.ty.src]
+include = ["src", "tests", "cloud"]
+
+[tool.ty.rules]
+possibly-missing-attribute = "warn"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = [
+  "-ra",
+  "--strict-markers",
+  "--strict-config",
+  "--import-mode=importlib",
+  "-p", "no:cacheprovider",
+  "-m", "not real and not tpu",
+]
+markers = [
+  "real: needs real Qwen3.5 snapshots (TJEV_MODELS)",
+  "tpu: needs a TPU (JAX_PLATFORMS=tpu pytest -m tpu)",
+  "slow: trains the tiny model end to end (tens of seconds)",
+]
+xfail_strict = true

@@ -1,0 +1,42 @@
+tjev
+Copyright 2026 The tjev Authors. Licensed under the Apache License, Version 2.0 (LICENSE).
+
+This is an independent implementation. It is not affiliated with TypeSafe AI, Qwen /
+Alibaba, Google, or the JevBench maintainers, and it contains neither Jev's proprietary
+weights nor its training recipe. Qwen3.5 weights must be obtained separately under their
+upstream license (Apache-2.0).
+
+The Qwen3.5 decoder follows the public Hugging Face transformers reference
+(models/qwen3_5/modeling_qwen3_5.py) and the design of MaxText's Qwen3.5 / Gated DeltaNet
+code; parity with transformers is tested (tests/model/test_parity.py). JevBench public
+items are used only for final measurement and are not redistributed. No pretrained weights
+or third-party dataset records are redistributed; the license of every data source is
+recorded in the source registry (src/tjev/data/sources/) and in each built mix's
+manifest.json.
+
+------------------------------------------------------------------------------------------
+Third-party code
+
+MaxText
+  https://github.com/AI-Hypercomputer/maxtext
+  (pull request #5364, commit 61ef5db17a9fbefc8e4cca5e0caa0b506ae893e7; branch
+  atwigg/mlperf at a51bcf5 with pull request #5399)
+  Copyright 2023-2026 Google LLC. Licensed under the Apache License, Version 2.0.
+  Adapted in src/tjev/kernels/gated_delta_rule/pallas_tpu.py (the Pallas TPU recurrence
+  design: reverse chunk order through the index maps, the state carried in VMEM scratch,
+  saved per-chunk states; the bf16_3x precision policy). The file header describes the
+  changes. cloud/tpu_env.sh takes its libtpu flag set from benchmarks/xla_flags_library.py.
+
+JAX (Pallas TPU splash attention), used as a library, not copied
+  https://github.com/jax-ml/jax (jax.experimental.pallas.ops.tpu.splash_attention)
+  Copyright 2023-2026 The JAX Authors. Licensed under the Apache License, Version 2.0.
+  Called by src/tjev/kernels/attention/splash_tpu.py.
+
+Algorithms implemented from their papers (no code copied):
+  * ZClip adaptive gradient clipping (arXiv 2504.02507): src/tjev/train/optim.py.
+  * Polar Express Newton-Schulz coefficients (Amsel et al., arXiv 2505.16932; reference
+    values from github.com/NoahAmsel/PolarExpress): src/tjev/train/optim.py.
+  * WSD schedule with a (1 - sqrt) cooldown (Hägele et al., arXiv 2405.18392):
+    src/tjev/train/optim.py.
+  * The learning-rate transfer rules of src/tjev/campaign/plan.py cite their sources in
+    its docstring.

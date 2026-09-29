@@ -1,0 +1,43 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - run: uv sync --locked
+      - run: uv run ruff check --output-format=github .
+      - run: uv run ruff format --check .
+      - run: uv run ty check --output-format=github
+
+  test-cpu:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.12", "3.13"]
+    env:
+      JAX_PLATFORMS: cpu
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          python-version: ${{ matrix.python }}
+      - run: uv sync --locked
+      # 4 virtual CPU devices (tests/conftest.py): the sharded paths and shard_map run for real;
+      # the Pallas TPU kernels run in interpret mode.
+      - run: uv run pytest -n 4 --dist loadfile

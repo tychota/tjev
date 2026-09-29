@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+build/
+dist/
+# Local artifacts. Anchored to the repository root so that packages such as
+# src/tjev/data/ are never ignored.
+/models/
+/runs/
+/data/
+/reports/
+/logs/
+/mlx/
+*.npz
