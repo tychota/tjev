@@ -22,9 +22,13 @@ import jax.numpy as jnp
 from flax import nnx
 
 from tjev.config import ComputeSpec, LoRASpec
+from tjev.model.attention import GatedAttention
 from tjev.model.config import ModelConfig
-from tjev.model.layers import Frozen, Linear, RMSNorm, grouped
-from tjev.model.mixers import GatedAttention, GatedDeltaNet, LinearFactory, Weights
+from tjev.model.gdn import GatedDeltaNet
+from tjev.model.lora import Linear, LinearFactory
+from tjev.model.mlp import MLP
+from tjev.model.norms import RMSNorm
+from tjev.model.params import Frozen, Weights, sub_weights
 from tjev.model.weights import load_hf, stack_layers
 
 _SAVE = jax.checkpoint_policies.save_only_these_names
@@ -44,22 +48,6 @@ REMAT_POLICIES = {
 }
 
 
-class MLP(nnx.Module):
-    def __init__(self, w: Weights, linear: LinearFactory):
-        self.gate_proj = linear("gate_proj", w["gate_proj.weight"])
-        self.up_proj = linear("up_proj", w["up_proj.weight"])
-        self.down_proj = linear("down_proj", w["down_proj.weight"])
-
-    def __call__(self, x: jax.Array) -> jax.Array:
-        with jax.named_scope("mlp"):
-            gate, up = grouped(x, self.gate_proj, self.up_proj, names=("mlp_gate", "mlp_up"))
-            return self.down_proj(jax.nn.silu(gate) * up)
-
-
-def _sub(w: Weights, prefix: str) -> Weights:
-    return {k[len(prefix) :]: v for k, v in w.items() if k.startswith(prefix)}
-
-
 class SuperBlock(nnx.Module):
     """3 × (norm, GDN, norm, MLP) + 1 × (norm, gated attention, norm, MLP)."""
 
@@ -76,14 +64,16 @@ class SuperBlock(nnx.Module):
         self.post_norms = nnx.List(
             [RMSNorm(w["post_attention_layernorm.weight"], eps) for w in layers]
         )
-        self.mlps = nnx.List([MLP(_sub(w, "mlp."), linear) for w in layers])
+        self.mlps = nnx.List([MLP(sub_weights(w, "mlp."), linear) for w in layers])
         self.gdn = nnx.List(
             [
-                GatedDeltaNet(_sub(w, "linear_attn."), config, compute, linear)
+                GatedDeltaNet(sub_weights(w, "linear_attn."), config, compute, linear)
                 for w in layers[: interval - 1]
             ]
         )
-        self.attention = GatedAttention(_sub(layers[-1], "self_attn."), config, compute, linear)
+        self.attention = GatedAttention(
+            sub_weights(layers[-1], "self_attn."), config, compute, linear
+        )
         self.remat = compute.remat
 
     def layer(

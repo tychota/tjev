@@ -35,7 +35,7 @@ Qwen3.5's interleaved MRoPE reduces to plain RoPE for text.
 - **Per-layer remat.** Remat is applied per decoder layer, not per super-block, so the
   backward pass holds one layer's activations at a time.
 
-### Gated DeltaNet layer (`tjev.model.mixers.GatedDeltaNet`)
+### Gated DeltaNet layer (`tjev.model.gdn.GatedDeltaNet`)
 
 ```
 qkv, z, b, a = in_proj_qkv(x), in_proj_z(x), in_proj_b(x), in_proj_a(x)
@@ -55,7 +55,7 @@ out          = out_proj(RMSNorm(o) · silu(z))
   `compute.gdn_impl`: the XLA chunked form, the recurrence, or the Pallas TPU kernels (see
   [kernels.md](kernels.md)).
 
-### Gated attention layer (`tjev.model.mixers.GatedAttention`)
+### Gated attention layer (`tjev.model.attention.GatedAttention`)
 
 `q_proj` emits `[query | gate]` per head. q and k go through a zero-centred RMSNorm and
 RoPE; attention is GQA within segments; the output is multiplied by `sigmoid(gate)` before
@@ -66,7 +66,7 @@ RoPE; attention is GQA within segments; the output is multiplied by `sigmoid(gat
 
 ## LoRA
 
-`tjev.model.layers.Linear` holds the frozen weight as a non-`Param` variable and the
+`tjev.model.lora.Linear` holds the frozen weight as a non-`Param` variable and the
 adapters as `nnx.LoRAParam`, so `nnx.split(model, nnx.LoRAParam, ...)` separates the
 trainable state.
 
@@ -78,7 +78,7 @@ trainable state.
   B starts at zero, so a fresh adapter is the identity.
 - **Grouped A matrices.** Projections that share an input (`in_proj_*`, `q/k/v`,
   `gate/up`) concatenate their A matrices. x is then read once by one wider low-rank
-  matmul (`layers.grouped`).
+  matmul (`lora.grouped`).
 
 ## The decision readout
 
@@ -115,7 +115,7 @@ number of data workers.
 | Package | Responsibility |
 |---|---|
 | `tjev.config` | Frozen dataclass schema with the recommended defaults; presets by name (`tpu-v6e`, `qwen35-2b`) with `extends`; `key=value` overrides; fail-closed coercion |
-| `tjev.model` | Architecture config, HF import and stacking, layers, mixers, the scanned decoder |
+| `tjev.model` | `config` (architecture), `weights` (HF import, stacking), `params`, `lora`, `norms`, `rope`, `gdn`, `attention`, `mlp`, `qwen35` (the scanned decoder) |
 | `tjev.kernels` | One package per op: an XLA reference and Pallas TPU kernels, plus the `shard_map` helper |
 | `tjev.sharding` | The (data, fsdp) mesh, frozen-base placement, batch sharding |
 | `tjev.data` | Items, rendering, tokenizer, packing, mixture, Grain pipeline, `sources/`, the mix builder, JevBench import and filter |

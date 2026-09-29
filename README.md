@@ -98,8 +98,8 @@ v5e-8, use `bash cloud/kaggle.sh all s0 sweep transfer final`; see [docs/tpu.md]
 ```
 src/tjev/
   config/     typed run schema, presets (hardware/, models/), layered loading
-  model/      Qwen3.5: HF import, LoRA layers, GDN and attention mixers, scanned decoder
-  kernels/    gated_delta_rule/ and attention/ (XLA reference + Pallas TPU), conv1d, shard_map
+  model/      Qwen3.5: HF import, LoRA, norms, RoPE, GDN, gated attention, MLP, scanned decoder
+  kernels/    gated_delta_rule/ and attention/ (pure-JAX reference + Pallas TPU), conv1d, shard_map
   data/       items, rendering, packing, Grain pipeline, sources/, the mix builder, JevBench
   train/      objective, optimizers, jitted step, checkpoints, metrics, the loop
   eval/       metrics, calibration, eval sets, run loading, post-training, reports

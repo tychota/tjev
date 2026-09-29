@@ -1,8 +1,8 @@
-"""The two sequence mixers of Qwen3.5: Gated DeltaNet and gated full attention.
+"""Gated DeltaNet layer: projections, segmented causal conv, gates, the delta rule.
 
-Both take packed rows: ``segment_ids`` [B,T] (0 = padding) isolate segments, so a packed
-row computes exactly what each segment would compute alone. The sequence-mixing cores are
-ops from :mod:`tjev.kernels`, chosen by ``ComputeSpec``.
+Packed rows: ``segment_ids`` [B,T] (0 = padding) isolate segments, so a packed row computes
+exactly what each segment would compute alone. The delta rule and the conv are ops from
+:mod:`tjev.kernels`, chosen by ``ComputeSpec``.
 """
 
 from __future__ import annotations
@@ -14,32 +14,12 @@ import jax.numpy as jnp
 from flax import nnx
 from jax.ad_checkpoint import checkpoint_name
 
-from tjev.config import ComputeSpec, LoRASpec
-from tjev.kernels import attention, gated_delta_rule, l2norm, segmented_causal_conv1d
+from tjev.config import ComputeSpec
+from tjev.kernels import gated_delta_rule, l2norm, segmented_causal_conv1d
 from tjev.model.config import ModelConfig
-from tjev.model.layers import Frozen, GatedRMSNorm, Linear, RMSNorm, grouped, rotary
-
-Weights = dict[str, jax.Array]
-
-
-class LinearFactory:
-    """Creates (possibly LoRA-adapted) projections from stacked HF-orientation weights."""
-
-    def __init__(self, lora: LoRASpec | None, dtype: jnp.dtype, rngs: nnx.Rngs):
-        self.lora, self.dtype, self.rngs = lora, dtype, rngs
-
-    def __call__(self, name: str, weight: jax.Array) -> Linear:
-        # HF stores [out, in]; NNX layout is [in, out]. Leading (stack) axes are kept.
-        kernel = jnp.swapaxes(jnp.asarray(weight), -1, -2)
-        lora = self.lora
-        adapted = lora is not None and lora.rank > 0 and name in lora.targets
-        return Linear(
-            kernel,
-            dtype=self.dtype,
-            rank=lora.rank if lora is not None and adapted else 0,
-            scale=lora.scale if lora is not None and adapted else 1.0,
-            rngs=self.rngs,
-        )
+from tjev.model.lora import LinearFactory, grouped
+from tjev.model.norms import GatedRMSNorm
+from tjev.model.params import Frozen, Weights
 
 
 class GatedDeltaNet(nnx.Module):
@@ -117,46 +97,3 @@ class GatedDeltaNet(nnx.Module):
             out = self.norm(out, z)
             out = jnp.where(valid, out.reshape(batch, length, -1), 0).astype(x.dtype)
             return self.out_proj(out, name="mixer_out")
-
-
-class GatedAttention(nnx.Module):
-    """q_proj emits [query | gate] per head; q/k RMSNorm, partial RoPE, GQA attention within
-    segments, then the output gate σ(gate) before o_proj."""
-
-    def __init__(
-        self, w: Weights, config: ModelConfig, compute: ComputeSpec, linear: LinearFactory
-    ):
-        self.config = config
-        self.compute = compute
-        self.q_proj = linear("q_proj", w["q_proj.weight"])
-        self.k_proj = linear("k_proj", w["k_proj.weight"])
-        self.v_proj = linear("v_proj", w["v_proj.weight"])
-        self.o_proj = linear("o_proj", w["o_proj.weight"])
-        self.q_norm = RMSNorm(w["q_norm.weight"], config.rms_norm_eps)
-        self.k_norm = RMSNorm(w["k_norm.weight"], config.rms_norm_eps)
-
-    def __call__(self, x: jax.Array, segment_ids: jax.Array, positions: jax.Array) -> jax.Array:
-        c = self.config
-        batch, length, _ = x.shape
-        with jax.named_scope("attn_proj"):
-            qg, k, v = grouped(x, self.q_proj, self.k_proj, self.v_proj, names=("attn_qkv",) * 3)
-            qg = qg.reshape(batch, length, c.num_heads, 2 * c.head_dim)
-            q, gate = qg[..., : c.head_dim], qg[..., c.head_dim :]
-            gate = gate.reshape(batch, length, -1)
-            k = k.reshape(batch, length, c.num_kv_heads, c.head_dim)
-            v = v.reshape(batch, length, c.num_kv_heads, c.head_dim)
-            q = rotary(self.q_norm(q), positions, c.rotary_dim, c.rope_theta)
-            k = rotary(self.k_norm(k), positions, c.rotary_dim, c.rope_theta)
-        with jax.named_scope("attention_core"):
-            out = attention(
-                q,
-                k,
-                v,
-                segment_ids,
-                impl=self.compute.attention,
-                block=self.compute.attention_block,
-                remat=self.compute.remat != "none",
-            )
-        with jax.named_scope("attn_out"):
-            out = out.reshape(batch, length, -1) * jax.nn.sigmoid(gate)
-            return self.o_proj(out, name="mixer_out")

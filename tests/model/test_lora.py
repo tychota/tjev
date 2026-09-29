@@ -5,7 +5,7 @@ import jax.numpy as jnp
 import numpy as np
 from flax import nnx
 
-from tjev.model.layers import Linear, grouped
+from tjev.model.lora import Linear, grouped
 
 
 def _layers():

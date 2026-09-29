@@ -25,7 +25,7 @@ kernels run in Pallas interpret mode. The package `__init__.py` is a dispatcher 
 `impl=` and, for the TPU kernels, wraps the call in `batch_parallel`
 (`src/tjev/kernels/sharding.py`).
 
-The model (`src/tjev/model/mixers.py`) picks the implementation from `ComputeSpec`
+The model (`src/tjev/model/gdn.py`, `attention.py`) picks the implementation from `ComputeSpec`
 (`src/tjev/config/schema.py`):
 
 | Field | Values (default first) | Effect |
