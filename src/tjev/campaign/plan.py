@@ -23,7 +23,7 @@ How ``fit`` decides (priors: local mix-v3 runs, docs/training.md):
   * An arm is adopted when its paired online difference is below −max(FLOOR, 2 SE) and its
     eval score is not worse by more than FLOOR.
   * Rank 64 (4B, 9B) takes lr/√2 (rsLoRA: with α/√r scaling the optimum moves as 1/√r;
-    LoRA Without Regret, arXiv 2410.21228 / thinkingmachines.ai). Across widths
+    "LoRA Without Regret", thinkingmachines.ai/blog/lora). Across widths
     lr*(d) = lr*(d_proxy)·(d/d_proxy)^-P_WIDTH (arXiv 2609.01244 fits ~0 for Qwen LoRA,
     Tinker 0.08). Halving the batch: lr × 0.85 (arXiv 2609.01244; 2507.07101: √batch is
     too steep). Horizon: lr ∝ steps^-GAMMA from the sweep length (fine-tuning evidence is

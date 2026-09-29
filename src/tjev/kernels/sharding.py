@@ -3,8 +3,8 @@
 XLA cannot partition a Pallas custom call: on a multi-device mesh it would replicate it
 (every device doing every row). Inside a jitted step the kernels therefore run under
 ``shard_map`` over the batch axis, which is split over all mesh axes (as the batch is,
-``tjev.train.sharding.BATCH_AXES``). The mesh comes from ``jax.set_mesh``, which
-``tjev.train.sharding.install_mesh`` sets for runs that use these kernels.
+``tjev.sharding.BATCH_AXES``). The mesh comes from ``jax.set_mesh``, which
+``tjev.sharding.install_mesh`` sets for runs that use these kernels.
 """
 
 from __future__ import annotations

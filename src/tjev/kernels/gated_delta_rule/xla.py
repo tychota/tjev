@@ -122,7 +122,7 @@ def chunk_gated_delta_rule(
     ``precision`` sets the matmuls (``highest`` = true fp32, the parity reference;
     ``high`` = TF32 on GPU / bf16_3x on TPU; ``bf16`` = bf16 operands with fp32
     accumulation). ``inverse`` picks the UT transform: ``solve`` (triangular solve, the
-    reference) or ``doubling`` (matmuls only: the algorithm of the Mosaic kernel A).
+    reference) or ``doubling`` (matmuls only: what the Pallas TPU kernels use).
     Gates, exponentials and the carried state are fp32 in every mode.
     """
     if precision not in PRECISIONS or inverse not in INVERSES:

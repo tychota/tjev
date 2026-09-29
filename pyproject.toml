@@ -113,6 +113,7 @@ known-first-party = ["tjev"]
 
 [tool.ruff.format]
 docstring-code-format = true
+exclude = ["*.md"]  # doc sketches keep their authored layout
 
 [tool.ty.environment]
 python-version = "3.12"
