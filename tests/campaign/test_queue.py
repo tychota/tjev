@@ -17,7 +17,7 @@ def _common(tmp_path) -> str:
         f"model.path={tmp_path / 'model'} model.dtype=float32 "
         f"data.train=[{tmp_path / 'train.jsonl'}] train.seq_buckets=[1024] "
         "train.microbatch_tokens=1024 train.tokens_per_step=4096 train.max_segments=4 "
-        "train.eval_every=99 train.quick_eval_every=0 train.checkpoint_secs=0 "
+        "train.quick_eval_every=0 train.checkpoint_secs=0 "
         "compute.gdn_chunk=16 lora.rank=4 optim.lr=3e-3 optim.warmup_steps=1 "
         "optim.decay_fraction=0.25 log.tensorboard=false"
     )

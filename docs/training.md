@@ -54,7 +54,7 @@ tjev train tpu-v6e qwen35-2b data/mix-v3/mix.yaml model.path=models/Qwen3.5-2B \
 | Batch | 65,536 tokens per step, buckets 1024 / 2048 / 4096, 16 packing bins | ~150 answer slots per step on mix-v3 |
 | Loss normalisation | divide by the expected slots per step | Steps hold one bucket; per-step normalisation made each long item weigh ~20× |
 | Clipping | global norm 1.0 (z-score clipping is a sweep arm) | See *Clipping* below |
-| Selection | NLL after one temperature (see below), evaluated every tenth of the run | ECE is not a proper score; the held-out generators catch overfitting to in-distribution templates |
+| Selection | NLL after one temperature (see below), evaluated at every checkpoint (every 50 steps) | ECE is not a proper score; the held-out generators catch overfitting to in-distribution templates |
 | Precision | bf16 base, fp32 adapters and moments, fp32 GDN state and gates, `gdn_precision=high` (bf16_3x) | One-pass bf16 there broke the gate gradients (MaxText) |
 
 The rationale, literature and measurements are in
@@ -93,7 +93,8 @@ It is an option, not the default. See [research/muon.md](research/muon.md).
 
 ## Selection
 
-At each full eval (`train.eval_every`) the loop scores:
+At every checkpoint step (`train.checkpoint_every`, 50 by default, and the last step) the
+loop runs the full eval and scores:
 
 - **`validation`**: the mix validation set, capped at 64 rows per source.
 - **`heldout`**: the held-out generator selection set, if given.
@@ -101,21 +102,22 @@ At each full eval (`train.eval_every`) the loop scores:
 It fits one temperature on the even validation slots, then scores NLL on the odd ones and
 on the held-out set. `score` is the mean of those NLLs, and lower is better.
 
-- A new best is always checkpointed and never pruned. `selection.json` names it once its
-  checkpoint is written.
+- Every evaluated step is a checkpoint, so the best is always restorable; it is never
+  pruned. `selection.json` names it once its checkpoint is written.
 - `tjev eval`, `tjev calibrate`, `tjev post` and `tjev export` use the selected step by
   default.
 - JevBench is never used for selection.
 
-A quick eval (`train.quick_eval_every`, 24 items per source) is logged as `eval_quick/*`
+A quick eval (`train.quick_eval_every`, every 10 steps, 24 items per source) is logged as `eval_quick/*`
 for the curves only.
 
 ## Checkpoints, resume and branches
 
 - **What is saved.** Orbax saves are async: adapters, optimizer state, and the data-stream
   state. The latest `keep_checkpoints` are kept, plus the selected step.
-- **When.** Every `checkpoint_every` steps, every `checkpoint_secs` seconds (900 s by
-  default, for preemptible or time-limited hosts), and on SIGTERM. SIGTERM saves, then exits
+- **When.** Every `checkpoint_every` steps (with a full eval), and, for resuming only,
+  every `checkpoint_secs` seconds (900 s by default, for preemptible or time-limited hosts)
+  and on SIGTERM. SIGTERM saves, then exits
   with code 143.
 - **Exact resume.** Running the same command again resumes exactly: same batches, same
   adapters on CPU. A changed training (the *identity*: config without logging and cadence

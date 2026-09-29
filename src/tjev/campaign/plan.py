@@ -151,13 +151,10 @@ def _wandb(c: Campaign, name: str, size: str, chips: int) -> list[str]:
 def job(c: Campaign, name: str, size: str, overrides: list[str], *, steps: int,
         chips: int | None = None, after: str | None = None, post: str = "quick") -> str:  # fmt: skip
     chips = chips or c.hw["chips"][size]
-    evals = max(1, steps // 10)  # a full eval and a checkpoint at every tenth of the run
     fields = [name, f"chips={chips}", f"post={post}", *([f"after={after}"] if after else [])]
     args = [
         *_common(c, size),
-        f"train.steps={steps}",
-        f"train.eval_every={evals}",
-        f"train.checkpoint_every={evals}",
+        f"train.steps={steps}",  # checkpoint + full eval every 50 steps (the default)
         *overrides,
         *_wandb(c, name, size, chips),
     ]

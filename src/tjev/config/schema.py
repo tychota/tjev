@@ -130,9 +130,10 @@ class TrainSpec:
     # source must be this run's training (its identity) with the same schedule up to <step>.
     branch_from: str = ""
     log_every: int = 1  # metrics are fetched one step late: logging every step is free
-    eval_every: int = 120  # full eval (validation + held-out) and selection
-    quick_eval_every: int = 25  # a small eval for the curves only (0: off)
-    checkpoint_every: int = 120
+    quick_eval_every: int = 10  # a small eval for the curves only (0: off)
+    # Every checkpoint_every steps (and the last step): a checkpoint *and* the full eval
+    # (validation + held-out) that drives selection, so every evaluated step can be selected
+    checkpoint_every: int = 50
     # >0: also checkpoint when this many seconds passed since the last save (preemptible and
     # time-limited VMs); SIGTERM always saves and stops
     checkpoint_secs: float = 900.0

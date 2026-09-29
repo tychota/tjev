@@ -60,7 +60,7 @@ EXPECTED_SLOTS_STEPS = 64
 # Fields that change how a run is logged, evaluated or checkpointed, never what it trains:
 # they may differ across a resume (or between a run and its cooldown branch).
 NOT_IDENTITY = {
-    "train": ("steps", "log_every", "eval_every", "quick_eval_every", "checkpoint_every",
+    "train": ("steps", "log_every", "quick_eval_every", "checkpoint_every",
               "checkpoint_secs", "keep_checkpoints", "profile_start", "profile_steps",
               "branch_from"),
     "data": ("workers", "worker_buffer", "validation", "validation_per_source", "heldout",
@@ -309,10 +309,10 @@ def train(cfg: RunConfig) -> dict:
                 jax.profiler.stop_trace()
                 profiling = False
 
-            full_eval = evalset and (step % cfg.train.eval_every == 0 or step == cfg.train.steps)
-            quick_eval = quickset and not full_eval and step % cfg.train.quick_eval_every == 0
             due = step % cfg.train.checkpoint_every == 0 or step == cfg.train.steps
-            synced = bool(full_eval or quick_eval or due or stop.is_set())
+            full_eval = bool(evalset) and due
+            quick_eval = bool(quickset) and not due and step % cfg.train.quick_eval_every == 0
+            synced = due or quick_eval or stop.is_set()
             window.flush(everything=synced)
 
             if quickset and quick_eval:
@@ -337,12 +337,13 @@ def train(cfg: RunConfig) -> dict:
                     if held is not None:
                         best["heldout"] = held["all"]
 
-            # A new best is always checkpointed (whatever checkpoint_every is), is never
-            # pruned, and selection.json names it only once its checkpoint is written.
+            # Full evals happen at checkpoint steps, so the best step is always checkpointed; it
+            # is never pruned, and selection.json names it only once its checkpoint is written.
+            # Time-based and SIGTERM saves are for resuming only (no eval).
             timed = cfg.train.checkpoint_secs and (
                 time.monotonic() - t_saved > cfg.train.checkpoint_secs
             )
-            if new_best or due or timed or stop.is_set():
+            if due or timed or stop.is_set():
                 meta = {"stream": stream_state, "best": best}
                 ckpt.save(step, lora, opt_state, meta, keep=best["step"])
                 t_saved = time.monotonic()

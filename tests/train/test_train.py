@@ -41,7 +41,6 @@ def tiny_config(root, name, steps, **extra) -> RunConfig:
         "train.tokens_per_step=8192",
         "train.max_segments=4",
         "train.log_every=2",
-        "train.eval_every=4",
         "train.quick_eval_every=0",
         "train.checkpoint_every=2",
         "train.checkpoint_secs=0",
@@ -74,7 +73,7 @@ def rows(root, name):
 
 def test_train_and_resume_equal_an_uninterrupted_run(setup):
     full = train(tiny_config(setup, "full", 6))
-    assert full["best"]["step"] in (4, 6)
+    assert full["best"]["step"] in (2, 4, 6)
     learning = [x for x in rows(setup, "full") if "learning/loss" in x]
     assert len(learning) == 3
     assert all(np.isfinite(x["learning/loss"]) for x in learning)
@@ -101,7 +100,7 @@ def test_identity_mismatch_refuses_resume(setup):
     ],
 )
 def test_optimizers_train(setup, name, extra):
-    train(tiny_config(setup, f"opt-{name}", 16, **{"train.eval_every": 16, "train.log_every": 1},
+    train(tiny_config(setup, f"opt-{name}", 16, **{"train.checkpoint_every": 16, "train.log_every": 1},
                       **extra))  # fmt: skip
     learning = [r for r in rows(setup, f"opt-{name}") if "learning/loss" in r]
     losses = np.asarray([r["learning/loss"] for r in learning])
@@ -131,7 +130,7 @@ def test_expected_slots_per_step_is_the_mean_over_a_fresh_stream():
 
 
 def test_quick_eval_logs_between_full_evals(setup):
-    extra = {"train.quick_eval_every": 2, "train.eval_every": 6,
+    extra = {"train.quick_eval_every": 2, "train.checkpoint_every": 6,
              "data.quick_validation_per_source": 4, "train.log_every": 1}  # fmt: skip
     train(tiny_config(setup, "quick-eval", 6, **extra))
     logged = rows(setup, "quick-eval")
@@ -167,7 +166,7 @@ def test_restart_before_the_first_checkpoint_starts_the_curves_over(setup):
 def test_branch_from_equals_the_standalone_shorter_run(setup):
     """WSD cooldown branch: resuming a longer run's stable phase with a shorter horizon
     trains exactly what that shorter run trains on its own (same data stream)."""
-    wsd = {"optim.decay_fraction": 0.25, "train.eval_every": 99}
+    wsd = {"optim.decay_fraction": 0.25}
     train(tiny_config(setup, "br-long", 8, **wsd, **{"train.keep_checkpoints": 10}))
     train(tiny_config(setup, "br-short", 4, **wsd))
     branch = f"{setup / 'runs' / 'br-long'}@2"
@@ -198,7 +197,7 @@ def test_selection_is_the_calibrated_nll_with_the_heldout_set(setup):
 def test_tpu_kernels_train_like_the_xla_path(setup, fsdp):
     """Splash attention + the Pallas GDN (interpret mode on CPU) under shard_map on the
     4-device mesh give the XLA path's adapters; fsdp=2 is v5e's 4B layout (data 2 × fsdp 2)."""
-    exact = {"compute.gdn_precision": "highest", "train.eval_every": 99, "mesh.fsdp": fsdp}
+    exact = {"compute.gdn_precision": "highest", "mesh.fsdp": fsdp}
     train(tiny_config(setup, f"k-xla-{fsdp}", 2, **exact))
     kernels = {"compute.attention": "splash", "compute.gdn_impl": "pallas_tpu"}
     try:
@@ -214,7 +213,7 @@ def test_cli_train_and_compile_check(setup):
 
     from tjev.cli import app
 
-    cfg = tiny_config(setup, "cli", 2, **{"train.eval_every": 99})
+    cfg = tiny_config(setup, "cli", 2)
     overrides = [
         "name=cli", f"output={cfg.output}", f"model.path={cfg.model.path}",
         "model.dtype=float32", f"data.train=[{cfg.data.train[0]}]", "train.steps=2",

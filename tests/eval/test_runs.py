@@ -33,7 +33,7 @@ def trained(tmp_path_factory):
     overrides = [
         "name=run", f"output={root / 'runs'}", f"model.path={root / 'model'}",
         f"data.train=[{mix / 'train' / 'tiny.jsonl'}]", f"data.validation={mix / 'validation.jsonl'}",
-        "train.steps=4", "train.eval_every=2", "train.checkpoint_every=2", "train.quick_eval_every=0",
+        "train.steps=4", "train.checkpoint_every=2", "train.quick_eval_every=0",
         "optim.lr=3e-3", "optim.warmup_steps=1", *TINY,
     ]  # fmt: skip
     train(load_config(overrides=overrides))
