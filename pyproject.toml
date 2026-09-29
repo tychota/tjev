@@ -120,6 +120,10 @@ python-version = "3.12"
 [tool.ty.src]
 include = ["src", "tests", "cloud"]
 
+[tool.ty.analysis]
+# Apple-silicon only (the mlx extra): not installable where CI and TPU hosts run
+allowed-unresolved-imports = ["mlx.**", "mlx_lm.**", "mlx", "mlx_lm"]
+
 [tool.ty.rules]
 possibly-missing-attribute = "warn"
 
