@@ -48,4 +48,4 @@ def test_segments_are_isolated():
 def test_unknown_impl_fails():
     q, k, v, seg = _inputs()
     with pytest.raises(ValueError, match="impl"):
-        attention(q, k, v, seg, impl="cudnn")  # ty: ignore[invalid-argument-type]
+        attention(q, k, v, seg, impl="cudnn")

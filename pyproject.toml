@@ -139,3 +139,12 @@ markers = [
   "slow: trains the tiny model end to end (tens of seconds)",
 ]
 xfail_strict = true
+
+[[tool.ty.overrides]]
+# Tests index and compare loosely typed library outputs (optax update trees, CLI results):
+# the source is checked strictly, the tests for everything else.
+include = ["tests/**"]
+
+[tool.ty.overrides.rules]
+not-subscriptable = "ignore"
+invalid-argument-type = "ignore"

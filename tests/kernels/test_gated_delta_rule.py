@@ -151,4 +151,4 @@ def test_dispatch_matches_the_reference(impl):
     got = gated_delta_rule(q, k, v, g, beta, seg, impl=impl, chunk=8, precision="highest")
     np.testing.assert_allclose(got, want, atol=2e-5, rtol=2e-5)
     with pytest.raises(ValueError, match="impl"):
-        gated_delta_rule(q, k, v, g, beta, seg, impl="mosaic")  # ty: ignore[invalid-argument-type]
+        gated_delta_rule(q, k, v, g, beta, seg, impl="mosaic")
