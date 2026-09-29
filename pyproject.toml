@@ -101,7 +101,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["N802", "PT011"]
+"tests/**" = ["N802", "PT011", "PT018"]
 "**/__init__.py" = ["TID252"]  # re-exports of the package's own modules
 
 [tool.ruff.lint.flake8-tidy-imports]

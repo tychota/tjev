@@ -19,7 +19,7 @@ import math
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 QuestionType = Literal["noul", "choice", "score"]
 TYPES: tuple[QuestionType, ...] = ("noul", "choice", "score")
@@ -63,6 +63,14 @@ def _distribution(raw: dict, labels: tuple[str, ...], where: str) -> tuple[float
     return tuple(v / total for v in values)
 
 
+def rendered_state(state: Any) -> Any:
+    """A structured state (JevBench hard tier: a JSON object or list) as the indented JSON
+    text the model reads; anything else unchanged."""
+    if isinstance(state, (dict, list)) and state:
+        return json.dumps(state, ensure_ascii=False, indent=1)
+    return state
+
+
 def parse_item(raw: dict, where: str = "item") -> Item:
     """One JSONL row → :class:`Item`; malformed rows raise ``ValueError`` / ``KeyError``."""
     q = raw["question"]
@@ -104,10 +112,7 @@ def parse_item(raw: dict, where: str = "item") -> Item:
         if expected not in labels:
             raise ValueError(f"{where}: expected {expected!r} not in labels")
         target = tuple(1.0 if label == expected else 0.0 for label in labels)
-    state = raw["state"]
-    if isinstance(state, (dict, list)) and state:
-        # Structured states (JevBench hard tier) are rendered as indented JSON text.
-        state = json.dumps(state, ensure_ascii=False, indent=1)
+    state = rendered_state(raw["state"])
     if not isinstance(state, str) or not state.strip():
         raise ValueError(f"{where}: empty state")
     return Item(
