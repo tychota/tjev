@@ -6,7 +6,7 @@ document has been measured on a real TPU yet. The kernels are tested for parity 
 interpret mode and lowered for TPU on CPU (see [Testing](#testing)). Every performance figure
 here is a prediction.
 
-An earlier GPU version had Mosaic GPU kernels; see the jev repo history.
+An earlier, GPU-only development version also had Mosaic GPU kernels; they are not part of tjev.
 
 ## Overview
 
@@ -267,7 +267,7 @@ remat.
 (conv → gates → l2norm → delta rule) is also wrapped in its own `jax.checkpoint`, so its fp32
 intermediates live only during its own backward.
 
-Facts that shape these choices (checked on CPU with toy layers in the jev repo):
+Facts that shape these choices (checked on CPU with toy layers during development):
 
 - A `custom_vjp` forward rule is rematerialised like any other code; its residuals are not kept
   automatically.
@@ -330,8 +330,8 @@ the zero-shot evals get `compute.attention=xla compute.gdn_impl=chunked`). It th
 
 ## Performance model and roadmap
 
-All numbers in this section are predictions from a per-op roofline analysis done in the jev
-repo. None has been measured on a TPU. The s0 bench and an xprof trace are the first
+All numbers in this section are predictions from a per-op roofline analysis done during
+development. None has been measured on a TPU. The s0 bench and an xprof trace are the first
 measurements.
 
 ### Rooflines
@@ -371,7 +371,7 @@ in total. After the full fusion ladder below, predicted model MFU is 40% for 2B 
    terms in XLA. Spec: same grid as the forward, chunks reversed, G in a `(heads, Dk, Dv)`
    fp32 scratch; reads q, k, v, the gates, the saved `states` (bf16 is enough, since the
    state-path dots are 1-pass) and T (fp32, saved by the forward); recomputes D, u/w and intra
-   in VMEM. With X = Tᵀ·d_vnew, the identities (checked in fp64 in the jev repo)
+   in VMEM. With X = Tᵀ·d_vnew, the identities (checked in fp64 during development)
 
    ```
    d_vβ   = X

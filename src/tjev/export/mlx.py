@@ -44,6 +44,7 @@ def convert(export: str | Path, out: str | Path, quant: str) -> Path:
     elif quant == "4bit-emb":
 
         def keep_readout(path: str, module: Any, *_: Any) -> bool:
+            del module
             return "embed_tokens" not in path  # the tied embedding is the letter readout
 
         mlx_convert(str(export), mlx_path=str(out), quantize=True, q_bits=4, q_group_size=64,
