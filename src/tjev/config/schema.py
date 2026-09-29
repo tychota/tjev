@@ -70,6 +70,10 @@ class ComputeSpec:
     # Delta-rule matmuls: "high" = bf16_3x on TPU / TF32 on GPU (MaxText's choice for the
     # gate gradients), "highest" = fp32 (the parity reference), "bf16" = one bf16 pass.
     gdn_precision: Literal["highest", "high", "bf16"] = "high"
+    # libtpu flags (LIBTPU_INIT_ARGS) set before JAX starts, unless the environment already
+    # sets LIBTPU_INIT_ARGS (cloud/tpu_env.sh exports the subset libtpu accepted on the host:
+    # an unknown flag aborts libtpu). They change speed, never results: not in the identity.
+    libtpu_flags: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if self.gdn_impl.startswith("pallas_tpu") and self.gdn_chunk & (self.gdn_chunk - 1):

@@ -18,7 +18,13 @@ from tjev.data.tokenize import PromptTokenizer
 from tjev.eval import calibrate as cal
 from tjev.eval.evalset import EvalSet
 from tjev.model import Qwen35, build_model, snapshot_identity
-from tjev.sharding import install_mesh, make_mesh, place_frozen, place_replicated
+from tjev.sharding import (
+    configure_runtime,
+    install_mesh,
+    make_mesh,
+    place_frozen,
+    place_replicated,
+)
 from tjev.train.checkpoint import Checkpoints
 from tjev.train.optim import make_optimizer
 from tjev.train.step import make_eval_step, split_model
@@ -47,6 +53,7 @@ class LoadedRun:
         if dtype is not None:
             cfg = replace(cfg, model=replace(cfg.model, dtype=dtype))
         self.cfg: RunConfig = cfg
+        configure_runtime(cfg.compute)
         self.identity = saved["identity"]
         self.vocab = Vocab(json.loads((self.dir / "vocab.json").read_text(encoding="utf-8")))
         if step is None:
@@ -164,6 +171,7 @@ def evaluate_base(
     ``data``) and applied to ``data``, as the JevBench raw-logit controls do."""
     cfg = cfg or RunConfig()
     cfg = replace(cfg, model=replace(cfg.model, path=str(model_path)))
+    configure_runtime(cfg.compute)
     _, model = build_model(cfg.model.path, cfg.compute, None, dtype=cfg.model.dtype)
     mesh = make_mesh(cfg.mesh)
     install_mesh(cfg.compute, mesh)

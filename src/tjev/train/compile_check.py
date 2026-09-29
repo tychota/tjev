@@ -16,7 +16,7 @@ from flax import nnx
 from tjev.config import RunConfig
 from tjev.data.pack import Batch, rows_for
 from tjev.model import Qwen35, expected_shapes, read_config, stack_layers
-from tjev.sharding import install_mesh, make_mesh
+from tjev.sharding import configure_runtime, install_mesh, make_mesh
 from tjev.train.optim import make_optimizer
 from tjev.train.step import make_train_step, split_model
 
@@ -64,6 +64,7 @@ def abstract_batch(accumulation: int, rows: int, length: int, slots: int, labels
 
 
 def compile_check(cfg: RunConfig) -> dict:
+    configure_runtime(cfg.compute)
     mesh = make_mesh(cfg.mesh)
     install_mesh(cfg.compute, mesh)
     graphdef, lora, frozen = split_model(abstract_model(cfg))

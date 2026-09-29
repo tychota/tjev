@@ -9,6 +9,7 @@ replicated (they are small).
 
 from __future__ import annotations
 
+import os
 from collections.abc import Sequence
 from typing import Any
 
@@ -73,3 +74,9 @@ def place_frozen(frozen: Any, mesh: Mesh) -> Any:
 
 def place_replicated(tree: Any, mesh: Mesh) -> Any:
     return jax.device_put(tree, replicated(mesh))
+
+
+def configure_runtime(compute: ComputeSpec) -> None:
+    """Process settings that must precede JAX's backend initialisation (call first)."""
+    if compute.libtpu_flags and "LIBTPU_INIT_ARGS" not in os.environ:
+        os.environ["LIBTPU_INIT_ARGS"] = " ".join(compute.libtpu_flags)

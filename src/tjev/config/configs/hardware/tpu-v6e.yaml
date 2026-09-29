@@ -9,5 +9,18 @@ compute:
   gdn_impl: pallas_tpu # fused Pallas GDN forward + Pallas reverse-recurrence backward
   gdn_precision: high  # bf16_3x delta-rule matmuls (1-pass bf16 breaks the gate gradients)
   remat: full
+  # MaxText's v6e dense-model libtpu set (benchmarks/xla_flags_library.py): latency-hiding
+  # scheduler, data-parallel all-reduce optimisation (our LoRA gradients), async collective
+  # fusion, a larger scoped VMEM for Pallas / XLA fusions
+  libtpu_flags:
+    - --xla_tpu_enable_latency_hiding_scheduler=true
+    - --xla_tpu_enable_data_parallel_all_reduce_opt=true
+    - --xla_tpu_data_parallel_opt_different_sized_ops=true
+    - --xla_tpu_enable_async_collective_fusion=true
+    - --xla_tpu_enable_async_collective_fusion_fuse_all_gather=true
+    - --xla_tpu_enable_async_collective_fusion_multiple_steps=true
+    - --xla_tpu_overlap_compute_collective_tc=true
+    - --xla_enable_async_all_gather=true
+    - --xla_tpu_scoped_vmem_limit_kib=98304
 train:
   microbatch_tokens: 8192  # per chip; 4B takes 4096 and 9B 2048 (campaign plan)

@@ -150,5 +150,9 @@ of the three runners.
 - **Output.** It writes `logs/campaign.{done,failed,paused}`.
 - **Final phase.** It post-trains and exports the selected run of each size with
   `tjev post` and `tjev export`.
-- **Environment.** `cloud/tpu_env.sh` sets the JAX / libtpu environment: the accepted
-  libtpu flags (MaxText's v6e set), the compile cache and W&B.
+- **Environment.** `cloud/tpu_env.sh` sets the JAX / libtpu environment: the compile
+  cache, W&B, and the libtpu flags that libtpu accepted on this host.
+- **libtpu flags.** They live in the TPU presets (`compute.libtpu_flags`: MaxText's v6e
+  dense-model set), so a plain `tjev train tpu-v6e …` gets them. Phase `s0` probes them one
+  by one, and an exported `LIBTPU_INIT_ARGS` (the accepted subset) takes precedence. They
+  change speed, never results, so they are not part of a run's identity.

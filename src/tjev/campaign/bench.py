@@ -115,7 +115,7 @@ def bench_step(size: str, model_dir: Path, overrides: list[str], bucket=2048, ac
 
     from tjev.config import MeshSpec, load_config
     from tjev.model import build_model
-    from tjev.sharding import install_mesh, make_mesh
+    from tjev.sharding import configure_runtime, install_mesh, make_mesh
     from tjev.testing import synthetic_batch
     from tjev.train.optim import make_optimizer
     from tjev.train.step import make_train_step, split_model
@@ -130,6 +130,7 @@ def bench_step(size: str, model_dir: Path, overrides: list[str], bucket=2048, ac
             *overrides,
         ],
     )
+    configure_runtime(cfg.compute)  # before the first device query below
     install_mesh(cfg.compute, make_mesh(MeshSpec(data=1), jax.devices()[:1]))
     _, model = build_model(str(model_dir), cfg.compute, cfg.lora, dtype=cfg.model.dtype)
     graphdef, lora, frozen = split_model(model)

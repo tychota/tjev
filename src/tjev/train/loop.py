@@ -44,6 +44,7 @@ from tjev.eval.evalset import EvalSet
 from tjev.model import build_model, snapshot_identity
 from tjev.sharding import (
     batch_sharding,
+    configure_runtime,
     install_mesh,
     make_mesh,
     place_frozen,
@@ -63,6 +64,7 @@ NOT_IDENTITY = {
     "train": ("steps", "log_every", "quick_eval_every", "checkpoint_every",
               "checkpoint_secs", "keep_checkpoints", "profile_start", "profile_steps",
               "branch_from"),
+    "compute": ("libtpu_flags",),
     "data": ("workers", "worker_buffer", "validation", "validation_per_source", "heldout",
              "quick_validation_per_source"),
 }  # fmt: skip
@@ -165,6 +167,7 @@ def eval_scalars(report: dict) -> dict:
 
 
 def train(cfg: RunConfig) -> dict:
+    configure_runtime(cfg.compute)
     run_dir = Path(cfg.output) / cfg.name
     run_dir.mkdir(parents=True, exist_ok=True)
     mesh = make_mesh(cfg.mesh)
