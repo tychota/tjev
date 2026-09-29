@@ -1,0 +1,8 @@
+# TPU v5e (v5litepod; Kaggle's free v5e-8, Colab's v5e-1), any single-host slice.
+# Per chip: 16 GB HBM at 0.82 TB/s, 197 TFLOP/s bf16, 128x128 MXUs (critical intensity
+# ~240 FLOP/B: the HBM-bound GDN core and LoRA adds lose less than on v6e). Same kernels and
+# precision policy as tpu-v6e. 16 GB: 2B takes 4096-token microbatches; 4B shards its base
+# over 2 chips (mesh.fsdp=2), 9B over 8.
+extends: tpu-v6e
+train:
+  microbatch_tokens: 4096

@@ -1,0 +1,7 @@
+# Qwen3.5-9B (hidden 4096, 32 layers, untied lm_head): the 4B layout at a wider hidden size,
+# so its rate is a width extrapolation from 4B. bf16 base 18 GB: replicated on a 32 GB v6e
+# chip with 2048-token microbatches, sharded on v5e.
+lora:
+  rank: 64
+optim:
+  lr: 2.5e-5

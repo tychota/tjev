@@ -1,0 +1,8 @@
+# Qwen3.5-0.8B: the cheap sweep proxy (the 24-layer, 16/16 GDN-head layout of 2B), rank 32.
+# Learning rates of every model preset: the prior of the campaign planner for 1200 steps of
+# 65k tokens (local mix-v3 paired-loss runs, width and horizon rules: docs/training.md),
+# until a sweep (`tjev campaign fit`) replaces it.
+lora:
+  rank: 32
+optim:
+  lr: 3.7e-5

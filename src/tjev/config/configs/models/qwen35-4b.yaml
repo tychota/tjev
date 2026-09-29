@@ -1,0 +1,5 @@
+# Qwen3.5-4B, the accurate tier (8-bit on a Mac), rank 64 at the rsLoRA 1/sqrt(2) rate.
+lora:
+  rank: 64
+optim:
+  lr: 2.5e-5

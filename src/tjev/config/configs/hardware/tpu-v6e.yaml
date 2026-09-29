@@ -1,0 +1,13 @@
+# TPU v6e (Trillium), any single-host slice (v6e-1/-4/-8; the mesh takes every visible chip).
+# Per chip: 32 GB HBM at 1.6 TB/s, 918 TFLOP/s bf16, 256x256 MXUs: critical intensity
+# ~575 FLOP/B, so >= 1k tokens per chip per matmul. The base runs in bf16 with fp32
+# accumulation; adapters, Adam moments, GDN state and gates stay fp32 (docs/tpu.md).
+# Pure data parallelism: only the LoRA gradients are all-reduced (<1% of a step), so the
+# frozen base stays replicated while it fits (9B: 18 GB of 32).
+compute:
+  attention: splash    # Pallas TPU splash attention, under shard_map over the batch
+  gdn_impl: pallas_tpu # fused Pallas GDN forward + Pallas reverse-recurrence backward
+  gdn_precision: high  # bf16_3x delta-rule matmuls (1-pass bf16 breaks the gate gradients)
+  remat: full
+train:
+  microbatch_tokens: 8192  # per chip; 4B takes 4096 and 9B 2048 (campaign plan)
