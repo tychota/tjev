@@ -209,3 +209,11 @@ MapDataset.range(next_index, ∞).map(SegmentAt.pair)      random access, 1:1
 - **Planned: translated contender items.** About 15% of the `jev` block is to be translated
   to French, with automatic number / entity / option checks. Temperatures would then be
   calibrated per (type × language). Not implemented.
+- **Planned: a teacher block.** An LLM authors JevBench-style items (a sampled family,
+  domain, language and length) and two independent solvers answer them blind. An item is
+  kept only when both pick the author's label, and the solvers' agreement can also serve
+  as a soft target. This is the recipe of the strongest contenders (decider, JevK5).
+  Distillation from a trained 4B into the 2B, restricted to where the teacher agrees with
+  gold, would follow. An earlier version of this code existed but was not part of mix-v3,
+  and it is not ported. When it lands, it becomes a new block in `BLOCKS`, and the other
+  shares shrink.

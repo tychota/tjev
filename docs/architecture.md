@@ -122,6 +122,7 @@ number of data workers.
 | `tjev.train` | Objective, optimizers and schedule, jitted step, Orbax checkpoints, metric sinks, the loop, the ahead-of-time memory check |
 | `tjev.eval` | Metrics, calibration, eval sets, loading finished runs, post-training, reports |
 | `tjev.export` | PEFT and merged export, reference logits, MLX |
+| `tjev.serve` | The `/v1/systemone` API: pydantic wire models, FastAPI app, asyncio micro-batcher, JAX and MLX backends |
 | `tjev.campaign` | TPU planner and cost model, job queue, bench |
 | `tjev.cli` | The `tjev` command, one Typer module per command group |
 
