@@ -1,0 +1,24 @@
+tests/kernels/test_pallas_tpu.py
+  s_c37b0508beebe6::t_ac7ac169ecf1c1 194-275,360-378
+  s_c37b0508beebe6::t_1242e73ead77eb 379-380
+src/tjev/kernels/gated_delta_rule/pallas_tpu_v2.py
+  s_c37b0508beebe6::t_d931bfa823ddb6 202-204,206,208,210-214,219-220,233-239,242-243,247,252-253,256-258,271,296-333
+  s_c37b0508beebe6::t_7eadb178eca0b1 91,97-98,109,111,130-157,159-161,165-171,381,397,404,410,437,444-445,447-449,452-455,461,464-466,520-522,524-529,532-533,555,558
+  s_c37b0508beebe6::t_460ba6ef73d5f9 92-96,102-106
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "1eeafb2e910cc67cfc1b26427c697210175b9931",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
