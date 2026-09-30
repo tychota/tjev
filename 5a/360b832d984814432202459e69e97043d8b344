@@ -1,0 +1,66 @@
+src/tjev/kernels/gated_delta_rule/xla.py
+  s_c37b0508beebe6::t_396b01e8684781 23-39,94-131,178-179,223-224,228-229,231,244-246,250-251
+src/tjev/model/attention.py
+  s_c37b0508beebe6::t_396b01e8684781 55-57
+cloud/tpu_campaign.sh
+  s_c37b0508beebe6::t_bc2e95f89a5c0e 98-130,133-135,137-139
+  s_c37b0508beebe6::t_396b01e8684781 22-23,141-147
+src/tjev/kernels/attention/__init__.py
+  s_c37b0508beebe6::t_396b01e8684781 32-34,39-40,49-55
+src/tjev/campaign/bench.py
+  s_c37b0508beebe6::t_396b01e8684781 13-19,27,29,33,67,87-96,120-129,147-182,190,224,268-271,276,278-298,312-318,320-325,334-335,344,346,349-353
+src/tjev/config/schema.py
+  s_c37b0508beebe6::t_396b01e8684781 52,60-62,67-71,75-79,82-90
+src/tjev/kernels/gated_delta_rule/__init__.py
+  s_c37b0508beebe6::t_396b01e8684781 10-11,23,27-30,44,46-55,59-61,73-75,78-86
+src/tjev/campaign/parity.py
+  s_c37b0508beebe6::t_396b01e8684781 20-31,53,65-100,245-320,394-400,408-411,414,422,425-430,435-436,439-446
+src/tjev/model/lora.py
+  s_c37b0508beebe6::t_396b01e8684781 56-59
+src/tjev/train/step.py
+  s_c37b0508beebe6::t_396b01e8684781 59-60
+tests/model/test_scopes.py
+  s_c37b0508beebe6::t_396b01e8684781 1-63
+tests/test_runtime.py
+  s_c37b0508beebe6::t_396b01e8684781 27-45
+src/tjev/kernels/gated_delta_rule/pallas_tpu.py
+  s_c37b0508beebe6::t_396b01e8684781 42-44,55,59-66,84-88,123-130,135-140,172,176-177,180,192,195,197-200,204,278-283,294,337,347,351,353-355,361-362,364,423-425,427-428,433,437,441,448,466-480,491,497-500,503-505,507-508,518-519,522
+src/tjev/model/qwen35.py
+  s_c37b0508beebe6::t_396b01e8684781 44-48,52,88-100,146-147,155-156,167-170
+src/tjev/kernels/gated_delta_rule/pallas_tpu_v2.py
+  s_c37b0508beebe6::t_396b01e8684781 1-481
+NOTICE
+  s_c37b0508beebe6::t_396b01e8684781 30-42
+src/tjev/kernels/attention/splash_tpu.py
+  s_c37b0508beebe6::t_396b01e8684781 28-31,36-58,60-63,66,76-81,92-94
+docs/kernels.md
+  s_c37b0508beebe6::t_396b01e8684781 18,33,36,39,125-134,149-154,229-266,283-290,325,328-340,354,382-396,412-414,458-459,479-480,490-516
+src/tjev/train/loop.py
+  s_c37b0508beebe6::t_396b01e8684781 71-80,107-110
+tests/kernels/test_pallas_tpu.py
+  s_c37b0508beebe6::t_396b01e8684781 17,73-75,77-81,94,109-178,199-228,235-241,248,255-292,296-298,301-304,307,323-325,329
+tests/campaign/test_bench.py
+  s_c37b0508beebe6::t_396b01e8684781 1-39
+src/tjev/model/gdn.py
+  s_c37b0508beebe6::t_396b01e8684781 58-65,77,93-95
+tests/model/test_remat.py
+  s_c37b0508beebe6::t_396b01e8684781 15,25-26,38-46,48-49,57,65,67,87-128
+tests/kernels/test_gated_delta_rule.py
+  s_c37b0508beebe6::t_396b01e8684781 10,102-112,117-118,122
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "5a360b832d984814432202459e69e97043d8b344",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
