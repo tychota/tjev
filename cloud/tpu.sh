@@ -19,7 +19,8 @@
 #   BUCKET=gs://…/runs (optional; spot: runs mirrored every 10 min. On a new VM, restore
 #     with `gcloud storage rsync -r $BUCKET ~/tjev-work/runs` before `run`: runs resume)
 #   TJEV_ROOT=~/tjev-work (local: data/<MIX>/, data/jevbench/public.jsonl)  MIX=mix-v3
-#   MODELS="0.8B 2B 4B"  SIZES=4B,2B,0.8B  CAMPAIGN=tpu-<date> (W&B group prefix)
+#   MODELS="0.8B 2B 4B"  SIZES=4B,2B,0.8B  BUDGET (planner knobs, e.g. "--seeds 2")
+#   CAMPAIGN=tpu-<date> (W&B group prefix)
 #   WANDB_API_KEY (else ~/.netrc's api.wandb.ai entry; else W&B logs offline)
 #   OUT=$TJEV_ROOT/tpu-results/<date>
 set -euo pipefail
@@ -95,7 +96,8 @@ setup() { remote "MODELS='$MODELS' MIX=$MIX bash ~/tjev-work/src/cloud/tpu_boots
 run() {
   [[ $# -gt 0 ]] || { echo "usage: tpu.sh run PHASE..." >&2; exit 2; }
   remote "cd ~/tjev-work/src && rm -f ~/tjev-work/logs/campaign.{done,failed,paused} && \
-    MIX=$MIX HARDWARE=$HW CHIPS=${TYPE##*-} SIZES=$SIZES TJEV_WANDB_CAMPAIGN=$CAMPAIGN \
+    MIX=$MIX HARDWARE=$HW CHIPS=${TYPE##*-} SIZES=$SIZES BUDGET='${BUDGET:-}' \
+    TJEV_WANDB_CAMPAIGN=$CAMPAIGN \
     BUCKET=${BUCKET:-} nohup setsid bash cloud/tpu_campaign.sh $* \
       > ~/tjev-work/logs/campaign.log 2>&1 < /dev/null &
     sleep 2; tail -n 5 ~/tjev-work/logs/campaign.log"

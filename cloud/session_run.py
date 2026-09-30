@@ -151,6 +151,7 @@ def main() -> int:
         "MIX": job.get("mix", "mix-v3"),
         "MODELS": job.get("models", "0.8B 2B 4B"),
         "SIZES": job.get("sizes", "4B,2B,0.8B"),
+        "BUDGET": job.get("budget", ""),
         "HARDWARE": job.get("hardware", "v5e"),
         "CHIPS": str(job.get("chips", 8)),
         "TJEV_WANDB_CAMPAIGN": job.get("campaign", "tpu"),

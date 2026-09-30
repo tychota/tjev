@@ -12,6 +12,7 @@
 #   TJEV_ROOT (~/tjev-work: src/, data/<MIX>/, data/jevbench/public.jsonl, models/, runs/)
 #   TJEV_VENV (~/tjev-venv; absent: none)  MIX (mix-v3)  HARDWARE (v6e | v5e)  CHIPS (8)
 #   SIZES (final sizes, longest first: "4B,2B,0.8B")
+#   BUDGET  planner knobs for plan, fit and cost, e.g. "--seeds 2 --arm-seeds 2 --arms zclip,b32k"
 #   DEADLINE_HOURS  session limit from the campaign's start: at it, runs checkpoint and the
 #                   campaign exits 3 (paused); running it again resumes. Finished phases are
 #                   skipped; a phase's queue is planned once (queues/PHASE.queue) and reused.
@@ -19,7 +20,7 @@
 set -uo pipefail
 cd "$(dirname "$0")/.."
 : "${TJEV_ROOT:=$HOME/tjev-work}" "${TJEV_VENV:=$HOME/tjev-venv}" "${MIX:=mix-v3}"
-: "${HARDWARE:=v6e}" "${CHIPS:=8}" "${SIZES:=4B,2B,0.8B}" "${DEADLINE_HOURS:=0}"
+: "${HARDWARE:=v6e}" "${CHIPS:=8}" "${SIZES:=4B,2B,0.8B}" "${DEADLINE_HOURS:=0}" "${BUDGET:=}"
 ROOT=$TJEV_ROOT
 RUNS=$ROOT/runs
 MIXDIR=$ROOT/data/$MIX
@@ -40,7 +41,8 @@ say() { echo "[campaign] $(date -Is) $*"; }
 KERNELS=--kernels
 [[ -f $REPORTS/tpu-kernels.off ]] && KERNELS=--no-kernels
 PRESET=tpu-$HARDWARE
-plan() { tjev campaign "$@" --runs "$RUNS" --hardware "$HARDWARE"; }
+read -ra BUDGET_ARGS <<<"$BUDGET"  # e.g. "--seeds 2 --arm-seeds 2 --no-muon": plan, fit and cost alike
+plan() { tjev campaign "$@" --runs "$RUNS" --hardware "$HARDWARE" --sizes "$SIZES" "${BUDGET_ARGS[@]}"; }
 
 remaining_hours() {  # what is left of DEADLINE_HOURS (0 = no deadline)
   python -c "import sys; d, s, n = map(float, sys.argv[1:]); print(0 if d <= 0 else max(0.01, d - (n - s) / 3600))" \
@@ -72,7 +74,7 @@ s0() {
       --calibrate-on "$MIXDIR/calibration.jsonl" --out "$REPORTS/zeroshot-$size.json" \
       > /dev/null 2>> "$REPORTS/zeroshot.log" || say "zero-shot $size failed"
   done
-  tjev campaign cost --hardware "$HARDWARE" --chips "$CHIPS" --sizes "$SIZES" \
+  plan cost --chips "$CHIPS" \
     --bench "$REPORTS/tpu-bench.json" | tee "$REPORTS/tpu-cost.txt"
   touch "$REPORTS/s0.done"
 }
@@ -81,7 +83,7 @@ phase() {  # sweep | transfer | final; returns 3 when paused by the deadline
   local q=$QUEUES/$1.queue
   if [[ -f $QUEUES/$1.done ]]; then say "$1 already done"; return 0; fi
   if [[ ! -s $q ]]; then  # planned once: a resumed phase keeps its jobs whatever it learns
-    plan plan "$1" --mix "$MIXDIR" --models "$MODELS" --sizes "$SIZES" "$KERNELS" --out "$q" || return 1
+    plan plan "$1" --mix "$MIXDIR" --models "$MODELS" "$KERNELS" --out "$q" || return 1
   fi
   say "$1: $(wc -l < "$q") jobs"
   tjev campaign queue "$q" --runs "$RUNS" --mix "$MIXDIR" --jevbench "$JEVBENCH" \

@@ -99,5 +99,5 @@ batches, with an SE of ≈ 0.010 from one seed.
   2B / v6e, about half of the step is the GDN core.
 - **After the fused backward.** Its roadmap predicts ~40% for 2B and ~44% for 4B (see
   [kernels.md](kernels.md)).
-- **Campaign cost.** With the current priors, the whole cheap campaign is about 17
-  chip-hours on v6e (~$22 at flex-start rates) or ~5 h of a free Kaggle v5e-8 session.
+- **Campaign cost.** With the current priors, the whole campaign (37 jobs) is about 24
+  chip-hours on v6e (~$32 at flex-start rates) or ~7 h of a free Kaggle v5e-8 session.

@@ -10,7 +10,7 @@
 #   bash cloud/colab.sh session N PHASES…     # one session (N > 1 restores session N-1)
 #
 # Settings: TPU (v6e1 | v5e1), SESSION_HOURS (11), MAX_SESSIONS (4), CAMPAIGN, SIZES
-# ("4B,2B,0.8B"), MODELS ("0.8B 2B 4B"), TJEV_ROOT, MIX, OUT.
+# ("4B,2B,0.8B"), BUDGET (planner knobs), MODELS ("0.8B 2B 4B"), TJEV_ROOT, MIX, OUT.
 # The colab CLI flags follow its README (June 2026); check `colab --help` if one moved.
 set -euo pipefail
 : "${TJEV_ROOT:=$HOME/tjev-work}" "${MIX:=mix-v3}" "${MODELS:=0.8B 2B 4B}" "${TPU:=v6e1}"
@@ -34,7 +34,8 @@ session() {  # session N PHASES…
 {"home": "/content/home", "code": "/content/src.tgz", "data": "/content/data.tgz",
  "data_root": "$TJEV_ROOT", "mix": "$MIX", "models": "$MODELS", "restore": $restore,
  "save": "/content/save", "session_hours": $SESSION_HOURS, "chips": 1,
- "phases": "$*", "hardware": "${TPU%?}", "sizes": "$SIZES", "campaign": "$CAMPAIGN",
+ "phases": "$*", "hardware": "${TPU%?}", "sizes": "$SIZES", "budget": "${BUDGET:-}",
+ "campaign": "$CAMPAIGN",
  "code_version": "$(git -C "$REPO" rev-parse --short HEAD)", "wandb_key": "${WANDB_API_KEY:-}"}
 EOF
   cat > "$tmp/run.py" <<'EOF'

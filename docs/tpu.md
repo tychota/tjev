@@ -37,9 +37,23 @@ the phases before it (`tjev campaign fit`).
 | Phase | Jobs | What it settles |
 |---|---|---|
 | `s0` | — | libtpu flags probed one by one; the Pallas kernel tests on the TPU (on failure every job falls back to the XLA paths); kernel and train-step bench per size; zero-shot controls |
-| `sweep` | 8 | The 2B proxy at 600 steps: AdamW at 2.5, 3.54, 5 and 7.07e-5 (seed 0; 3.54e-5 also seed 1); paired arms at 3.54e-5: z-score clipping, no clipping, half the batch at lr × 0.85 for twice the steps |
-| `transfer` | 9 | The proxy's horizon: a 2400-step run with WSD cooldown branches at 600 and 1200; 0.8B and 4B at the predicted rate × {½, 1, 2} |
+| `sweep` | 16 | The 2B proxy at 600 steps: AdamW at 2.5, 3.54, 5 and 7.07e-5 (seed 0; 3.54e-5 also seed 1); Muon (Polar Express) at 2.5, 3.54 and 5e-5; paired arms at 3.54e-5 (below) |
+| `transfer` | 12 | The proxy's horizon at its fitted rate and at 0.64× it (each a 2400-step run with WSD cooldown branches at 600 and 1200): the best horizon and the horizon exponent γ; 0.8B and 4B at the predicted rate × {½, 1, 2} |
 | `final` | 9 | 4B, 2B, 0.8B at their recipe: one long run, and cooldown branches at ¼ and ½ of its horizon; `tjev campaign select` picks the best of the three per size |
+
+The sweep arms, all at the centre rate and paired with the AdamW run of the same seed:
+
+| Arm | Change | Decides |
+|---|---|---|
+| `zclip`, `noclip` | z-score clipping, no clipping | the clipping |
+| `b32k`, `b16k` | half / quarter batch at lr × 0.85 per halving, for 2× / 4× the steps | the batch (compared at matching tokens: the same segments) |
+| `r64`, `r64-samelr` | rank 64 at lr/√2 and at the same lr | rank 64 for 0.8B / 2B, and whether the rate moves with the rank |
+| `b2-0.99` | Adam β2 0.99 | β2 |
+| `fp32-storage` | fp32 weights and activations (one-pass bf16 matmuls) | nothing: reported only (a true fp32 control needs 6-pass matmuls, ~4–6× the cost) |
+
+Budget knobs, the same for `plan`, `fit` and `cost` (`BUDGET="…"` for the runners):
+`--seeds` (AdamW grid seeds), `--arm-seeds` (seeds of the arms and the Muon grid),
+`--sweep-steps`, `--arms zclip,b32k,…`, `--no-muon`.
 
 How the fit decides:
 
@@ -49,8 +63,12 @@ How the fit decides:
   against a seed standard deviation of ~0.026 for the eval score.
 - **The rate curve.** A quadratic in log2(lr) with seed fixed effects, fitted on the online
   loss.
-- **Arms.** An arm is adopted when its paired difference is below −max(0.007, 2 SE) and its
-  eval score is not worse by more than 0.007.
+- **Arms and Muon.** An arm, or Muon (its best grid run against AdamW's), is adopted when
+  its paired difference is below −max(0.007, 2 SE) and its eval score is not worse by more
+  than 0.007.
+- **Horizon exponent.** At 600 and 2400 steps, the paired difference of the two transfer
+  rates places each horizon's optimum on the sweep's quadratic; the optimum's shift per
+  log2 of steps is γ, shrunk toward the prior 0.15 ± 0.15.
 - **Horizon and sizes.** The horizon is the best of the transfer runs. Sizes that were not
   measured follow the rank, width, batch and horizon rules ([training.md](training.md)).
 
@@ -75,8 +93,11 @@ post-training. Before any run, with the priors:
 
 | Hardware | Chip-hours | Wall time (8-chip VM) | Cost |
 |---|---|---|---|
-| v6e-8, flex-start | 16.6 | ~2.1 h | ~$22 |
-| v5e-8, Kaggle | 39.4 | ~4.9 h (one session) | free |
+| v6e-8, flex-start | 23.7 | ~3.0 h | ~$32 |
+| v5e-8, Kaggle | 55.4 | ~6.9 h (one 9 h session) | free |
+
+Without Muon and with only the clipping and batch arms (`--arms zclip,noclip,b32k
+--no-muon`), the v6e cost drops to ~$26.
 
 The MFU priors are 18–19% for 2B / 4B on v6e with the current kernels. Their per-op
 roofline and the fused-backward roadmap are in [kernels.md](kernels.md). A bench on the real

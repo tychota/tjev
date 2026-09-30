@@ -1,4 +1,9 @@
-"""``tjev campaign plan | fit | select | cost | queue | bench``: the TPU campaign."""
+"""``tjev campaign plan | fit | select | cost | queue | bench``: the TPU campaign.
+
+The budget knobs (``--seeds``, ``--arm-seeds``, ``--sweep-steps``, ``--arms``, ``--muon``)
+must be the same for ``plan``, ``fit`` and ``cost`` of one campaign: ``fit`` reads the runs
+the plan named.
+"""
 
 from __future__ import annotations
 
@@ -17,16 +22,28 @@ Mix = Annotated[str, typer.Option(help="the built mix directory")]
 Models = Annotated[str, typer.Option(help="directory of Qwen3.5-<size> snapshots")]
 Hardware = Annotated[str, typer.Option(help="v6e | v5e")]
 Sizes = Annotated[str, typer.Option(help="final sizes, longest first")]
+Seeds = Annotated[int, typer.Option(help="seeds of the AdamW grid (the centre gets one more)")]
+ArmSeeds = Annotated[int, typer.Option(help="seeds of every arm and of the Muon grid")]
+SweepSteps = Annotated[int, typer.Option(help="steps of a sweep run")]
+Arms = Annotated[str, typer.Option(help="comma list of sweep arms (default: all)")]
+Muon = Annotated[bool, typer.Option(help="sweep a Muon (Polar Express) rate bracket")]
 PASSTHROUGH = {"allow_extra_args": True, "ignore_unknown_options": True}
 
 
-def _campaign(runs: Path, mix: str, models: str, hardware: str, sizes: str, kernels: bool):
-    from tjev.campaign.plan import HARDWARE, campaign_from_env
+def _campaign(runs: Path, mix: str = "MIX", models: str = "MODELS", *, hardware: str = "v6e",
+              sizes: str = "4B,2B,0.8B", kernels: bool = True, seeds: int = 1,
+              arm_seeds: int = 1, sweep_steps: int = 600, arms: str = "", muon: bool = True):  # fmt: skip
+    from tjev.campaign.plan import ARMS, HARDWARE, campaign_from_env
 
     if hardware not in HARDWARE:
         raise typer.BadParameter(f"hardware must be one of {sorted(HARDWARE)}")
-    return campaign_from_env(runs, mix, models, hardware=hardware,
-                             final_sizes=tuple(comma_list(sizes)), kernels=kernels)  # fmt: skip
+    chosen = tuple(comma_list(arms)) or tuple(ARMS)
+    if unknown := set(chosen) - set(ARMS):
+        raise typer.BadParameter(f"unknown arms {sorted(unknown)} (arms: {', '.join(ARMS)})")
+    return campaign_from_env(runs, mix, models, hardware=hardware, kernels=kernels,
+                             final_sizes=tuple(comma_list(sizes)), seeds=seeds,
+                             arm_seeds=arm_seeds, sweep_steps=sweep_steps, arms=chosen,
+                             muon=muon)  # fmt: skip
 
 
 @app.command()
@@ -38,14 +55,20 @@ def plan(
     hardware: Hardware = "v6e",
     sizes: Sizes = "4B,2B,0.8B",
     kernels: Annotated[bool, typer.Option(help="Pallas TPU kernels (else the XLA paths)")] = True,
+    seeds: Seeds = 1,
+    arm_seeds: ArmSeeds = 1,
+    sweep_steps: SweepSteps = 600,
+    arms: Arms = "",
+    muon: Muon = True,
     out: Annotated[Path | None, typer.Option(help="write the queue here")] = None,
 ) -> None:
     """The queue of one phase (planned from the finished runs of the phases before)."""
     from tjev.campaign.plan import plan as make_plan
 
-    text = (
-        "\n".join(make_plan(phase, _campaign(runs, mix, models, hardware, sizes, kernels))) + "\n"
-    )
+    c = _campaign(runs, mix, models, hardware=hardware, sizes=sizes, kernels=kernels,
+                  seeds=seeds, arm_seeds=arm_seeds, sweep_steps=sweep_steps, arms=arms,
+                  muon=muon)  # fmt: skip
+    text = "\n".join(make_plan(phase, c)) + "\n"
     if out:
         out.write_text(text)
     else:
@@ -53,11 +76,23 @@ def plan(
 
 
 @app.command()
-def fit(runs: Runs, hardware: Hardware = "v6e", out: Path | None = None) -> None:
+def fit(
+    runs: Runs,
+    hardware: Hardware = "v6e",
+    sizes: Sizes = "4B,2B,0.8B",
+    seeds: Seeds = 1,
+    arm_seeds: ArmSeeds = 1,
+    sweep_steps: SweepSteps = 600,
+    arms: Arms = "",
+    muon: Muon = True,
+    out: Path | None = None,
+) -> None:
     """Decisions and per-size recipes from the finished runs."""
     from tjev.campaign.plan import fit as fit_runs
 
-    report = fit_runs(_campaign(runs, "MIX", "MODELS", hardware, "4B,2B,0.8B", True))
+    c = _campaign(runs, hardware=hardware, sizes=sizes, seeds=seeds, arm_seeds=arm_seeds,
+                  sweep_steps=sweep_steps, arms=arms, muon=muon)  # fmt: skip
+    report = fit_runs(c)
     if out:
         out.write_text(json.dumps(report, indent=2, default=float) + "\n")
     echo_json(report)
@@ -76,6 +111,11 @@ def cost(
     runs: Runs = Path("runs"),
     hardware: Hardware = "v6e",
     sizes: Sizes = "4B,2B,0.8B",
+    seeds: Seeds = 1,
+    arm_seeds: ArmSeeds = 1,
+    sweep_steps: SweepSteps = 600,
+    arms: Arms = "",
+    muon: Muon = True,
     chips: Annotated[int, typer.Option(help="chips of the VM")] = 8,
     rate: Annotated[float | None, typer.Option(help="USD per chip-hour")] = None,
     bench: Annotated[Path | None, typer.Option(help="`tjev campaign bench` JSON")] = None,
@@ -85,7 +125,8 @@ def cost(
     from tjev.campaign.plan import SIZES, tokens_per_second
     from tjev.campaign.plan import cost as phase_cost
 
-    c = _campaign(runs, "MIX", "MODELS", hardware, sizes, True)
+    c = _campaign(runs, hardware=hardware, sizes=sizes, seeds=seeds, arm_seeds=arm_seeds,
+                  sweep_steps=sweep_steps, arms=arms, muon=muon)  # fmt: skip
     measured = json.loads(bench.read_text()) if bench else None
     table = phase_cost(c, bench=measured, vm_chips=chips, rate=rate)
     typer.echo(f"{'phase':10s} {'jobs':>5s} {'chip h':>8s} {'wall h':>7s} {'USD':>8s}   "

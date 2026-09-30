@@ -13,7 +13,7 @@
 # e.g.  bash cloud/kaggle.sh all s0 sweep transfer final
 #
 # Settings: CAMPAIGN (tjev-<date>: kernel slugs <campaign>-s<N>, W&B group), SIZES
-# ("4B,2B,0.8B"), MODELS ("0.8B 2B 4B"), TJEV_ROOT (~/tjev-work), MIX (mix-v3), SESSION_HOURS (9), MAX_SESSIONS
+# ("4B,2B,0.8B"), BUDGET (planner knobs, e.g. "--seeds 2"), MODELS ("0.8B 2B 4B"), TJEV_ROOT (~/tjev-work), MIX (mix-v3), SESSION_HOURS (9), MAX_SESSIONS
 # (4), OUT ($TJEV_ROOT/kaggle-results/<campaign>). W&B logs offline (<run>/wandb, `wandb sync`
 # after pull) unless WANDB_INLINE=1, which writes $WANDB_API_KEY into the private kernel.
 #
@@ -67,7 +67,8 @@ job = {
     "data_root": "$TJEV_ROOT", "mix": "$MIX", "models": "$MODELS",
     "restore": ["/kaggle/input/$( [[ $n -gt 1 ]] && slug $((n - 1)) )"] if $n > 1 else [],
     "save": "/kaggle/working", "session_hours": float("$SESSION_HOURS"), "chips": 8,
-    "phases": "$*", "hardware": "v5e", "sizes": "$SIZES", "campaign": "$CAMPAIGN",
+    "phases": "$*", "hardware": "v5e", "sizes": "$SIZES", "budget": "${BUDGET:-}",
+    "campaign": "$CAMPAIGN",
     "code_version": "$(git -C "$REPO" rev-parse --short HEAD)", "wandb_key": "$key",
 }
 src = open(sys.argv[1]).read().replace("JOB: dict = {}", "JOB: dict = " + repr(job), 1)
