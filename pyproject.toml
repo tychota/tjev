@@ -121,7 +121,7 @@ exclude = ["*.md"]  # doc sketches keep their authored layout
 python-version = "3.12"
 
 [tool.ty.src]
-include = ["src", "tests", "cloud"]
+include = ["src", "tests", "cloud", "experiments", "scripts"]
 
 [tool.ty.analysis]
 # Apple-silicon only (the mlx extra): not installable where CI and TPU hosts run
