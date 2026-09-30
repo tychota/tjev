@@ -1,0 +1,28 @@
+src/tjev/kernels/gated_delta_rule/xla.py
+  s_c37b0508beebe6::t_0bc311daec177f 43-53
+src/tjev/campaign/parity.py
+  s_c37b0508beebe6::t_da4cc92ecb0fcb 204-205,230,235-237
+  s_c37b0508beebe6::t_830a4cfe6b72af 48
+  s_c37b0508beebe6::t_7ca6a59ea119a4 102-105,202-203,231
+tests/kernels/test_gated_delta_rule.py
+  s_c37b0508beebe6::t_a936ed3846953a 170-183
+cloud/tpu_campaign.sh
+  s_c37b0508beebe6::t_f794a9a01ad1f8 114
+  s_c37b0508beebe6::t_fce398141d4cd0 102,107-113,115-117
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "d9282951f51ab6a8b16919203bd14c4106f72f3d",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
