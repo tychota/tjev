@@ -1,0 +1,23 @@
+scripts/ground_truth.py
+  s_c37b0508beebe6::t_3a81cedb9a1fec 1-41,46-91,94-176,184-203,208-232
+  s_c37b0508beebe6::t_5a58f92bd145bc 42-45
+  s_c37b0508beebe6::t_f18fb396d0a308 180,183
+  s_c37b0508beebe6::t_1866d7824bec33 92-93
+  s_c37b0508beebe6::t_286f9ec792ae1e 177-179,181-182,204-207
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "20ec216f60664c6f9ca3f2ce3143f4a91330e922",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
