@@ -1,0 +1,32 @@
+src/tjev/kernels/gated_delta_rule/pallas_tpu_mega.py
+  s_c37b0508beebe6::t_a5b71a1a5defe3 333,336
+  s_c37b0508beebe6::t_4149d818e01ccc 231
+  s_c37b0508beebe6::t_30c3e17bc0538d 1-230,232-332,334-335,337-498,500-529,531-533,536-539,541-621
+  s_c37b0508beebe6::t_6ca996e719ab5d 530,534-535,540
+  s_c37b0508beebe6::t_08271e8f381f88 499
+src/tjev/kernels/sharding.py
+  s_c37b0508beebe6::t_6ca996e719ab5d 25-39
+tests/kernels/test_gdn_mega.py
+  s_c37b0508beebe6::t_0fd40e30aa825d 219
+  s_c37b0508beebe6::t_511c3c7d7dc57c 1-8,11-133,136-137,139-150,153-218,220-239
+  s_c37b0508beebe6::t_8dff855326f52b 9-10,134-135,138
+  s_c37b0508beebe6::t_08271e8f381f88 151-152
+NOTICE
+  s_c37b0508beebe6::t_b94eacfdaa7e6d 36-43,50-60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "22dd5c5104e983f8f2c9f2060526f55ff25b5291",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
