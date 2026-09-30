@@ -1,0 +1,59 @@
+src/tjev/model/qwen35.py
+  s_c37b0508beebe6::t_dfbdc752e52f5b 44-48,52
+src/tjev/campaign/parity.py
+  s_c37b0508beebe6::t_79d7e008a9abaf 64-69
+  s_c37b0508beebe6::t_842b1910949c8d 70-73
+  s_c37b0508beebe6::t_455c2f7b1ce33e 218-293,368-371,397-401,410-417
+  s_c37b0508beebe6::t_7b1b10126405e5 20-31,365-367,379-382,385,393,396,406-407
+docs/kernels.md
+  s_c37b0508beebe6::t_65bc841950d505 275,278-290,304
+  s_c37b0508beebe6::t_8e2bd0fb503d0a 347-349
+  s_c37b0508beebe6::t_cdf65bac74bb91 36,124-132
+  s_c37b0508beebe6::t_3a1b889175b117 133
+src/tjev/kernels/gated_delta_rule/xla.py
+  s_c37b0508beebe6::t_adb1a8791c041a 24,79-116,163-164,213
+src/tjev/model/gdn.py
+  s_c37b0508beebe6::t_891fd2321e2907 81
+  s_c37b0508beebe6::t_dfbdc752e52f5b 97-99
+src/tjev/campaign/bench.py
+  s_c37b0508beebe6::t_79d7e008a9abaf 247,252,254-257
+  s_c37b0508beebe6::t_842b1910949c8d 258-261
+src/tjev/kernels/gated_delta_rule/pallas_tpu.py
+  s_c37b0508beebe6::t_dfbdc752e52f5b 54,275-280,291,435
+  s_c37b0508beebe6::t_6287cf85144d46 58-64,121-123,125,128,135-136,474,483,486-487,503
+  s_c37b0508beebe6::t_891fd2321e2907 421-423,425-426,431,439,446,480-482,499-500
+tests/campaign/test_bench.py
+  s_c37b0508beebe6::t_79d7e008a9abaf 39
+tests/model/test_remat.py
+  s_c37b0508beebe6::t_b36b8b2cbe4dff 94-96,113,116
+  s_c37b0508beebe6::t_bcea03648668d4 15,25-26,38-43,45-46,62,64,84-93,97-112,114-115,117-120
+src/tjev/train/loop.py
+  s_c37b0508beebe6::t_426c2826cb2cb4 71-75,102-105
+tests/test_runtime.py
+  s_c37b0508beebe6::t_842b1910949c8d 27-45
+src/tjev/kernels/gated_delta_rule/__init__.py
+  s_c37b0508beebe6::t_891fd2321e2907 39,41-45,49-51,63-65
+src/tjev/config/schema.py
+  s_c37b0508beebe6::t_891fd2321e2907 75-80
+  s_c37b0508beebe6::t_dfbdc752e52f5b 52,60-62
+tests/kernels/test_gated_delta_rule.py
+  s_c37b0508beebe6::t_0d1e74a420a7ea 10,102-112,117-118
+tests/kernels/test_pallas_tpu.py
+  s_c37b0508beebe6::t_468bcd0832e17d 72,74-76,104-120,148-153,160
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "1d49f811a5c15d0055947d00f3fffc83d7f9fa26",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
