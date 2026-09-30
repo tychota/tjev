@@ -13,7 +13,7 @@ from typing import Annotated
 
 import typer
 
-from tjev.cli import campaign, data, evaluation, export, training
+from tjev.cli import campaign, data, evaluation, export, serve, training
 from tjev.cli.common import echo_json
 
 app = typer.Typer(
@@ -27,6 +27,7 @@ app.add_typer(campaign.app, name="campaign")
 training.register(app)
 evaluation.register(app)
 export.register(app)
+serve.register(app)
 
 ConfigItems = Annotated[
     list[str] | None, typer.Argument(help="presets / YAML files and key=value overrides")

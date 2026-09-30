@@ -35,7 +35,7 @@ affiliated with TypeSafe AI or the JevBench maintainers (see [NOTICE](NOTICE)).
 | Kernels | Pallas TPU GDN and splash attention match the XLA reference in interpret mode and lower for TPU. **They have not been compiled on a real TPU yet**: campaign phase `s0` tests them first and falls back to the XLA paths if they fail |
 | Training | Every path is tested end to end on CPU (4 virtual devices): resume, cooldown branches, selection, the TPU kernels under `shard_map` |
 | Data | The mix-v3 builder, the JevBench contamination filter, held-out generator sets |
-| Export | PEFT adapters, a merged HF snapshot, MLX conversion, calibration and parity (mlx-lm) |
+| Export and serving | PEFT adapters, a merged HF snapshot, MLX conversion, calibration and parity (mlx-lm); a FastAPI decision API with micro-batching |
 
 Zero-shot controls on the 231 public JevBench items (temperatures fitted on the mix's
 calibration split, never on JevBench):
@@ -74,6 +74,9 @@ uv run tjev export runs/q2b runs/q2b/export
 uv run tjev mlx convert runs/q2b/export mlx/q2b-bf16 --quant bf16
 uv run tjev mlx check mlx/q2b-bf16 runs/q2b/export/reference.json
 uv run tjev mlx calibrate mlx/q2b-bf16 data/mix-v3/calibration.jsonl mlx/q2b-bf16-cal.json
+
+# serve the decisions (uv sync --extra serve)
+uv run tjev serve --run runs/q2b --calibration runs/q2b/post/calibration-jax.json
 ```
 
 To run the whole campaign (sweep, transfer, final runs, post-training) on Kaggle's free
@@ -89,6 +92,7 @@ v5e-8, use `bash cloud/kaggle.sh all s0 sweep transfer final`; see [docs/tpu.md]
 | [docs/tpu.md](docs/tpu.md) | The TPU campaign: phases, Kaggle / Colab / GCP, costs |
 | [docs/kernels.md](docs/kernels.md) | The gated delta rule and the Pallas TPU kernels |
 | [docs/export.md](docs/export.md) | PEFT, merged snapshots, MLX conversion and calibration |
+| [docs/serve.md](docs/serve.md) | The decision API: FastAPI, micro-batching, JAX and MLX backends |
 | [docs/results.md](docs/results.md) | Everything measured so far |
 | [docs/research/](docs/research/) | Muon on LoRA, LoRA optimizers, training notes, text analysis |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Development workflow |
@@ -104,6 +108,7 @@ src/tjev/
   train/      objective, optimizers, jitted step, checkpoints, metrics, the loop
   eval/       metrics, calibration, eval sets, run loading, post-training, reports
   export/     PEFT and merged export, reference logits, MLX
+  serve/      the /v1/systemone API (FastAPI, asyncio micro-batching), JAX and MLX backends
   campaign/   TPU planner and cost model, job queue, bench
   cli/        the `tjev` command (Typer)
 cloud/        GCP, Kaggle and Colab runners
