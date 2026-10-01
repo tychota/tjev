@@ -1,0 +1,26 @@
+tests/model/test_parity.py
+  s_c37b0508beebe6::t_1953bd382b9bfc 156-164,174-175
+tests/campaign/test_plan.py
+  s_c37b0508beebe6::t_a94ae72e79ea70 408,412-416,418-425,428-432,434-444,447-459,463-464,468,470,472-473,477,479-483,485-487
+src/tjev/campaign/plan.py
+  s_c37b0508beebe6::t_9326ace0af6925 57,253,434-440,465-468,471-490,494-497,499-508,511-512,518-520,522-537
+  s_c37b0508beebe6::t_bb9f0f6e202563 510,513
+docs/sweep-plan.md
+  s_c37b0508beebe6::t_293914c3fadcce 286,289-290,293-309,313,315,317,320-321,323-340
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "442dee64437691c6a0b1142d86a46530daa55270",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
