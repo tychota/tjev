@@ -1,0 +1,36 @@
+tests/model/test_parity.py
+  s_c37b0508beebe6::t_c18cb46f2ebfcc 42-49,62-63,69
+scripts/ground_truth.py
+  s_c37b0508beebe6::t_53199d757ce0a1 136,138-139,147,151-156,158-159
+  s_c37b0508beebe6::t_b1d9942d5ceca1 137,157
+src/tjev/model/gdn.py
+  s_c37b0508beebe6::t_460ba6ef73d5f9 20,50-51,94-95,99-123
+  s_c37b0508beebe6::t_642bc1d4dde4a1 124-125
+tests/model/test_remat.py
+  s_c37b0508beebe6::t_c18cb46f2ebfcc 42-44,97-100,106-108
+docs/kernels.md
+  s_c37b0508beebe6::t_4fa9359a908d04 267-341
+src/tjev/train/loop.py
+  s_c37b0508beebe6::t_4c43c1542fb235 79-80
+src/tjev/config/schema.py
+  s_c37b0508beebe6::t_4c43c1542fb235 77-83,94-96,98-102
+src/tjev/kernels/gated_delta_rule/__init__.py
+  s_c37b0508beebe6::t_a5b71a1a5defe3 159-160
+  s_c37b0508beebe6::t_4c43c1542fb235 12-15,35-45,60-61,69-71,103-106,112-151,154
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "900d7485d913f514d3635f4edfaacf72bae60f2f",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
