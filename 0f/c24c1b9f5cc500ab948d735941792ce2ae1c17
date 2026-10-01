@@ -1,0 +1,28 @@
+tests/campaign/test_plan.py
+  s_c37b0508beebe6::t_a78f92a69c8986 142-159
+  s_c37b0508beebe6::t_032740ba6345a3 234
+  s_c37b0508beebe6::t_23f222c375d086 77,79
+src/tjev/campaign/plan.py
+  s_c37b0508beebe6::t_a78f92a69c8986 499,519-520
+  s_c37b0508beebe6::t_23f222c375d086 13,119-126,128,492-493,534
+docs/training.md
+  s_c37b0508beebe6::t_7cc7c110bdb3eb 29,94-134,136
+  s_c37b0508beebe6::t_ad3995377e329e 135
+  s_c37b0508beebe6::t_f201f84ea6ce61 137
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "0fc24c1b9f5cc500ab948d735941792ce2ae1c17",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
