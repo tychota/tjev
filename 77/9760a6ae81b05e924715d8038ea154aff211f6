@@ -1,0 +1,26 @@
+src/tjev/campaign/bench.py
+  s_c37b0508beebe6::t_71463c69a8dfc8 304-305,313-357,361,370,412
+  s_c37b0508beebe6::t_997930c42bebf8 97-109,123,306-312,358-360,362-369,371-376,381-411,413,444
+src/tjev/campaign/parity.py
+  s_c37b0508beebe6::t_997930c42bebf8 46,107-111
+tests/campaign/test_bench.py
+  s_c37b0508beebe6::t_48718dfb1445f1 40-64
+docs/kernels.md
+  s_c37b0508beebe6::t_90b997011d1e24 339-350
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "779760a6ae81b05e924715d8038ea154aff211f6",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
