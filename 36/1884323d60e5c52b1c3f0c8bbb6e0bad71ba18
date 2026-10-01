@@ -1,0 +1,21 @@
+src/tjev/data/sources/generators.py
+  s_c37b0508beebe6::t_f8f842a15b0479 66-69,71-85,108-115,119-291,293,299-302,310-420,428-429,437-559,563,593-598,606-609,611-615,618-622,625-714,716-717,719-724,726-734,738,775,788-850,862,865-868,876-918,935-944,946-949,980-981,1068-1282,1767-1769,1821,1840,1861,1872-1873,2055-2231,2298,2314,2507-2543,2562,2564,2715-2753,2756,2773,2777,2810-2812,2818
+tests/data/test_generators.py
+  s_c37b0508beebe6::t_68a5b5350cfda9 41-42,44-54,136-137,145-159,175-240
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "361884323d60e5c52b1c3f0c8bbb6e0bad71ba18",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
