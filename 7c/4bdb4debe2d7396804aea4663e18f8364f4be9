@@ -1,0 +1,22 @@
+cloud/tpu_campaign.sh
+  s_c37b0508beebe6::t_ffbbdb074f9a6e 292-293
+src/tjev/campaign/plan.py
+  s_c37b0508beebe6::t_86dd26a4326b88 149-160
+  s_c37b0508beebe6::t_573a9dd613cbfb 173-175,201
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "7c4bdb4debe2d7396804aea4663e18f8364f4be9",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
