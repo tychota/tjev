@@ -1,0 +1,21 @@
+cloud/colab_cpu.sh
+  s_c37b0508beebe6::t_7934c3adbad926 26,28-29,39
+  s_c37b0508beebe6::t_685002b8233b28 1-25,27,30-38,40-47
+  s_c37b0508beebe6::t_210f7b68837934 48
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "521842826c5d95a9a757f19dfc9d17127f4ff2bc",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
