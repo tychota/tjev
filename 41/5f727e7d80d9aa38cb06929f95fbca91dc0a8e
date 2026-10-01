@@ -1,0 +1,72 @@
+tests/data/test_contenders.py
+  s_c37b0508beebe6::t_aedb33443cff92 39,277-287
+src/tjev/data/mix.py
+  s_c37b0508beebe6::t_aedb33443cff92 47,78-95,248-251,256,269-271,307,344,353,360-362,368
+  s_c37b0508beebe6::t_003b12aad7566d 367,369-370,382,387-388,413,420-422,514
+src/tjev/data/balance.py
+  s_c37b0508beebe6::t_aedb33443cff92 298,311-312,320,336,350,352-353,356,363
+src/tjev/data/licences.py
+  s_c37b0508beebe6::t_b72699227394de 1-93
+docs/data.md
+  s_c37b0508beebe6::t_aedb33443cff92 501-519,530-535
+src/tjev/data/sources/generators.py
+  s_c37b0508beebe6::t_aedb33443cff92 66-69,71-85,108-115,119-291,293,299-302,310-420,428-429,437-559,563,593-598,606-609,611-615,618-622,625-714,716-717,719-724,726-734,738,775,788-850,862,865-868,876-918,935-944,946-949,980-981,1068-1282,1822,1841,1862,1873-1874,2180-2356,2423,2439,2632-2668,2687,2689,2840-2878,2881,2898,2902,2941-2943,2949
+  s_c37b0508beebe6::t_b7ed278d4ae816 1920,1925-1927,1977
+  s_c37b0508beebe6::t_a7d94ec3c915e1 1767,1769
+scripts/jev_fr_pilot.py
+  s_c37b0508beebe6::t_b72699227394de 1-277
+src/tjev/data/sources/base.py
+  s_c37b0508beebe6::t_aedb33443cff92 40-42
+src/tjev/data/assets/jev_fr_pilot.jsonl
+  s_c37b0508beebe6::t_b72699227394de 1-275
+tests/data/test_generators.py
+  s_c37b0508beebe6::t_03b00947249830 226
+  s_c37b0508beebe6::t_5ee3d1a91026c4 58
+  s_c37b0508beebe6::t_8f0fa77b08a854 326-342
+  s_c37b0508beebe6::t_b44bee393da584 223-225
+  s_c37b0508beebe6::t_b7ed278d4ae816 207-210
+  s_c37b0508beebe6::t_aedb33443cff92 43-44,46-56,140-141,149-163,260-325
+tests/data/test_sources.py
+  s_c37b0508beebe6::t_aedb33443cff92 123-151
+tests/data/test_balance.py
+  s_c37b0508beebe6::t_aedb33443cff92 230-241
+docs/fr-samples.md
+  s_c37b0508beebe6::t_b72699227394de 1-435
+src/tjev/data/sources/public.py
+  s_c37b0508beebe6::t_aedb33443cff92 91-203,208,294-310,312,318,499-554,743-745,750,755,759-772,790,799-812,848-875
+docs/fr-data.md
+  s_c37b0508beebe6::t_b72699227394de 1-458
+scripts/fr_samples.py
+  s_c37b0508beebe6::t_b72699227394de 1-103
+src/tjev/data/sources/contenders.py
+  s_c37b0508beebe6::t_aedb33443cff92 491-513,540-543
+  s_c37b0508beebe6::t_a995b55b617fb6 544
+src/tjev/cli/data.py
+  s_c37b0508beebe6::t_aedb33443cff92 48-54,78-84,96,105
+tests/data/test_mix.py
+  s_c37b0508beebe6::t_aedb33443cff92 16,110-140
+reports/data/mix-v5/build.log
+  s_c37b0508beebe6::t_65a50c041660cc 1-348
+reports/data/mix-v5/derive.log
+  s_c37b0508beebe6::t_a16496a5a80b15 1-232
+reports/data/mix-v5/report.json
+  s_c37b0508beebe6::t_49948dbd05a13e 1-10230
+reports/data/mix-v5/report.md
+  s_c37b0508beebe6::t_121975ed3a7289 1-337
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "415f727e7d80d9aa38cb06929f95fbca91dc0a8e",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
