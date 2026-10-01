@@ -1,0 +1,23 @@
+tests/kernels/test_mosaic_numerics.py
+  s_c37b0508beebe6::t_95ce6e1e137e97 42
+  s_c37b0508beebe6::t_57a7d5ca333d1f 1-41,43-72,84-89,91,93-100
+  s_c37b0508beebe6::t_46e4386cdb2789 73-83,90,92
+cloud/tpu_campaign.sh
+  s_c37b0508beebe6::t_0fb29dc1f0c4cd 167-168,170-171
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "d003b61265bcf02760996ea98968c45b31c4b2ae",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
