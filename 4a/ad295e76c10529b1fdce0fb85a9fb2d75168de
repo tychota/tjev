@@ -1,0 +1,20 @@
+src/tjev/campaign/plan.py
+  s_c37b0508beebe6::t_9c2ab5a16ac8de 178-184,214-215,378-379
+  s_c37b0508beebe6::t_c3917958f664f9 133-138
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "4aad295e76c10529b1fdce0fb85a9fb2d75168de",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
