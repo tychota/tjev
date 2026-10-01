@@ -1,0 +1,43 @@
+src/tjev/campaign/plan.py
+  s_c37b0508beebe6::t_fe2eb9f4ce19a8 225-226
+  s_c37b0508beebe6::t_73e90d1414a097 191-193,602
+  s_c37b0508beebe6::t_ebf72aa34256be 188-190,307-309,316
+  s_c37b0508beebe6::t_65eeaef0d6e2ff 320-323,326-327,330-331,334-336
+  s_c37b0508beebe6::t_ba4c9a89f87f1d 82-93,135-143,145-154,183-187,194-199,228-247,251-263,266-267,284,311,317-319,325,329,332,337,675-676
+  s_c37b0508beebe6::t_9e379bda6ce0ab 312-315
+  s_c37b0508beebe6::t_9ed7b5076c05ab 391-397,402,497-498,505,584,593-596,624,630-631
+  s_c37b0508beebe6::t_0b3d209892094f 6-9,16-17,722
+  s_c37b0508beebe6::t_07002b7aeabd2e 227
+docs/tpu.md
+  s_c37b0508beebe6::t_5983a093b87ee8 18-22,61-67
+docs/sweep-plan.md
+  s_c37b0508beebe6::t_5983a093b87ee8 41-43,250
+  s_c37b0508beebe6::t_dbda5e3ac5556b 313-316
+  s_c37b0508beebe6::t_9a6cc8a47d33bb 1-40,44-249,251-312,317-495
+src/tjev/cli/campaign.py
+  s_c37b0508beebe6::t_65eeaef0d6e2ff 43,81,147
+  s_c37b0508beebe6::t_73e90d1414a097 33,44,59,82,90-91,111,119,148,160
+  s_c37b0508beebe6::t_0b3d209892094f 30-32,42,45,52-58,60-61,78-80,109-110,118,144-146,159
+  s_c37b0508beebe6::t_d1204df0fee07e 34-36
+tests/campaign/test_plan.py
+  s_c37b0508beebe6::t_73e90d1414a097 316-326
+  s_c37b0508beebe6::t_79a1612e0225b0 77-81,225-301
+  s_c37b0508beebe6::t_e2d4e8a425dda0 218-219
+  s_c37b0508beebe6::t_d1204df0fee07e 302-315
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "cebb694fc6ea9a5103c85642dd1df4940af23a4b",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
