@@ -1,0 +1,78 @@
+tests/eval/test_order_averaging.py
+  s_c37b0508beebe6::t_71c8845de47968 1-111
+src/tjev/data/pack.py
+  s_c37b0508beebe6::t_463e00db7804ee 18,111,113-118
+src/tjev/cli/export.py
+  s_c37b0508beebe6::t_c5a4a59dbbc2f2 74-76
+  s_c37b0508beebe6::t_dbf8bb2f17c705 61-62,77,86-87,102
+  s_c37b0508beebe6::t_b961e76414ab2b 11,101,103
+tests/eval/test_evalset_orders.py
+  s_c37b0508beebe6::t_3afbc928061a8b 1-87,89-91,96-124
+  s_c37b0508beebe6::t_86b5ff542987a0 88,92-95
+src/tjev/data/render.py
+  s_c37b0508beebe6::t_6b8b1f7ac7dfbb 6-8,29-30,92-94,104-105,135-167
+src/tjev/cli/evaluation.py
+  s_c37b0508beebe6::t_765e3b9655dd84 23-24,29,36-45,48,61-62,75,89-90,95,97
+  s_c37b0508beebe6::t_d41344e02417c2 10,30,49,76,96
+src/tjev/eval/post.py
+  s_c37b0508beebe6::t_b1fea692adf9c1 51,60-61
+  s_c37b0508beebe6::t_765e3b9655dd84 22,40
+  s_c37b0508beebe6::t_6df635b5b10cfb 8-13,24,39,47-48,50,57,59,70-74
+src/tjev/eval/runs.py
+  s_c37b0508beebe6::t_a930a78f4e377a 160-161
+  s_c37b0508beebe6::t_b1fea692adf9c1 216,219-220,233-234
+  s_c37b0508beebe6::t_105ff1cd0f6394 16,94-96,102-103,115-116,119-120,126-129,141-142,144-146,148-149,157-158,165-170,195-196
+src/tjev/eval/evalset.py
+  s_c37b0508beebe6::t_b284ce2a1f9493 1,3-12,14,20,22,28-48,51,58-59,63-64,66-69,73-96,98-100,102-105,109-112
+src/tjev/serve/wire.py
+  s_c37b0508beebe6::t_71ee944320df0b 68-70,82
+  s_c37b0508beebe6::t_c5a4a59dbbc2f2 95-96
+  s_c37b0508beebe6::t_daf9e910ac0630 11-23,28,32,55-67,71-81,83-94,142,147-149,151-153
+  s_c37b0508beebe6::t_cfba617510648c 150
+src/tjev/serve/app.py
+  s_c37b0508beebe6::t_c5a4a59dbbc2f2 69-70
+  s_c37b0508beebe6::t_cfba617510648c 7-8,22-29,32-38,51-56
+src/tjev/eval/metrics.py
+  s_c37b0508beebe6::t_a26eac5267960d 6-10,31-33,35-42,51-54,57-64,118-119
+  s_c37b0508beebe6::t_b1fea692adf9c1 34,55-56
+  s_c37b0508beebe6::t_f83be1c3aa78e0 43-50
+tests/serve/test_serve_orders.py
+  s_c37b0508beebe6::t_6e723050256aa2 48-53,63,67,72,78-79
+  s_c37b0508beebe6::t_19da38db52cfb2 1-47,54-62,64-66,68-71,73-77,80-170
+src/tjev/cli/serve.py
+  s_c37b0508beebe6::t_b1fea692adf9c1 50,73,76
+  s_c37b0508beebe6::t_71ee944320df0b 6,53,72
+  s_c37b0508beebe6::t_88606e549b57f4 21-22,28-33,38,43-45,55-61,63-65,75,79
+  s_c37b0508beebe6::t_c5a4a59dbbc2f2 23-27,34-37,39-42,62
+  s_c37b0508beebe6::t_f375d1cc4be2ee 54
+src/tjev/cli/common.py
+  s_c37b0508beebe6::t_b1fea692adf9c1 6,10-12,20-40
+src/tjev/export/mlx.py
+  s_c37b0508beebe6::t_dbf8bb2f17c705 25-33,128-139,142-144,146-153,155,169-192,201-202,208-218
+tests/data/test_orders.py
+  s_c37b0508beebe6::t_5859779844589e 11-12,15-21
+  s_c37b0508beebe6::t_8997387a68645e 1-10,13-14,22-86
+src/tjev/serve/backends.py
+  s_c37b0508beebe6::t_d00d9042a940fb 6-13,27,30-33,53-55,59-75,91-92,123-126,136,149-151,158,163-164,166-168,171,177-184,189-193,197-201,204-205
+src/tjev/eval/calibrate.py
+  s_c37b0508beebe6::t_a8309e87cefa55 5-9,64-76,84-85,90-98,106-107,109-111
+  s_c37b0508beebe6::t_a26eac5267960d 17,22-26
+tests/eval/test_runs.py
+  s_c37b0508beebe6::t_5836544eb8ac87 93-119
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "ae6052f37e7acda8cd176e16cd330e9c51fe4302",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
