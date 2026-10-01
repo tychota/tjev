@@ -1,0 +1,23 @@
+docs/data.md
+  s_c37b0508beebe6::t_53568f12163243 245-333
+reports/data/mix-v4/report.json
+  s_c37b0508beebe6::t_fb344b1024c296 1-9364
+reports/data/mix-v4/report.md
+  s_c37b0508beebe6::t_6cf26907aed20e 1-319
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "7bc1d1301da887d6e198b2e5af2dac546b06fbad",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
