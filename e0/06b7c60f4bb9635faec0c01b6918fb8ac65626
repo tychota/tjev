@@ -1,0 +1,25 @@
+src/tjev/train/loop.py
+  s_c37b0508beebe6::t_6eada80ba8573e 541,596
+  s_c37b0508beebe6::t_35582fc0e32896 594-595
+tests/train/test_health.py
+  s_c37b0508beebe6::t_35582fc0e32896 220-233
+src/tjev/train/health.py
+  s_c37b0508beebe6::t_6eada80ba8573e 219-236,250,265,281,283-284,289
+  s_c37b0508beebe6::t_0f08f2a82c1f51 237-249
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "e006b7c60f4bb9635faec0c01b6918fb8ac65626",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
