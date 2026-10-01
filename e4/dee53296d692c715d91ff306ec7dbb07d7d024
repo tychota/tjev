@@ -1,0 +1,70 @@
+docs/official-eval.md
+  s_c37b0508beebe6::t_3e99b44fc2d36e 1-199
+cloud/tpu_campaign.sh
+  s_c37b0508beebe6::t_3e99b44fc2d36e 24-29,128-198,229-232
+src/tjev/eval/official.py
+  s_c37b0508beebe6::t_52f49d4e405f9a 186-188,191-192,198,603,605-606,608,612,625,644,678-679,711,722-725,728,767
+  s_c37b0508beebe6::t_3e99b44fc2d36e 1-185,189-190,193-197,199-602,604,607,609-611,613-624,626-643,645-677,680-710,712-721,726-727,729-766,768-874
+src/tjev/cli/common.py
+  s_c37b0508beebe6::t_0464455b5c29d3 12,32-44,54-68
+src/tjev/cli/serve.py
+  s_c37b0508beebe6::t_0464455b5c29d3 6,10-18,38-41,49-50,58,61
+src/tjev/cli/evaluation.py
+  s_c37b0508beebe6::t_3e99b44fc2d36e 1,109-122,128-158,161-202,207
+  s_c37b0508beebe6::t_0464455b5c29d3 10-19,123-127,159-160
+tests/data/test_orders.py
+  s_c37b0508beebe6::t_04232a7b496277 8,33-38,41-45,49-62,85-87,89-93
+src/tjev/serve/backends.py
+  s_c37b0508beebe6::t_c1a06b50324c65 7-10,27-35,91,127-131,193-195,215,221-222,224-231
+  s_c37b0508beebe6::t_0464455b5c29d3 133-137
+  s_c37b0508beebe6::t_3e99b44fc2d36e 73-79,123-126,160-165,171-174,180,182-185,188-192
+src/tjev/data/pack.py
+  s_c37b0508beebe6::t_c85aff2292fa02 18,112
+src/tjev/eval/evalset.py
+  s_c37b0508beebe6::t_10c56cf1a527a5 3-5,10,23,47-49
+tests/serve/test_serve.py
+  s_c37b0508beebe6::t_3e99b44fc2d36e 51-56,110-111
+tests/serve/test_serve_orders.py
+  s_c37b0508beebe6::t_80c1173ca2b6b5 32-33,35-39,60-80,121-124
+docs/serve.md
+  s_c37b0508beebe6::t_3e99b44fc2d36e 24,31-37,49-52
+src/tjev/serve/app.py
+  s_c37b0508beebe6::t_3e99b44fc2d36e 72-73
+src/tjev/data/render.py
+  s_c37b0508beebe6::t_3e99b44fc2d36e 15-22,27,54-58,95-112,126,128-129,150-151,164-167,180-183
+  s_c37b0508beebe6::t_c85aff2292fa02 6,9-12,30,127,130-131,143-149,187-193,197-205
+docs/training.md
+  s_c37b0508beebe6::t_3e99b44fc2d36e 240-241
+tests/eval/test_official.py
+  s_c37b0508beebe6::t_3e99b44fc2d36e 1-180
+README.md
+  s_c37b0508beebe6::t_3e99b44fc2d36e 96
+src/tjev/serve/wire.py
+  s_c37b0508beebe6::t_0199521f6fb7ac 12-17
+  s_c37b0508beebe6::t_3e99b44fc2d36e 7-8,35-36,110-111,122-124,129-130,132-135
+src/tjev/export/mlx.py
+  s_c37b0508beebe6::t_10c56cf1a527a5 30,142,146-148
+tests/eval/test_evalset_orders.py
+  s_c37b0508beebe6::t_ab2c7a57f75103 118-125,129-136,138-139
+  s_c37b0508beebe6::t_15e2e35c382f90 3-4,13,47,49-50,82,87,91-94,98-100,103,114-115,126-128
+tests/eval/test_order_averaging.py
+  s_c37b0508beebe6::t_8ff27599d9a402 68-70
+tests/eval/test_runs.py
+  s_c37b0508beebe6::t_fe421f351e967b 102-103
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "e4dee53296d692c715d91ff306ec7dbb07d7d024",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
