@@ -1,0 +1,45 @@
+docs/calibration.md
+  s_c37b0508beebe6::t_2f9bf9336329b6 3-54,73-211,306-308,366-371
+reports/calibration/1200-final-4b-h1500-1450/study.json
+  s_c37b0508beebe6::t_cb32d7888c2bc1 1-881
+reports/calibration/1200-final-4b-h1500-1450/study.md
+  s_c37b0508beebe6::t_e56c83bcf067a5 1-150
+reports/calibration/1200-final-4b-h3000-3000/study.json
+  s_c37b0508beebe6::t_43bee4fb0afbc8 1-881
+reports/calibration/1200-final-4b-h3000-3000/study.md
+  s_c37b0508beebe6::t_b95845fef401b1 1-150
+reports/calibration/final-4b-h1500-1450/study.json
+  s_c37b0508beebe6::t_192a2eff1d8307 1-4013
+reports/calibration/final-4b-h1500-1450/study.md
+  s_c37b0508beebe6::t_c864243e0ca962 1-453
+reports/calibration/final-4b-h3000-1200/study.json
+  s_c37b0508beebe6::t_be52bf5dd2064c 1-4013
+reports/calibration/final-4b-h3000-1200/study.md
+  s_c37b0508beebe6::t_c97a6941e8324d 1-450
+reports/calibration/final-4b-h3000-3000/study.json
+  s_c37b0508beebe6::t_b84778b5b2542b 1-4013
+reports/calibration/final-4b-h3000-3000/study.md
+  s_c37b0508beebe6::t_2e190b145a4587 1-449
+scripts/calibration_study.py
+  s_c37b0508beebe6::t_3e75e45ecf5d97 197-198,638,648,674
+src/tjev/eval/calibrate.py
+  s_c37b0508beebe6::t_eebb81f67298b7 118-122
+tests/eval/test_calibrate.py
+  s_c37b0508beebe6::t_fb0b00445eeb60 86-87,147-162
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "f00019ce1bb1417606c7268773231f97c423276f",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
