@@ -1,0 +1,65 @@
+tests/eval/test_v15.py
+  s_c37b0508beebe6::t_7d22a6f76e4710 1-274
+  s_c37b0508beebe6::t_5b7e35b374496f 275-283
+src/tjev/serve/policy.py
+  s_c37b0508beebe6::t_1a1be81907651a 1-133
+tests/serve/test_serve_policy.py
+  s_c37b0508beebe6::t_43d8bc505e89cf 1-98
+  s_c37b0508beebe6::t_e6002e6e078321 99-100
+src/tjev/eval/v15.py
+  s_c37b0508beebe6::t_0e6a3e0d85e3bf 1-415
+  s_c37b0508beebe6::t_ddfea8aa78ceb5 416-461
+src/tjev/serve/app.py
+  s_c37b0508beebe6::t_17f7f521dbc47d 41
+  s_c37b0508beebe6::t_fbae8f93bd5fbf 59-62
+  s_c37b0508beebe6::t_1d448e13b7dbd0 39-40
+  s_9fdb27a1ac54ee::t_59727f363b4a41 7-8,22,37,75
+src/tjev/cli/common.py
+  s_c37b0508beebe6::t_fd0f6ed44fb10d 12,46-59,70-80,86-87,89-93
+src/tjev/cli/evaluation.py
+  s_c37b0508beebe6::t_d263e5767fa694 1-2,14-15,17,19,23,60-66,74-76,79-80,125-138,140-142,145-147,150-151,174-177,210-212,226-284,319
+src/tjev/cli/serve.py
+  s_c37b0508beebe6::t_28d558256a740f 13-14,16-17,20,46-49,62-63,77
+src/tjev/eval/calibrate.py
+  s_c37b0508beebe6::t_f06a465997f0a5 342-358
+src/tjev/eval/evalset.py
+  s_c37b0508beebe6::t_ed344540555aa2 135,138
+src/tjev/eval/official.py
+  s_c37b0508beebe6::t_07154e8e73afd7 44-45,56-57,63,186,191,197,216-220,228-233,259-273,276-279,429,594,637-642,645,684
+src/tjev/eval/post.py
+  s_c37b0508beebe6::t_70c0d75c8168b7 7-13,23-28,38,41-43,60-61,68,71-78,85-88,104,110,122-124
+src/tjev/eval/runs.py
+  s_c37b0508beebe6::t_18aa2ab13b871f 6-7,37-76,149,151-152,195,205-209,217-219,223
+src/tjev/serve/wire.py
+  s_c37b0508beebe6::t_b78f731410a2bf 24-37,50-52,73,76,81,139-143,145,147-151,153-172
+tests/eval/test_official.py
+  s_c37b0508beebe6::t_43240ba21c0083 166,168
+tests/eval/test_runs.py
+  s_c37b0508beebe6::t_7c363e239cce3d 54-56,101-107,150-170
+tests/serve/test_serve_orders.py
+  s_c37b0508beebe6::t_6b2b1a37885e9a 154
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "883c1a3196139f88f7177be06e461cfc77644564",
+  "prompts": {},
+  "sessions": {
+    "s_9fdb27a1ac54ee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a5f694802bee5853a",
+        "model": "unknown"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    },
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
