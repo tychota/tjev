@@ -1,0 +1,22 @@
+scripts/resume_test.py
+  s_c37b0508beebe6::t_a9e1460af5bd3d 1-22,26-38,40-112,117,119-130
+  s_c37b0508beebe6::t_1565f1e1de99d4 23-25,39,113-116,118
+cloud/tpu_campaign.sh
+  s_c37b0508beebe6::t_bef7c1351e4b03 33-34,415-428
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "eeb5cd764d9afaa67fa3589d18220db829d8faba",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
