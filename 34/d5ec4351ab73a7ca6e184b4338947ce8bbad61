@@ -1,0 +1,20 @@
+docs/research/lora-and-data-2026-10.md
+  s_c37b0508beebe6::t_2d73480ef22625 1-60,62-67
+  s_c37b0508beebe6::t_48f2234e00cbcf 61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "34d5ec4351ab73a7ca6e184b4338947ce8bbad61",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
