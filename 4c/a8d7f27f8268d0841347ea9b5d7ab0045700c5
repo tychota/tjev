@@ -1,0 +1,47 @@
+src/tjev/data/sources/targeted.py
+  s_c37b0508beebe6::t_e8314c0a3ab985 1-968
+  s_c37b0508beebe6::t_412f0a5448075e 969-1187
+tests/data/test_targeted.py
+  s_c37b0508beebe6::t_985c5d804b4331 1-399
+  s_c37b0508beebe6::t_6e4e0af34ef12f 400-409
+docs/data.md
+  s_c37b0508beebe6::t_2473f48b44556e 520-708
+reports/data/mix-v6/build.log
+  s_c37b0508beebe6::t_29a1bd41cb84dd 1-393
+reports/data/mix-v6/compare.txt
+  s_c37b0508beebe6::t_bc9317886a8527 1-101
+reports/data/mix-v6/report.json
+  s_c37b0508beebe6::t_3071e3e0a0f998 1-11889
+reports/data/mix-v6/report.md
+  s_c37b0508beebe6::t_3ee3ccde9b1501 1-375
+scripts/data_report.py
+  s_c37b0508beebe6::t_576d851d6c17c1 653-655
+src/tjev/cli/data.py
+  s_c37b0508beebe6::t_88bc85d5d89786 85-98,120-121
+src/tjev/data/hygiene.py
+  s_c37b0508beebe6::t_ed384862ba31a2 14-21,42,72-73,78,88,123-124,127-128,131,134,139-144,147-149,154-159
+src/tjev/data/jevbench.py
+  s_c37b0508beebe6::t_84dce350f6b922 7-9,125-146
+src/tjev/data/licences.py
+  s_c37b0508beebe6::t_075613fe49a0aa 79-109
+src/tjev/data/mix.py
+  s_c37b0508beebe6::t_35e2523d3d23c1 46,55,66-69,73-75,91-95,106-109,117-119,126-127,374-375,385-389,397,400,409-410,413-414,441-444,458-459,463,469-470,556-557,605-607,620-621,635-636
+src/tjev/data/sources/__init__.py
+  s_c37b0508beebe6::t_9edfc5cb42029a 11,22,26-27,35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4ca8d7f27f8268d0841347ea9b5d7ab0045700c5",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
