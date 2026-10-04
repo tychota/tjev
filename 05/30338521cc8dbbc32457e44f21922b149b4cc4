@@ -1,0 +1,27 @@
+cloud/colab_cpu.sh
+  s_c37b0508beebe6::t_e1683e10e91995 40
+docs/fr-data.md
+  s_c37b0508beebe6::t_17783c7235dd4e 459-561
+reports/data/mix-v5b/build.log
+  s_c37b0508beebe6::t_a4146ac74256f9 1-351
+reports/data/mix-v5b/report.json
+  s_c37b0508beebe6::t_b8afcf8c5841b6 1-10230
+reports/data/mix-v5b/report.md
+  s_c37b0508beebe6::t_6a28283563472b 1-337
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0530338521cc8dbbc32457e44f21922b149b4cc4",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
