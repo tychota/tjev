@@ -1,0 +1,26 @@
+scripts/v15_study.py
+  s_c37b0508beebe6::t_0aa591121ec09b 1-302
+  s_c37b0508beebe6::t_e7ea42267359ed 303-331
+docs/calibration.md
+  s_c37b0508beebe6::t_6fa01839afea43 357,364-412
+docs/official-eval.md
+  s_c37b0508beebe6::t_a1815e52ba4ca1 63,92-185,199-201
+docs/serve.md
+  s_c37b0508beebe6::t_141877675aae23 105-166
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "337f7ed813e79ad19e57f4e249ef96ba35dc1803",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
