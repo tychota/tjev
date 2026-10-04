@@ -1,0 +1,21 @@
+src/tjev/campaign/plan.py
+  s_c37b0508beebe6::t_9eeceaa8d4bdce 540-545,569,572-574
+docs/research/lora-and-data-2026-10.md
+  s_c37b0508beebe6::t_6692a9ae4f26df 15,26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d9afb70f77040ac7ac4be5edc2bb10a488963916",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
