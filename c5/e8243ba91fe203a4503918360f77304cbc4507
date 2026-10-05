@@ -1,0 +1,57 @@
+docs/data.md
+  s_c37b0508beebe6::t_abef8855655b52 199-256
+docs/training.md
+  s_c37b0508beebe6::t_b28fd63d263854 30,33,121-212
+scripts/aot_tpu.py
+  s_c37b0508beebe6::t_3c2002ffc10fa2 136,167-169,187-188
+scripts/packing_report.py
+  s_c37b0508beebe6::t_f099d4d9a77868 1-235
+scripts/remat_memory.py
+  s_c37b0508beebe6::t_bdcd63075d7f67 1-91
+src/tjev/campaign/parity.py
+  s_c37b0508beebe6::t_15d51973251538 176
+src/tjev/campaign/residuals.py
+  s_c37b0508beebe6::t_013eb161e50b8b 54-55,75,82,154
+src/tjev/config/schema.py
+  s_c37b0508beebe6::t_99a675ae6a52d6 12,88,98-99,101-105,194-212,334-338
+src/tjev/data/balance.py
+  s_c37b0508beebe6::t_33b24f6576f21b 155,157-158,175
+src/tjev/data/pack.py
+  s_c37b0508beebe6::t_581d04e34bdf7e 161,165-169,262-264,266-290,307,309-311,335-338,347-371,397
+src/tjev/data/pipeline.py
+  s_c37b0508beebe6::t_7c9356bd0ae59d 96,100-101,121
+src/tjev/model/attention.py
+  s_c37b0508beebe6::t_6368348cef76fe 34-36,38,57
+src/tjev/model/gdn.py
+  s_c37b0508beebe6::t_f8fc2d2a1e2cb0 126-128,130,149-151
+src/tjev/model/qwen35.py
+  s_c37b0508beebe6::t_e2830e97c02504 52-53,59-63,112-121,124-127,142,144,157-159,164,166,169-170
+src/tjev/train/compile_check.py
+  s_c37b0508beebe6::t_d4c72e006ebf2a 106,121-122
+src/tjev/train/loop.py
+  s_c37b0508beebe6::t_377a5e22e86cc1 109,121,468
+tests/data/test_packing.py
+  s_c37b0508beebe6::t_f942dbed6ce0d4 1-156
+tests/data/test_pipeline.py
+  s_c37b0508beebe6::t_d6a25044bd02d2 165-197
+tests/model/test_remat.py
+  s_c37b0508beebe6::t_a64cedec7cea27 25-27,45-46,69,71,74-75,78,83-133,162-163
+tests/train/test_train.py
+  s_c37b0508beebe6::t_ebeb8e53f83142 90-104,429,444-445
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c5e8243ba91fe203a4503918360f77304cbc4507",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
