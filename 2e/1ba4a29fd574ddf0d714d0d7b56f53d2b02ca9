@@ -1,0 +1,38 @@
+tests/model/test_pipelining.py
+  s_c37b0508beebe6::t_c66b3f0e214566 1-107
+  s_c37b0508beebe6::t_b0dd9069a7128b 108-111
+scripts/aot_arms.py
+  s_c37b0508beebe6::t_d85513e18c53f3 75-76,88-89,110-112,115-117,129,137-138,142
+scripts/aot_tpu.py
+  s_c37b0508beebe6::t_5493afbac6f026 22,130-184,242,244,261-262
+src/tjev/campaign/bench.py
+  s_c37b0508beebe6::t_029cf9034a733e 552-564,601,604-608
+src/tjev/campaign/parity.py
+  s_c37b0508beebe6::t_0ad44e31d72cd1 46-54,122-123
+src/tjev/config/schema.py
+  s_c37b0508beebe6::t_6dd53f3bd1c90f 159-163,182-186,199-202
+src/tjev/kernels/lora/pallas_tpu.py
+  s_c37b0508beebe6::t_9f10625f15107d 47,77-80,134-223,280,283-284,294,317,319-323,430,433,435-436,448,486,499-509
+src/tjev/model/qwen35.py
+  s_c37b0508beebe6::t_4ab74b00fe91f8 205,273-276
+src/tjev/train/loop.py
+  s_c37b0508beebe6::t_90d0cc7873f0ff 110-111
+tests/kernels/test_lora_fused.py
+  s_c37b0508beebe6::t_1a09542cf27f3d 189-288
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2e1ba4a29fd574ddf0d714d0d7b56f53d2b02ca9",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
