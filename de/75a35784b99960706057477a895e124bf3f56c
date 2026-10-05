@@ -1,0 +1,25 @@
+scripts/aot_arms.py
+  s_c37b0508beebe6::t_5d7d68530ca788 110-115,119-121,142-144
+scripts/aot_tpu.py
+  s_c37b0508beebe6::t_9deeddcdd6c65f 130,137,140-188,198-200,204,211-214,218,221-223,225-228,321-324
+src/tjev/campaign/bench.py
+  s_c37b0508beebe6::t_190a84b834b67d 432-433
+tests/model/test_pipelining.py
+  s_c37b0508beebe6::t_9787d4a91bc46c 55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "de75a35784b99960706057477a895e124bf3f56c",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
