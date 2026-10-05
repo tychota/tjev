@@ -1,0 +1,54 @@
+scripts/packing_report.py
+  s_c37b0508beebe6::t_66174880fb9ec6 1-227
+  s_c37b0508beebe6::t_adcdd49930b175 228-235
+scripts/remat_memory.py
+  s_c37b0508beebe6::t_9867fc445358fb 1-91
+docs/data.md
+  s_c37b0508beebe6::t_8f456fe0e56f73 199-256
+docs/training.md
+  s_c37b0508beebe6::t_37dd53a492085f 30,33,121-212
+src/tjev/campaign/parity.py
+  s_c37b0508beebe6::t_59c5b6b3c4792c 176
+src/tjev/config/schema.py
+  s_c37b0508beebe6::t_e0249c4e509910 12,88,98-99,101-105,157-175,296-300
+src/tjev/data/balance.py
+  s_c37b0508beebe6::t_2765f54ff6fa7c 155,157-158,175
+src/tjev/data/pack.py
+  s_c37b0508beebe6::t_d03a341351749c 161,165-169,262-264,266-290,307,309-311,335-338,347-371,397
+src/tjev/data/pipeline.py
+  s_c37b0508beebe6::t_d879b82edee75c 96,100-101,121
+src/tjev/model/attention.py
+  s_c37b0508beebe6::t_f9d47d3de4736f 34-36,38,57
+src/tjev/model/gdn.py
+  s_c37b0508beebe6::t_e51ccf9645abc6 126-128,130,142-144
+src/tjev/model/qwen35.py
+  s_c37b0508beebe6::t_96f23405df53d4 48-49,55-59,90-99,102-105,112,114,124-126,131,133,136-137
+src/tjev/train/compile_check.py
+  s_c37b0508beebe6::t_48a697eba6a0f5 103,118-119
+src/tjev/train/loop.py
+  s_c37b0508beebe6::t_1d9fa0c5b25126 92,104,451
+tests/data/test_packing.py
+  s_c37b0508beebe6::t_b1876aa8db8f37 1-156
+tests/data/test_pipeline.py
+  s_c37b0508beebe6::t_a7f7504e76f07d 165-197
+tests/model/test_remat.py
+  s_c37b0508beebe6::t_b8f71735d8e312 25-27,45-46,69,71,74-75,78,83-133,162-163
+tests/train/test_train.py
+  s_c37b0508beebe6::t_3ca62b199600ab 90-104,429,444-445
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bfe9f121d7435a01863c30c1b72d57875ed6cd51",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
