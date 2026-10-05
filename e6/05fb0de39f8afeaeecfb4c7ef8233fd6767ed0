@@ -1,0 +1,26 @@
+docs/kernels.md
+  s_c37b0508beebe6::t_067d8f1893ed6b 740-866
+  s_c37b0508beebe6::t_8d932815d3cc7e 867-938
+scripts/aot_tpu.py
+  s_c37b0508beebe6::t_5317f4df5f0f46 232-313,407
+src/tjev/campaign/bench.py
+  s_c37b0508beebe6::t_35853336333469 554-561,564-565,567-579
+tests/kernels/test_lora_fused.py
+  s_c37b0508beebe6::t_87bacd2a63570a 180-181,184-185,189-190
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e605fb0de39f8afeaeecfb4c7ef8233fd6767ed0",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
