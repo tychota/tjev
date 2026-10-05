@@ -1,0 +1,29 @@
+scripts/build_mix_v7.sh
+  s_c37b0508beebe6::t_813eefa56cba62 9-10,14,46-47,57-58,60-67
+src/tjev/data/decontam.py
+  s_c37b0508beebe6::t_41776d24c46c64 95-96,137
+src/tjev/data/hygiene.py
+  s_c37b0508beebe6::t_5ffb44e0ec5f73 281-282,323-328
+src/tjev/data/mix.py
+  s_c37b0508beebe6::t_0978aea00c3bc0 1176
+src/tjev/data/sources/tools_v7.py
+  s_c37b0508beebe6::t_2eefff749a88ea 174,186
+tests/data/test_v7_mix.py
+  s_c37b0508beebe6::t_c527cc4cd1a365 387-399
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bc022a27fd4fedb10fbc5f48d837993469ab6795",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
