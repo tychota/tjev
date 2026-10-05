@@ -1,0 +1,39 @@
+src/tjev/data/sources/gen_v7/realtext.py
+  s_c37b0508beebe6::t_435ef0deb3f878 1-1041
+  s_c37b0508beebe6::t_ebe129abe3b699 1042-1215
+tests/data/test_gen_v7_realtext.py
+  s_c37b0508beebe6::t_e84bf2b9492e06 1-240
+  s_c37b0508beebe6::t_cb275db8c3e220 241-255
+src/tjev/data/sources/gen_v7/posterior.py
+  s_c37b0508beebe6::t_265a220f6d96e0 358
+tests/data/fixtures/gen_v7/cold.jsonl
+  s_c37b0508beebe6::t_e3a6a1df88582a 1-9
+tests/data/fixtures/gen_v7/kali.jsonl
+  s_c37b0508beebe6::t_b541f5f52df9b0 1-14
+tests/data/fixtures/gen_v7/sharc/train.jsonl
+  s_c37b0508beebe6::t_bf1f77111335ec 1-6
+tests/data/fixtures/gen_v7/sharc/validation.jsonl
+  s_c37b0508beebe6::t_d517d1177c0a76 1-6
+tests/data/fixtures/gen_v7/tau/LICENSE
+  s_c37b0508beebe6::t_61844ae5d8cb18 1-21
+tests/data/fixtures/gen_v7/tau/airline.md
+  s_c37b0508beebe6::t_832833da48ed21 1-70
+tests/data/fixtures/gen_v7/tau/retail.md
+  s_c37b0508beebe6::t_23b2a00fe7e611 1-81
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "07979fb8771f9a24f1f4294d9f5c0effc08c5c90",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
