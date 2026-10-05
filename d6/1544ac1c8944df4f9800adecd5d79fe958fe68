@@ -1,0 +1,45 @@
+src/tjev/kernels/lora/pallas_tpu.py
+  s_c37b0508beebe6::t_bcac02eff53305 1-569
+  s_c37b0508beebe6::t_32a04a542ecf53 570-608
+scripts/lora_numerics.py
+  s_c37b0508beebe6::t_5762973e0a120d 1-157
+src/tjev/kernels/lora/xla.py
+  s_c37b0508beebe6::t_65dd16239a61dc 1-33
+tests/kernels/test_lora_fused.py
+  s_c37b0508beebe6::t_eea70949ab608c 1-163
+  s_c37b0508beebe6::t_a2fa9524dc4a4d 164-170
+src/tjev/campaign/bench.py
+  s_c37b0508beebe6::t_47bb96d2a5e12b 124,378-457,467,486-487,505
+src/tjev/config/schema.py
+  s_c37b0508beebe6::t_42d39393f88ebc 141-152,161-164,168-169
+src/tjev/kernels/lora/__init__.py
+  s_c37b0508beebe6::t_c51fac47534f99 1-7
+src/tjev/model/lora.py
+  s_c37b0508beebe6::t_9e60aa38fcdde6 3-4,9-12,27,42,47-67,127,138-139,150-151,185-191,196,218,224-229,231-233,240-291,411-412,415-417,419,434
+src/tjev/model/qwen35.py
+  s_c37b0508beebe6::t_d39147a36d28b5 25,29,144-151,168-175,178-180,183-189,193
+tests/model/test_lora_fused.py
+  s_c37b0508beebe6::t_ec19010914dba9 1-109
+tests/model/test_lora_init.py
+  s_c37b0508beebe6::t_9ac0be38895749 116,338
+tests/model/test_parity.py
+  s_c37b0508beebe6::t_c351bcef450def 82-122,187,219-220
+tests/train/test_train.py
+  s_c37b0508beebe6::t_8e368cefcdb374 506-517
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d61544ac1c8944df4f9800adecd5d79fe958fe68",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
