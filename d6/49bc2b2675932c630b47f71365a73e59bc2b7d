@@ -1,0 +1,47 @@
+scripts/gdn_precision_study.py
+  s_c37b0508beebe6::t_609ec36ea88e17 1-180
+  s_c37b0508beebe6::t_b4baec3f3f691e 181-194
+scripts/gdn_precision_model.py
+  s_c37b0508beebe6::t_71c0e5fe5736ae 1-116
+  s_c37b0508beebe6::t_6139353b0550aa 117-121
+scripts/aot_tpu.py
+  s_c37b0508beebe6::t_4b6f0235125d01 1-187
+  s_c37b0508beebe6::t_79e4b51ce09c56 188-217
+tests/model/test_xla_flags.py
+  s_c37b0508beebe6::t_49f00e3d9d9765 1-187
+  s_c37b0508beebe6::t_fdf14627b8cfb9 188-225
+docs/kernels.md
+  s_c37b0508beebe6::t_c6151df93f8866 41-65
+src/tjev/config/schema.py
+  s_c37b0508beebe6::t_234b3b837b5e25 143-160
+src/tjev/model/gdn.py
+  s_c37b0508beebe6::t_e5b8794f92b844 130-136,142-143,150-153,155-159
+src/tjev/model/lora.py
+  s_c37b0508beebe6::t_942d5c715f6dca 101-102,104-108,112,114-115,131-133,137-144,167-171,176,196-198,218,246,347-349,351,366-367
+src/tjev/model/norms.py
+  s_c37b0508beebe6::t_561e90ee032cfd 37,41-62
+src/tjev/model/qwen35.py
+  s_c37b0508beebe6::t_46fcd7df7273c8 17,22,135,138-141,148-152,155-168,197-198,201-211,220,273-278,282,286
+src/tjev/train/compile_check.py
+  s_c37b0508beebe6::t_8c42feefc49daa 18,41-42
+src/tjev/train/loop.py
+  s_c37b0508beebe6::t_5318daf91d7551 92-96
+tests/train/test_train.py
+  s_c37b0508beebe6::t_56e4cc52d0c7d4 416
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d649bc2b2675932c630b47f71365a73e59bc2b7d",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
