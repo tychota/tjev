@@ -1,0 +1,25 @@
+src/tjev/data/decontam.py
+  s_c37b0508beebe6::t_1bf8255326a3dd 134-139,146-149,153-179,224-233,265-281
+src/tjev/data/hygiene.py
+  s_c37b0508beebe6::t_321a8197b70031 290-292,326-332,335
+src/tjev/data/sources/judge.py
+  s_c37b0508beebe6::t_f3f970ad5b2b8d 33,567-569
+tests/data/test_v7_mix.py
+  s_c37b0508beebe6::t_a423fcb08ada4b 346-364
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4fc57e6cba5f863ff32caf0258b5a3ff20c24a02",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
