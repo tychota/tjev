@@ -1,0 +1,23 @@
+tests/train/test_composition.py
+  s_c37b0508beebe6::t_c22283540d7199 1-182
+tests/model/test_scopes.py
+  s_c37b0508beebe6::t_37bd157cf1dec1 117-145
+tests/train/test_train.py
+  s_c37b0508beebe6::t_9b6a1dc5d7d552 454-470
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1ee232a98c3b32cfa1b2622a61b601a67cd3c87a",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
