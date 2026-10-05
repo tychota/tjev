@@ -1,0 +1,43 @@
+src/tjev/campaign/xprof_tools.py
+  s_c37b0508beebe6::t_7ff949b6ac520b 1-636
+  s_c37b0508beebe6::t_4dd9e34b7cc81e 637-697
+src/tjev/campaign/analyse.py
+  s_c37b0508beebe6::t_26de51b63b8035 1-155
+tests/campaign/test_xprof_tools.py
+  s_c37b0508beebe6::t_8583e2eb88bcb3 1-284
+  s_c37b0508beebe6::t_8c960a2c1ddd49 285-305
+docs/profiling.md
+  s_c37b0508beebe6::t_70cda023c2cf8e 1-225
+cloud/tpu_campaign.sh
+  s_c37b0508beebe6::t_c197836ce754a9 37-43,324-437,553-556
+docs/kernel-journey.md
+  s_c37b0508beebe6::t_e3da2ea9227047 143-147
+docs/kernels.md
+  s_c37b0508beebe6::t_2797d753d96a5b 608-610
+pyproject.toml
+  s_c37b0508beebe6::t_cf3e9c46c52ea7 49-50
+src/tjev/campaign/bench.py
+  s_c37b0508beebe6::t_de8b1e832ed26a 298-302,488-490,493,496,535,600
+src/tjev/campaign/journey.py
+  s_c37b0508beebe6::t_10bd6d4414fba4 366,420-423,836,872-873
+src/tjev/campaign/xprof_summary.py
+  s_c37b0508beebe6::t_ffc817a1a4d6cd 1-2,57,59-60,93-156,160-166,170,176-179,182-204,206-213,216,240,247,251,255-257,270
+uv.lock
+  s_c37b0508beebe6::t_147d532eb2d309 180-216,288-300,362-411,446-454,527-538,656-800,813-817,842-912,1022-1033,1305-1313,1490-1498,1827-1838,1898-1927,2142-2154,2384-2392,2430-2432,2481,2483,2781-2818
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1ed2aee4d363ede3c8ce0e0ac4fe5f926a0d84a3",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
