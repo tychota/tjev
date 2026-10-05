@@ -1,0 +1,21 @@
+scripts/aot_arms.py
+  s_c37b0508beebe6::t_7b2bf53ed50233 1-139
+scripts/aot_tpu.py
+  s_c37b0508beebe6::t_46ea814bd02f3b 115-129,215
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "52066a5d9699f567b0f34687fceb290880222cda",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
