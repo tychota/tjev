@@ -1,0 +1,19 @@
+scripts/aot_arms.py
+  s_de1a6462dd8c8c::t_40b9c356aea0e1 88-89
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4d8dafc41c5f744e098cd31a1f27c2a5deaf9bc0",
+  "prompts": {},
+  "sessions": {
+    "s_de1a6462dd8c8c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ae283647c4c5f9425",
+        "model": "unknown"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
