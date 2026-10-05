@@ -1,0 +1,25 @@
+docs/data.md
+  s_c37b0508beebe6::t_72f5baa7cac9ac 964-972,982-1015,1018-1027
+scripts/fr_mt_sample.py
+  s_c37b0508beebe6::t_bf09a5c55417e2 22,29-39,92-98,101-110,159-160,166-204,224-229
+src/tjev/data/sources/gen_v7/fr_mt.py
+  s_c37b0508beebe6::t_df4a571cbe5b0f 25-31,56-63,654-665,668-673,704-712,726-727,731-749,764-766,768-771,774-775,788-793,804-808,817-818,832-835,896-917
+tests/data/test_fr_mt.py
+  s_c37b0508beebe6::t_ad6ed87d78db6e 137-216
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "def8ffe4cdaf8d32823a162ef06914b04fd9012e",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
