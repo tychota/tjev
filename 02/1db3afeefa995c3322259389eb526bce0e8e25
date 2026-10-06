@@ -1,0 +1,31 @@
+src/tjev/eval/runs.py
+  s_c37b0508beebe6::t_7cabd3227bc56c 128-130,135-138
+cloud/session_run.py
+  s_c37b0508beebe6::t_6d87bfc7935a17 145-148,161,163,167-168,170
+src/tjev/train/checkpoint.py
+  s_c37b0508beebe6::t_f96743ad8f00cb 98-113
+src/tjev/train/loop.py
+  s_c37b0508beebe6::t_13adafef2db712 76,275-276,289,292-297,653,660
+src/tjev/config/schema.py
+  s_c37b0508beebe6::t_13adafef2db712 295-299
+tests/train/test_train.py
+  s_c37b0508beebe6::t_2a6cc2e546c64b 363-373,410-411
+src/tjev/campaign/plan.py
+  s_c37b0508beebe6::t_f557efa8c80c4a 505-506,508
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "021db3afeefa995c3322259389eb526bce0e8e25",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
