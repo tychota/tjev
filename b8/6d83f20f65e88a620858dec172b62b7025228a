@@ -1,0 +1,41 @@
+docs/kernels.md
+  s_c37b0508beebe6::t_aea8b52ec49b90 580-617
+  s_c37b0508beebe6::t_91a0b82c906ad6 1033-1039
+  s_35b641b930a96d::t_d01a7d9d88f9a4 1075
+src/tjev/kernels/tpu_compile.py
+  s_c37b0508beebe6::t_bfabcbdd13f32a 1-260
+  s_c37b0508beebe6::t_ab4f880b17d3db 261-279
+src/tjev/kernels/lora/pallas_tpu.py
+  s_c37b0508beebe6::t_8846992d42b681 113-119
+tests/kernels/test_tpu_compile.py
+  s_c37b0508beebe6::t_4e1b5e1c2f24eb 1-26
+  s_c37b0508beebe6::t_73dea6495c523a 27
+cloud/tpu_campaign.sh
+  s_c37b0508beebe6::t_a8a539c3ffcfa5 597,647-652,662,666,673
+pyproject.toml
+  s_c37b0508beebe6::t_df0387d692c3ab 144,149
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b86d83f20f65e88a620858dec172b62b7025228a",
+  "prompts": {},
+  "sessions": {
+    "s_35b641b930a96d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a08b65-e613-7380-80d3-808961eadc00",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    },
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
