@@ -1,0 +1,23 @@
+scripts/build_mix_v7.sh
+  s_c37b0508beebe6::t_99d4930c30032b 11-12,37-42
+src/tjev/cli/data.py
+  s_c37b0508beebe6::t_4ebd5e18920d61 154-156,179
+src/tjev/data/mix.py
+  s_c37b0508beebe6::t_87dd8a80cf4e9d 582,605-606,673-675,687-688,693,813-815,848-849,860-861,915-916,1059
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ce53f2cf239a302513fe2d37dd2cb547c7a7e39c",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
