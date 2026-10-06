@@ -1,0 +1,19 @@
+docs/training.md
+  s_74f31b43dd573e::t_8751381fa7b74f 216-224
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cf19d2dbfee89072b30c4e5368d8a93757106f0b",
+  "prompts": {},
+  "sessions": {
+    "s_74f31b43dd573e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "41594749-6fd7-424f-a034-2700001b026b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
