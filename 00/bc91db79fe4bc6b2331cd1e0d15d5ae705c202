@@ -1,0 +1,19 @@
+scripts/build_mix_v7.sh
+  s_2c199658e440c3::t_f01ccfe6425760 15,53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "00bc91db79fe4bc6b2331cd1e0d15d5ae705c202",
+  "prompts": {},
+  "sessions": {
+    "s_2c199658e440c3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ae88d933c1d16abd9",
+        "model": "unknown"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
