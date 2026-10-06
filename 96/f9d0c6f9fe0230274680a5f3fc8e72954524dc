@@ -1,0 +1,21 @@
+src/tjev/data/clean_v75.py
+  s_35b641b930a96d::t_95e7c1e9ed1cf7 44-46
+tests/data/test_clean_v75.py
+  s_35b641b930a96d::t_dd1668ce914a92 50-53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "96f9d0c6f9fe0230274680a5f3fc8e72954524dc",
+  "prompts": {},
+  "sessions": {
+    "s_35b641b930a96d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a08b65-e613-7380-80d3-808961eadc00",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
