@@ -1,0 +1,59 @@
+docs/sweep-plan.md
+  s_d1d39e59a20c39::t_be72df1b6eae12 1-672
+docs/training.md
+  s_d1d39e59a20c39::t_0551701f0ec488 29-30,32-34,57,59-290,311-313,327-486,489-490,498-501,511-526,529-547,571-572,575-580,591-593,597-600,602-603,606-609
+scripts/resume_test.py
+  s_d1d39e59a20c39::t_da60872d275799 1-130
+scripts/teacher_annotate.py
+  s_d1d39e59a20c39::t_52f70d202e6cf6 1-124
+src/tjev/train/checkpoint.py
+  s_d1d39e59a20c39::t_836a9e37d8d8d5 10,31-33,48-68,70-71,98-113
+src/tjev/train/compile_check.py
+  s_d1d39e59a20c39::t_e1e0bef4cf46db 18,22,41-42,48-49,67,76,78-82,88,90-95,97-100,103-107,121-122
+src/tjev/train/health.py
+  s_d1d39e59a20c39::t_66101c689baecb 1-412
+src/tjev/train/log.py
+  s_d1d39e59a20c39::t_e8ef3855d743c6 83-92
+src/tjev/train/loop.py
+  s_d1d39e59a20c39::t_24a4b9f9fab0a3 21,27,33,37,48,59,61-70,74,80-83,88-175,202-207,218-221,235-236,238-241,245-246,252-262,266-318,348-408,449-450,452,468-470,475-478,498-504,506-520,524-536,538,556,564-567,569-571,574-583,585-587,592-599,609-628,634-646,648-654,657-658,662-666,668,672-674,678,680-681,687-688,690,692-702,704-709,714-793,801-802,810,827-828,832-837,858-868,870-889,893,905,909-910
+src/tjev/train/objective.py
+  s_d1d39e59a20c39::t_d0fc3f4786ec6f 5-24,29-30,33,36,40-56,63-118,120-128,133-160,164,168-178,181,188-194
+src/tjev/train/optim.py
+  s_d1d39e59a20c39::t_fb1eb5e7f720dd 12,19,99-108,124,136-269,276-278,281-310
+src/tjev/train/step.py
+  s_d1d39e59a20c39::t_729824f5f4e112 11-19,24,30,34,37-38,40,42,57-62,64-70,74-138,145-151,153-161,163-170,174-176,179-191,193,195-206,208-211,214-220,222,233-251
+tests/train/test_calib_loss.py
+  s_d1d39e59a20c39::t_74222c4f00e09c 1-266
+tests/train/test_composition.py
+  s_d1d39e59a20c39::t_b2e4a3449e58fb 1-178
+tests/train/test_health.py
+  s_d1d39e59a20c39::t_fa839a7033491d 1-233
+tests/train/test_log.py
+  s_d1d39e59a20c39::t_deddfca87a5726 1-47
+tests/train/test_optim.py
+  s_d1d39e59a20c39::t_030c4aeb0614d5 119-165
+tests/train/test_regularisers.py
+  s_d1d39e59a20c39::t_a95517b3738870 1-201
+tests/train/test_step_names.py
+  s_d1d39e59a20c39::t_70ccd844c5fbb8 1-46
+tests/train/test_step_options.py
+  s_d1d39e59a20c39::t_8f89cc9ede2865 1-264
+tests/train/test_train.py
+  s_d1d39e59a20c39::t_888338755c61c8 5-6,90-104,247-642
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "52150f25bba1b77ca9da93a1b620a646cb17e54d",
+  "prompts": {},
+  "sessions": {
+    "s_d1d39e59a20c39": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d316479f-0782-47eb-a003-087da5c19333",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
