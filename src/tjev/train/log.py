@@ -80,7 +80,16 @@ class MetricLogger:
                 except Exception as e:
                     print(json.dumps({"event": "wandb_rewind_failed", "error": str(e)[:200]}))
             if self.wandb is None:
-                self.wandb = wb.init(id=run_id, resume="allow", **common)
+                try:
+                    self.wandb = wb.init(id=run_id, resume="allow", **common)
+                except Exception as e:  # a bad key or entity, or W&B down: never kill the run
+                    if mode == "offline":
+                        raise
+                    print(json.dumps({"event": "wandb_offline_fallback", "error": str(e)[:200]}))
+                    wb.teardown()  # the failed init keeps run_id registered in the service
+                    offline = dict(common)
+                    offline["mode"] = "offline"
+                    self.wandb = wb.init(id=run_id, resume="allow", **offline)
 
     def log(self, step: int, metrics: dict) -> None:
         flat: dict[str, float] = {}

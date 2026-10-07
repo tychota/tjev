@@ -15,10 +15,11 @@ from flax import nnx
 
 from tjev.config import RunConfig
 from tjev.data.pack import Batch, rows_for
+from tjev.data.render import LETTERS
 from tjev.model import Qwen35, expected_shapes, read_config, stack_layers
 from tjev.sharding import configure_runtime, install_mesh, make_mesh
 from tjev.train.optim import make_optimizer
-from tjev.train.step import make_train_step, split_model
+from tjev.train.step import make_train_step, named, split_model, train_step_name
 
 # A step needing more than this share of a device's memory leaves no room for fragmentation
 # and the other buckets' executables: lower train.microbatch_tokens or the largest bucket.
@@ -37,12 +38,15 @@ def abstract_model(cfg: RunConfig) -> Qwen35:
             cfg.lora,
             dtype=getattr(jnp, cfg.model.dtype),
             rngs=nnx.Rngs(0),
+            # compute.head_rows=letters: as many rows as the letters (their ids unread here)
+            head_rows=range(1, 1 + len(LETTERS)),
         )
 
     return nnx.eval_shape(build)
 
 
-def abstract_batch(accumulation: int, rows: int, length: int, slots: int, labels: int) -> Batch:
+def abstract_batch(accumulation: int, rows: int, length: int, slots: int, labels: int,
+                   teacher: bool = False) -> Batch:  # fmt: skip
     def shape(*s: int, dtype: Any = np.int32) -> Any:
         return jax.ShapeDtypeStruct((accumulation, rows, *s), dtype)
 
@@ -60,6 +64,7 @@ def abstract_batch(accumulation: int, rows: int, length: int, slots: int, labels
         lang_id=shape(slots),
         family_id=shape(slots),
         index=shape(slots),
+        teacher=shape(slots, labels, dtype=np.float32) if teacher else None,
     )
 
 
@@ -68,23 +73,38 @@ def compile_check(cfg: RunConfig) -> dict:
     mesh = make_mesh(cfg.mesh)
     install_mesh(cfg.compute, mesh)
     graphdef, lora, frozen = split_model(abstract_model(cfg))
-    tx = make_optimizer(cfg.optim, cfg.train.steps)
+    tx = make_optimizer(cfg.optim, cfg.train.steps, cfg.loss)
     opt_state = jax.eval_shape(tx.init, lora)
-    step = make_train_step(graphdef, tx, brier_weight=cfg.train.brier_weight, slots_per_step=1.0)
+    # the run's regularisers too (the KL's extra forward, dropout's key; the per-source
+    # selections need the data's vocabulary and only change a gather: every source here)
+    step = make_train_step(graphdef, tx, brier_weight=cfg.train.brier_weight, slots_per_step=1.0,
+                           loss=cfg.loss, dropout=cfg.lora.dropout)  # fmt: skip
+    key = (jax.eval_shape(lambda: jax.random.key(0)),) if cfg.lora.dropout else ()
     per_step = cfg.train.microbatch_tokens * mesh.size
     accumulation = max(1, cfg.train.tokens_per_step // per_step)
     report: dict[str, Any] = {"devices": mesh.size, "accumulation": accumulation, "buckets": {}}
     device_bytes = (jax.devices()[0].memory_stats() or {}).get("bytes_limit")
     for length in cfg.train.seq_buckets:
-        rows = rows_for(length, per_step)
+        rows = rows_for(length, per_step, mesh.size)
         batch = abstract_batch(
-            accumulation, rows, length, cfg.train.max_segments, cfg.train.max_labels
+            accumulation,
+            rows,
+            length,
+            cfg.train.max_segments,
+            cfg.train.max_labels,
+            teacher=bool(cfg.loss.teacher_mix),
         )
-        compiled = (
-            jax.jit(step, donate_argnums=(0, 1)).lower(lora, opt_state, frozen, batch).compile()
+        compiled = (  # named like the training program of this bucket (train_step_T…_mb…)
+            jax.jit(named(step, train_step_name(batch)), donate_argnums=(0, 1))
+            .lower(lora, opt_state, frozen, batch, *key)
+            .compile()
         )
         mem = compiled.memory_analysis()
-        entry: dict[str, Any] = {"rows_per_microbatch": rows}
+        entry: dict[str, Any] = {
+            "rows_per_microbatch": rows,
+            "tokens_per_device": cfg.train.microbatch_tokens_at(length),
+            "remat": cfg.compute.remat_at(length),  # compute.remat_by_bucket, else remat
+        }
         if mem is not None:
             need = mem.argument_size_in_bytes + mem.temp_size_in_bytes + mem.output_size_in_bytes
             entry |= {
@@ -98,7 +118,8 @@ def compile_check(cfg: RunConfig) -> dict:
                 if need > SAFE_FRACTION * device_bytes:
                     entry["warning"] = (
                         f"needs {need / 2**30:.1f} of {device_bytes / 2**30:.1f} GiB: lower "
-                        "train.microbatch_tokens or the largest bucket"
+                        "train.microbatch_tokens or the largest bucket, or a lighter "
+                        f"compute.remat_by_bucket.{length}"
                     )
         report["buckets"][length] = entry
     return report

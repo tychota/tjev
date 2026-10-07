@@ -116,3 +116,50 @@ def test_best_step_survives_checkpoint_rotation(tmp_path):
     ckpt.wait()
     assert sorted(ckpt.manager.all_steps()) == [4, 5, 6]
     ckpt.close()
+
+
+@pytest.mark.parametrize("name", ["adamw", "muon"])
+def test_peak_rate_in_state_matches_the_scheduled_optimizer(name):
+    """The optimizer at the unit schedule × the state's peak equals optax's at the full
+    schedule (weight decay included), step by step."""
+    import optax
+
+    from tjev.train.optim import _muon
+
+    spec = OptimSpec(name=name, lr=3e-4, warmup_steps=2, weight_decay=0.1, clip_mode="none")
+    steps = 8
+    full = (optax.adamw(schedule(spec, steps), b1=spec.b1, b2=spec.b2, eps=spec.eps,
+                        weight_decay=spec.weight_decay)
+            if name == "adamw" else _muon(spec, schedule(spec, steps)))  # fmt: skip
+    ours = make_optimizer(spec, steps)
+    keys = jax.random.split(jax.random.key(0), steps + 1)
+    # LoRA factor names: AdamW's weight decay applies to them only (optim.decay_mask)
+    params = {"lora_a": jax.random.normal(keys[0], (2, 16, 4)),
+              "lora_b": jax.random.normal(keys[0], (3,))}  # fmt: skip
+    p1, p2, s1, s2 = params, params, full.init(params), ours.init(params)
+    for k in keys[1:]:
+        g = jax.tree.map(lambda x, k=k: jax.random.normal(k, x.shape), params)
+        u1, s1 = full.update(g, s1, p1)
+        u2, s2 = ours.update(g, s2, p2)
+        p1, p2 = optax.apply_updates(p1, u1), optax.apply_updates(p2, u2)
+    for x, y in zip(jax.tree.leaves(p1), jax.tree.leaves(p2), strict=True):
+        np.testing.assert_allclose(x, y, rtol=1e-5, atol=1e-7)
+
+
+def test_rate_is_not_compiled_in():
+    """Two runs that differ only in their rate lower to the same program (one compile, the
+    persistent cache shared across a sweep's grid)."""
+    import optax
+
+    params = {"a": jnp.ones((2, 16, 4)), "b": jnp.ones((3,))}
+
+    def text(lr):
+        tx = make_optimizer(OptimSpec(lr=lr), 100)
+
+        def step(p, s, g):
+            u, s = tx.update(g, s, p)
+            return optax.apply_updates(p, u), s
+
+        return jax.jit(step).lower(params, tx.init(params), params).as_text()
+
+    assert text(1e-4) == text(3.5e-5)
