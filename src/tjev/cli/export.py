@@ -8,7 +8,7 @@ from typing import Annotated
 
 import typer
 
-from tjev.cli.common import echo_json
+from tjev.cli.common import NoulOrderOpt, Orders, echo_json, noul_order_value
 
 mlx_app = typer.Typer(
     help="Apple silicon: convert, check, calibrate, evaluate.", no_args_is_help=True
@@ -58,6 +58,8 @@ def calibrate(
     data: Annotated[Path, typer.Argument(help="the mix calibration split (JSONL)")],
     out: Path,
     limit: Annotated[int, typer.Option(help="items sampled for the fit")] = 2000,
+    orders: Orders = 1,
+    noul_order: NoulOrderOpt = "shuffled",
 ) -> None:
     """Per-type temperatures fitted on the MLX model (quantization shifts the logits)."""
     import numpy as np
@@ -69,7 +71,10 @@ def calibrate(
     if len(items) > limit:
         keep = sorted(np.random.default_rng(0).choice(len(items), limit, replace=False))
         items = [items[i] for i in keep]
-    echo_json(fit_calibration(Scorer(model), items, out)["temperatures"])
+    art = fit_calibration(
+        Scorer(model), items, out, orders=orders, noul_order=noul_order_value(noul_order)
+    )
+    echo_json(art["temperatures"])
 
 
 @mlx_app.command("eval")
@@ -78,6 +83,8 @@ def evaluate(
     data: Path,
     calibration: Annotated[Path | None, typer.Option(help="an MLX calibration artifact")] = None,
     out: Annotated[Path | None, typer.Option(help="write the full report here")] = None,
+    orders: Orders = 1,
+    noul_order: NoulOrderOpt = "shuffled",
 ) -> None:
     """Quality and per-decision latency of an MLX model on DATA."""
     from tjev.data.item import read_jsonl
@@ -91,8 +98,9 @@ def evaluate(
     if calibration:
         art = json.loads(calibration.read_text(encoding="utf-8"))
         temperatures = validate(art, checkpoint=mlx_identity(model), template=TEMPLATE_VERSION,
-                                backend="mlx")  # fmt: skip
-    report = mlx_evaluate(Scorer(model), list(read_jsonl(data)), temperatures)
+                                backend="mlx", orders=orders, noul_order=noul_order_value(noul_order))  # fmt: skip
+    report = mlx_evaluate(Scorer(model), list(read_jsonl(data)), temperatures, orders=orders,
+                          noul_order=noul_order_value(noul_order))  # fmt: skip
     if out:
         write_json(out, report)
     echo_json(report["all"])

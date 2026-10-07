@@ -48,6 +48,12 @@ def test_wire_parsing_and_answers():
     assert abs(sum(out.probabilities.values()) - 1) < 1e-9
     assert answer(named[1][1], np.array([0.25, 0.75])).noul == pytest.approx(0.75)
     assert named[2][1].question.labels == ("0", "1", "2")
+    # the displayed order is seeded by the question's content, not by its name
+    renamed = {**REQUEST, "questions": {"other": REQUEST["questions"]["intent"]}}
+    assert to_items(DecisionRequest.model_validate(renamed))[0][1].id == named[0][1].id
+    assert len({item.id for _, item in named}) == 3
+    empty = to_items(DecisionRequest.model_validate({**REQUEST, "state": ""}))
+    assert empty[0][1].state.startswith("(no state")
 
 
 class CountingBackend:
@@ -101,6 +107,8 @@ def test_endpoint_returns_distributions_in_label_order(client):
     assert set(body["answers"]["tone"]["probabilities"]) == {"0", "1", "2"}
     assert 0 <= body["answers"]["urgent"]["noul"] <= 1
     assert body["usage"]["prompt_tokens"] > 0
+    assert body["usage"]["input_tokens"] == body["usage"]["prompt_tokens"]
+    assert body["usage"]["output_tokens"] == 0
     named = to_items(DecisionRequest.model_validate(REQUEST))
     direct, _ = backend.score([item for _, item in named])
     for (name, item), p in zip(named, direct, strict=True):
@@ -116,3 +124,14 @@ def test_bad_requests(client):
     long = {**REQUEST, "state": "word " * 3000}  # beyond the 2048-token bucket
     assert c.post("/v1/systemone", json=long).status_code == 413
     assert c.post("/v1/other", json=REQUEST).status_code == 404
+
+
+def test_jax_backend_serves_up_to_32k_tokens_capped_by_max_tokens(tmp_path):
+    from tjev.serve.backends import SERVE_BUCKETS
+
+    assert SERVE_BUCKETS[-1] == 32768 and 16384 in SERVE_BUCKETS
+    make_tiny_snapshot(tmp_path)
+    backend = JaxBackend(model_path=tmp_path, max_tokens=16384, warmup=False)
+    assert backend.buckets == (1024, 2048, 4096, 8192, 16384)
+    with pytest.raises(ValueError, match="max_tokens"):
+        JaxBackend(model_path=tmp_path, max_tokens=512, warmup=False)

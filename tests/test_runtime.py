@@ -24,3 +24,22 @@ def test_libtpu_flags_do_not_change_the_identity():
     cfg = load_config("tpu-v6e")
     bare = dataclasses.replace(cfg, compute=dataclasses.replace(cfg.compute, libtpu_flags=()))
     assert run_identity(cfg, "m") == run_identity(bare, "m")
+
+
+def test_new_compute_fields_at_their_default_keep_the_identity(monkeypatch):
+    """Fields added after runs existed (IDENTITY_NEW_DEFAULTS): absent from the identity at
+    their default, so older runs resume; any other value is part of it."""
+    from tjev.train import loop
+
+    cfg = load_config("tpu-v6e")
+    seen = []
+    monkeypatch.setattr(loop, "fingerprint", lambda d: seen.append(d) or "x")
+    run_identity(cfg, "m")
+    assert not set(loop.IDENTITY_NEW_DEFAULTS["compute"]) & set(seen[0]["compute"])
+    monkeypatch.undo()
+    for key, default in loop.IDENTITY_NEW_DEFAULTS["compute"].items():
+        assert loop._same(getattr(cfg.compute, key), default), key  # a tuple field: a list
+    changed = dataclasses.replace(
+        cfg, compute=dataclasses.replace(cfg.compute, gdn_inverse="solve")
+    )
+    assert run_identity(changed, "m") != run_identity(cfg, "m")

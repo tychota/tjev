@@ -22,7 +22,14 @@ from typing import Any
 import numpy as np
 
 from tjev.data.item import Item, parse_item
-from tjev.data.render import LETTERS, TEMPLATE_VERSION, RenderSpec, render
+from tjev.data.render import (
+    LETTERS,
+    TEMPLATE_VERSION,
+    NoulOrder,
+    RenderSpec,
+    eval_specs,
+    render,
+)
 from tjev.eval import calibrate as cal
 from tjev.eval.metrics import summarize
 from tjev.utils import fingerprint
@@ -117,20 +124,35 @@ class Scorer:
         return np.asarray(out), len(tokens)
 
 
-def score_items(scorer: Any, items: list[Item], temperatures: dict | None = None) -> list[dict]:
-    """Per item: letter logits in display order, probabilities, target, latency."""
-    spec = RenderSpec(train=False)
+def score_items(
+    scorer: Any,
+    items: list[Item],
+    temperatures: dict | None = None,
+    *,
+    orders: int = 1,
+    noul_order: NoulOrder = "shuffled",
+) -> list[dict]:
+    """Per item: letter logits per ordering ``z`` [V, n] and probabilities ``p`` [n] (the
+    mean of the orderings' softmaxes, :mod:`tjev.eval.evalset`), target, latency, all in
+    the item's label order."""
+    spec = RenderSpec(train=False, noul_order=noul_order)
     rows = []
     for item in items:
-        text, order = render(item, spec)
-        t0 = time.perf_counter()
-        z, n_tokens = scorer.logits(text, len(order))
-        t = (temperatures or {}).get(item.question.type, 1.0)
-        p = np.exp((z - z.max()) / t)
-        p /= p.sum()
-        rows.append({"id": item.id, "z": z, "p": p, "tokens": n_tokens,
+        n = len(item.question.labels)
+        views = eval_specs(item, spec, orders)
+        z, p = np.zeros((len(views), n)), np.zeros(n)
+        t = cal.lookup(temperatures, item.question.type, item.lang)  # an eval set: lang known
+        t0, n_tokens = time.perf_counter(), 0
+        for v, view in enumerate(views):
+            text, order = render(item, view)
+            shown, tokens = scorer.logits(text, len(order))
+            n_tokens += tokens
+            z[v, order] = shown
+            e = np.exp((shown - shown.max()) / t)
+            p[order] += e / e.sum()
+        rows.append({"id": item.id, "z": z, "p": p / len(views), "tokens": n_tokens,
                      "seconds": time.perf_counter() - t0,
-                     "target": np.asarray([item.target[j] for j in order]),
+                     "target": np.asarray(item.target),
                      "type": item.question.type, "lang": item.lang})  # fmt: skip
     return rows
 
@@ -144,26 +166,57 @@ def _padded(rows: list[dict], key: str) -> tuple[np.ndarray, np.ndarray]:
     return values, mask
 
 
-def fit_calibration(scorer: Any, items: list[Item], out: str | Path) -> dict:
-    """Per-type temperatures fitted on *this* backend, as a provenance-bound artifact."""
-    rows = score_items(scorer, items)
-    logits, mask = _padded(rows, "z")
+def _views_padded(rows: list[dict]) -> tuple[np.ndarray, np.ndarray]:
+    """The rows' ``z`` [V, n] as [N, Vmax, Wmax] logits and mask (absent views all False)."""
+    views = max(r["z"].shape[0] for r in rows)
+    width = max(r["z"].shape[1] for r in rows)
+    values = np.zeros((len(rows), views, width))
+    mask = np.zeros((len(rows), views, width), bool)
+    for i, r in enumerate(rows):
+        v, n = r["z"].shape
+        values[i, :v, :n], mask[i, :v, :n] = r["z"], True
+    return values, mask
+
+
+def fit_calibration(
+    scorer: Any,
+    items: list[Item],
+    out: str | Path,
+    *,
+    orders: int = 1,
+    noul_order: NoulOrder = "shuffled",
+) -> dict:
+    """Temperatures (the default grouping) fitted on *this* backend and readout (``orders`` averaged
+    orderings, ``noul_order``), as a provenance-bound artifact."""
+    rows = score_items(scorer, items, orders=orders, noul_order=noul_order)
+    logits, mask = _views_padded(rows)
     target, _ = _padded(rows, "target")
-    fit = cal.fit_per_type(logits, mask, target, [r["type"] for r in rows])
+    fit = cal.fit_grouped(logits, mask, target, [r["type"] for r in rows],
+                          [r["lang"] for r in rows])  # fmt: skip
     art = cal.artifact(
         fit,
         checkpoint=mlx_identity(scorer.path),
         data=fingerprint({"n": len(rows), "items": [r["id"] for r in rows]}),
         template=TEMPLATE_VERSION,
         backend="mlx",
+        orders=orders,
+        noul_order=noul_order,
     )
     Path(out).write_text(json.dumps(art, indent=2))
     return art
 
 
-def evaluate(scorer: Any, items: list[Item], temperatures: dict | None = None) -> dict:
-    """Quality (accuracy, NLL, ECE, … by type and language) and latency (p50 / p95)."""
-    rows = score_items(scorer, items, temperatures)
+def evaluate(
+    scorer: Any,
+    items: list[Item],
+    temperatures: dict | None = None,
+    *,
+    orders: int = 1,
+    noul_order: NoulOrder = "shuffled",
+) -> dict:
+    """Quality (accuracy, NLL, ECE, … by type and language) and latency (p50 / p95; per
+    item, i.e. over its ``orders`` prompts)."""
+    rows = score_items(scorer, items, temperatures, orders=orders, noul_order=noul_order)
 
     def group(selected: list[dict]) -> dict:
         probs, mask = _padded(selected, "p")

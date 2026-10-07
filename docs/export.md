@@ -22,7 +22,7 @@ fp32 copy of the base, so on a small accelerator run the export with `JAX_PLATFO
 uv sync --extra mlx          # on the Mac
 tjev mlx convert EXPORT mlx/NAME-bf16 --quant bf16            # bf16 | 8bit | 4bit | 4bit-emb
 tjev mlx check mlx/NAME-bf16 EXPORT/reference.json            # parity with JAX
-tjev mlx calibrate mlx/NAME-bf16 data/mix-v3/calibration.jsonl mlx/NAME-bf16-cal.json
+tjev mlx calibrate mlx/NAME-bf16 data/mix-v7.5/calibration.jsonl mlx/NAME-bf16-cal.json
 tjev mlx eval mlx/NAME-bf16 data/jevbench/public.jsonl --calibration mlx/NAME-bf16-cal.json
 ```
 

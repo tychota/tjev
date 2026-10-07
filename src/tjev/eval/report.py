@@ -31,6 +31,7 @@ def summary(
     calibrated: dict,
     zeroshot: dict | None = None,
     extra: dict[str, dict] | None = None,
+    by_source: list[str] | tuple = (),
 ) -> str:
     """JevBench overall / by tier / family / type / language (Δ vs the control when given),
     then one table per ``extra`` report (e.g. held-out generators, mix validation)."""
@@ -62,5 +63,8 @@ def summary(
         rows = [_row("all", rep["all"])]
         rows += [_row(f"lang={k}", v) for k, v in sorted(rep.get("lang", {}).items())]
         rows += [_row(f"type={k}", v) for k, v in sorted(rep.get("type", {}).items())]
+        if title in by_source:  # e.g. validation-v7: one row per source, weakest first
+            per = sorted(rep.get("source", {}).items(), key=lambda kv: kv[1]["accuracy"])
+            rows += [_row(f"source={k}", v) for k, v in per]
         out.append(_table(f"{title} (calibrated)", rows))
     return "\n".join(out)

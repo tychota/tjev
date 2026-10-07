@@ -4,7 +4,8 @@
     tjev serve --backend mlx --model MLX_DIR --calibration C # Apple silicon
 
 Requests are async; their items are micro-batched (:mod:`tjev.serve.batcher`) into one
-backend call at a time. Invalid rubrics are 400, schema errors 422, and a state too long
+backend call at a time. ``policy`` (off by default, :mod:`tjev.serve.policy`): serving
+temperatures and the noul commit, applied after calibration. Invalid rubrics are 400, schema errors 422, and a state too long
 for the largest bucket is 413.
 """
 
@@ -18,10 +19,26 @@ from fastapi import FastAPI, HTTPException
 from tjev import __version__
 from tjev.serve.backends import Backend
 from tjev.serve.batcher import MicroBatcher
-from tjev.serve.wire import DecisionRequest, DecisionResponse, Usage, answer, to_items
+from tjev.serve.policy import AbstentionPolicy, ServingPolicy, as_policy
+from tjev.serve.wire import (
+    DecisionRequest,
+    DecisionResponse,
+    Usage,
+    answer,
+    to_items,
+)
 
 
-def create_app(backend: Backend, *, max_items: int = 64, max_wait_ms: float = 5.0) -> FastAPI:
+def create_app(
+    backend: Backend,
+    *,
+    max_items: int = 64,
+    max_wait_ms: float = 5.0,
+    policy: ServingPolicy | AbstentionPolicy | None = None,
+) -> FastAPI:
+    policy = as_policy(policy)
+    abstention = None if policy is None else policy.abstention
+    temps = {} if policy is None else {k: t for k, t in policy.temperatures.items() if t != 1.0}
     batcher = MicroBatcher(backend, max_items=max_items, max_wait_ms=max_wait_ms)
 
     @asynccontextmanager
@@ -34,7 +51,15 @@ def create_app(backend: Backend, *, max_items: int = 64, max_wait_ms: float = 5.
 
     @app.get("/health")
     async def health() -> dict[str, str]:
-        return {"status": "ok", "model": backend.name}
+        return {"status": "ok", "model": backend.name,
+                "orders": str(getattr(backend, "orders", 1)),
+                "noul_order": str(getattr(backend, "noul_order", "shuffled")),
+                "abstention": "off" if abstention is None else (
+                    f"[{abstention.low}, {abstention.high}] {abstention.snap}"
+                    + (f" margin {abstention.margin}" if abstention.margin else "")
+                    + (" into noul" if abstention.into_noul else "")),
+                "serving_temperatures": ", ".join(f"{k}={v}" for k, v in temps.items())
+                or "off"}  # fmt: skip
 
     @app.post("/v1/systemone")
     async def systemone(request: DecisionRequest) -> DecisionResponse:
@@ -47,9 +72,11 @@ def create_app(backend: Backend, *, max_items: int = 64, max_wait_ms: float = 5.
         except ValueError as e:  # e.g. a state longer than the largest bucket
             raise HTTPException(status_code=413, detail=str(e)) from e
         answers = {
-            name: answer(item, p) for (name, item), p in zip(named, scored.probs, strict=True)
+            name: answer(item, p, policy)
+            for (name, item), p in zip(named, scored.probs, strict=True)
         }
-        usage = Usage(prompt_tokens=scored.prompt_tokens, seconds=scored.seconds,
+        usage = Usage(prompt_tokens=scored.prompt_tokens, input_tokens=scored.prompt_tokens,
+                      seconds=scored.seconds,
                       batch_items=scored.batch_items)  # fmt: skip
         return DecisionResponse(answers=answers, usage=usage, model=backend.name)
 

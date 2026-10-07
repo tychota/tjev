@@ -121,3 +121,86 @@ def test_mlx_calibration_is_bound_to_checkpoint_and_quantization(tmp_path):
     assert report["all"]["n"] == 120
     assert set(report["type"]) == {"noul", "choice", "score"}
     assert report["all"]["p50_s"] >= 0
+
+
+@pytest.mark.parametrize("init", ["pissa", "lora-ga", "eva"])
+def test_an_init_run_exports_the_base_at_init(tmp_path, capsys, init):
+    """lr = 0: the adapters stay at their init, so the export must be the base model: the
+    merged snapshot W + s·(A0B0 − A0B0) = W, the PEFT adapter (rank 2r for residual inits:
+    [A | A0]·[B ; −B0]) a zero delta on the original W. A resume restores the saved init."""
+    from tjev.model.lora_init import INIT_FILE
+
+    make_tiny_snapshot(tmp_path / "model")
+    write_jsonl(tmp_path / "train.jsonl", [parse_item(r) for r in tiny_items(60, seed=1)])
+    overrides = [
+        "name=run", f"output={tmp_path / 'runs'}", f"model.path={tmp_path / 'model'}",
+        "model.dtype=float32", f"data.train=[{tmp_path / 'train.jsonl'}]", "train.steps=1",
+        "train.seq_buckets=[1024]", "train.microbatch_tokens=1024", "train.tokens_per_step=2048",
+        "train.max_segments=4", "train.checkpoint_every=1", "compute.gdn_chunk=16", "lora.rank=4",
+        "optim.lr=0.0", "optim.warmup_steps=1", "log.tensorboard=false", f"lora.init={init}",
+        "lora.init_batches=2", "lora.init_niter=2", "train.quick_eval_every=0",
+    ]  # fmt: skip
+    cfg = load_config(overrides=overrides)
+    train(cfg)
+    run = tmp_path / "runs" / "run"
+    assert (run / INIT_FILE).exists()
+    assert '"event": "lora_init"' in capsys.readouterr().out
+    train(cfg)  # a resume: the init is restored, never recomputed
+    assert '"event": "lora_init_restored"' in capsys.readouterr().out
+    out = tmp_path / "export"
+    export(run, out, merged=True, reference=False)
+    base = load_file(tmp_path / "model" / "model.safetensors")
+    merged = load_file(out / "model.safetensors")
+    adapters = load_file(out / "adapter_model.safetensors")
+    config = json.loads((out / "adapter_config.json").read_text())
+    residual = init != "eva"
+    assert config["r"] == (8 if residual else 4)
+    scale = config["lora_alpha"] / np.sqrt(config["r"])
+    assert scale == pytest.approx(cfg.lora.scale)
+    assert json.loads((out / DECISION_META).read_text())["lora_init"] == init
+    for proj in ("mlp.gate_proj", "mlp.down_proj", "linear_attn.in_proj_qkv"):
+        name = f"model.layers.0.{proj}.weight"
+        want = base[name].astype(np.float32)
+        np.testing.assert_allclose(merged[name].astype(np.float32), want, atol=2e-3, rtol=1e-2)
+        stem = f"base_model.model.model.language_model.layers.0.{proj}"
+        a, b = adapters[stem + ".lora_A.weight"], adapters[stem + ".lora_B.weight"]
+        assert np.abs(scale * (b @ a)).max() < 1e-5
+        if residual:  # the adapter half that moved W's part into s·A0B0 is not zero
+            assert np.abs(a).max() > 0 and np.abs(b).max() > 0
+
+
+def test_a_gate_full_run_exports_its_trained_gate_kernels(tmp_path):
+    """lora.gate_full: the merged snapshot holds the trained in_proj_a / in_proj_b kernels,
+    and the PEFT adapter carries them exactly as a rank-d_out LoRA (B = I, A = ΔW) at
+    scale 1 (rank_pattern / alpha_pattern): W0 + s·BA = the merged weight."""
+    make_tiny_snapshot(tmp_path / "model")
+    write_jsonl(tmp_path / "train.jsonl", [parse_item(r) for r in tiny_items(60, seed=1)])
+    overrides = [
+        "name=run", f"output={tmp_path / 'runs'}", f"model.path={tmp_path / 'model'}",
+        "model.dtype=float32", f"data.train=[{tmp_path / 'train.jsonl'}]", "train.steps=2",
+        "train.seq_buckets=[1024]", "train.microbatch_tokens=1024", "train.tokens_per_step=2048",
+        "train.max_segments=4", "train.checkpoint_every=2", "compute.gdn_chunk=16", "lora.rank=4",
+        "optim.lr=1e-2", "optim.warmup_steps=1", "log.tensorboard=false", "lora.gate_full=true",
+        "train.quick_eval_every=0",
+    ]  # fmt: skip
+    cfg = load_config(overrides=overrides)
+    train(cfg)
+    out = tmp_path / "export"
+    export(tmp_path / "runs" / "run", out, merged=True, reference=False)
+    base = load_file(tmp_path / "model" / "model.safetensors")
+    merged = load_file(out / "model.safetensors")
+    adapters = load_file(out / "adapter_model.safetensors")
+    config = json.loads((out / "adapter_config.json").read_text())
+    for proj in ("in_proj_a", "in_proj_b"):
+        name = f"model.layers.0.linear_attn.{proj}.weight"
+        stem = f"base_model.model.model.language_model.layers.0.linear_attn.{proj}"
+        a, b = adapters[stem + ".lora_A.weight"], adapters[stem + ".lora_B.weight"]
+        r = config["rank_pattern"][proj]
+        assert a.shape[0] == r == base[name].shape[0] and np.array_equal(b, np.eye(r))
+        scale = config["alpha_pattern"][proj] / np.sqrt(r)
+        assert scale == pytest.approx(1.0)
+        rebuilt = base[name].astype(np.float32) + scale * (b @ a)
+        assert np.abs(a).max() > 0  # the gate kernel moved
+        np.testing.assert_allclose(merged[name].astype(np.float32), rebuilt, atol=2e-3, rtol=1e-2)
+    # the other projections keep their LoRA at the run's rank
+    assert config["r"] == 4
