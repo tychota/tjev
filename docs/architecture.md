@@ -48,12 +48,15 @@ out          = out_proj(RMSNorm(o) · silu(z))
 
 - **The core is one checkpointed unit.** The conv, the gates and the delta rule are
   rematerialised together, so their fp32 intermediates live only during their own
-  backward pass.
+  backward pass. Under `remat=core_states` the layer saves the kernel's residuals instead,
+  so the forward kernel runs once per microbatch ([kernels.md](kernels.md#remat-policies)).
 - **The conv has a custom VJP.** Its backward keeps only x, the weight and the segment
   ids.
 - **The delta-rule implementation is selectable.** It is chosen by
-  `compute.gdn_impl`: the XLA chunked form, the recurrence, or the Pallas TPU kernels (see
-  [kernels.md](kernels.md)).
+  `compute.gdn_impl`: the XLA chunked form, the recurrence, or the Pallas TPU kernels, up
+  to the megakernel `pallas_tpu_mega2` that runs the whole core, conv included, as one
+  forward and one backward kernel (see [kernels.md](kernels.md)). The gated output norm
+  runs per head or on the flat `[B,T,H·Dv]` view (`compute.gdn_norm`).
 
 ### Gated attention layer (`tjev.model.attention.GatedAttention`)
 
@@ -73,12 +76,20 @@ trainable state.
 - **Targets.** Adapters sit on every projection: `q/k/v/o_proj`, the GDN
   `in_proj_qkv/z/a/b` and `out_proj`, and the MLP `gate/up/down_proj`.
 - **Frozen.** The conv, `A_log`, `dt_bias`, norms and embeddings stay frozen.
-- **Scaling.** rsLoRA: α/√r with α = 32, rank 32 (0.8B, 2B) or 64 (4B, 9B).
+- **Scaling.** rsLoRA: α/√r with α = 32, rank 32 (0.8B, 2B) or 64 (4B, 9B) by default;
+  the sweep found rank 16 as good at the 1/√r rate, and the campaign planner sets the rank
+  per size ([results.md](results.md#tpu-sweep-v6e-1-08b-proxy-measured)).
 - **Precision and init.** Adapters are fp32, cast to the compute dtype for the matmul.
   B starts at zero, so a fresh adapter is the identity.
 - **Grouped A matrices.** Projections that share an input (`in_proj_*`, `q/k/v`,
   `gate/up`) concatenate their A matrices. x is then read once by one wider low-rank
   matmul (`lora.grouped`).
+- **Two forms** (`compute.lora_impl`): `unmerged` (the adapter as its own low-rank
+  matmuls), `merged` (W + s·AB formed per microbatch, one matmul at the base cost; the
+  v6e1 default up to 4B)
+  ([kernels.md](kernels.md#merged-lora-computelora_implmerged)).
+- **Inits** (`lora.init`): `default` (A Gaussian, B = 0), `pissa`, `eva`, `lora-ga`. None
+  beat the default in the sweep ([results.md](results.md)).
 
 ## The decision readout
 
@@ -99,8 +110,10 @@ with its answer slot at its last token.
   `tests/model/test_parity.py` checks this against HF on separate sequences.
 - **Fixed shapes.** Every step holds microbatches of a single sequence bucket (1024, 2048
   or 4096 tokens), so shapes stay static and each bucket compiles once.
-- **Bins.** Packing is first-fit over 16 open bins per bucket, which cut padding from 10%
-  to 6% compared with next-fit.
+- **Bins.** Packing is first-fit over 16 open bins per bucket (`train.packing=bucket`),
+  which cut padding from 10% to 6% compared with next-fit; `best_fit` packs across the
+  buckets by best fit and brings padding under 3% (the campaign's default on v6e1,
+  [data.md](data.md#packing-trainpacking)).
 - **Loss normalisation.** A 4096-token step holds far fewer answer slots than a 1024-token
   one, so the gradient is divided by the *expected* slots per step (measured once on the
   packer). Every item then weighs the same whatever its bucket.
@@ -123,7 +136,7 @@ number of data workers.
 | `tjev.eval` | Metrics, calibration, eval sets, loading finished runs, post-training, reports |
 | `tjev.export` | PEFT and merged export, reference logits, MLX |
 | `tjev.serve` | The `/v1/systemone` API: pydantic wire models, FastAPI app, asyncio micro-batcher, JAX and MLX backends |
-| `tjev.campaign` | TPU planner and cost model, job queue, bench |
+| `tjev.campaign` | TPU planner and cost model, job queue, bench, parity against the official model, the kernel journey, xprof summaries and IR statistics ([profiling.md](profiling.md)) |
 | `tjev.cli` | The `tjev` command, one Typer module per command group |
 
 Design choices that follow the JAX AI stack:
