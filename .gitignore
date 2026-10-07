@@ -11,7 +11,9 @@ dist/
 /models/
 /runs/
 /data/
-/reports/
+/reports/*
+!/reports/data/
+!/reports/calibration/
 /logs/
 /mlx/
 *.npz

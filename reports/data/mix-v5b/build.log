@@ -1,0 +1,351 @@
+[jevbench] filtering against 231 public states
+[public] boolq …
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+
+
+  boolq: 9427 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+[public] mnli …
+
+
+
+
+
+  mnli: 20000 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+[public] snli …
+
+
+
+  snli: 10000 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+[public] xnli_fr …
+
+
+
+  xnli_fr: 2490 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+[public] xnli_fr_mt …
+  xnli_fr_mt: 10000 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+[public] paws …
+
+
+
+  paws: 10000 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0, 'train_label_conflict': 2}
+[public] pawsx_fr …
+
+
+
+  pawsx_fr: 1991 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 7, 'train_label_conflict': 2}
+[public] pawsx_fr_mt …
+  pawsx_fr_mt: 7000 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0, 'train_label_conflict': 4}
+[public] stsb …
+
+
+
+  stsb: 5733 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 6, 'train_label_conflict': 10}
+[public] sst5 …
+Repo card metadata block was not found. Setting CardData to empty.
+
+
+
+Repo card metadata block was not found. Setting CardData to empty.
+  sst5: 8538 train, drops {'empty_state': 5, 'heldout_duplicate': 0, 'train_overlaps_heldout': 2}
+[public] allocine_fr …
+
+
+
+  allocine_fr: 16000 train, drops {'empty_state': 1, 'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+[public] mtop_fr …
+
+
+
+
+  mtop_fr: 11524 train, drops {'heldout_duplicate': 1, 'train_overlaps_heldout': 24}
+[public] piaf_fr …
+
+  piaf_fr: 3557 train, drops {'heldout_duplicate': 1, 'train_overlaps_heldout': 0}
+[public] helpsteer2_helpfulness …
+
+
+  helpsteer2_helpfulness: 8000 train, drops {'heldout_duplicate': 1, 'train_overlaps_heldout': 3, 'train_label_conflict': 4}
+[public] helpsteer2_correctness …
+  helpsteer2_correctness: 8000 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 4}
+[public] banking77 …
+
+
+  banking77: 9995 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 8}
+[public] clinc_oos …
+
+
+
+  clinc_oos: 15245 train, drops {'empty_state': 4, 'heldout_duplicate': 0, 'train_overlaps_heldout': 2}
+[public] massive_en …
+
+
+
+  massive_en: 11502 train, drops {'empty_state': 5, 'heldout_duplicate': 0, 'train_overlaps_heldout': 8}
+[public] massive_fr …
+
+
+
+  massive_fr: 11410 train, drops {'empty_state': 1, 'heldout_duplicate': 3, 'train_overlaps_heldout': 103}
+[public] squad2 …
+
+
+  squad2: 20000 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0, 'train_label_conflict': 2}
+[public] vitaminc …
+
+
+
+  vitaminc: 20000 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+[public] jailbreak …
+
+
+  jailbreak: 984 train, drops {'empty_state': 1, 'heldout_duplicate': 0, 'train_overlaps_heldout': 16, 'train_near_duplicate_of_heldout': 43}
+[public] prompt_injection …
+
+
+  prompt_injection: 393 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+[public] dbpedia …
+
+
+  dbpedia: 8000 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+[public] gsm8k_check …
+
+
+  gsm8k_check: 7473 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+[public] raid …
+
+Creating parquet from Arrow format:   0%|          | 0/1 [00:00<?, ?ba/s]
+Creating parquet from Arrow format: 100%|██████████| 1/1 [00:00<00:00,  2.58ba/s]
+Creating parquet from Arrow format: 100%|██████████| 1/1 [00:00<00:00,  2.58ba/s]
+  raid: 20000 train, drops {'empty_state': 3, 'heldout_duplicate': 0, 'train_overlaps_heldout': 2}
+[public] mage …
+
+
+
+  mage: 20000 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+[public] hc3_fr …
+
+
+
+  hc3_fr: 10000 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 105}
+[public] pavlick_formality …
+
+
+  pavlick_formality: 9215 train, drops {'empty_state': 11, 'heldout_duplicate': 0, 'train_overlaps_heldout': 24, 'train_label_conflict': 24}
+[public] tweet_sentiment_en …
+
+
+
+  tweet_sentiment_en: 1839 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+[public] tweet_sentiment_fr …
+
+
+
+  tweet_sentiment_fr: 1828 train, drops {'heldout_duplicate': 5, 'train_overlaps_heldout': 9, 'train_label_conflict': 2}
+[public] go_emotions …
+
+  go_emotions: 20000 train, drops {'empty_state': 7, 'heldout_duplicate': 0, 'train_overlaps_heldout': 17, 'train_label_conflict': 187}
+[public] mlma_fr …
+
+  mlma_fr: 3589 train, drops {'heldout_duplicate': 1, 'train_overlaps_heldout': 8, 'train_label_conflict': 7}
+[public] mlma_en …
+
+  mlma_en: 5040 train, drops {'heldout_duplicate': 1, 'train_overlaps_heldout': 8, 'train_label_conflict': 17}
+[public] textdetox_fr …
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  textdetox_fr: 4450 train, drops {'empty_state': 1, 'heldout_duplicate': 54, 'train_overlaps_heldout': 6}
+[public] plumb …
+  plumb: 5014 train, drops {'heldout_duplicate': 6, 'train_overlaps_heldout': 0}
+[public] openjev …
+  openjev: 40000 train, drops {'heldout_duplicate': 1, 'train_overlaps_heldout': 30}
+[public] decider_teacher …
+  decider_teacher: 30000 train, drops {'heldout_duplicate': 14, 'train_overlaps_heldout': 0, 'train_label_conflict': 45}
+[public] mghafiri_scenarios …
+
+
+
+  mghafiri_scenarios: 11042 train, drops {'too_many_options': 32, 'heldout_duplicate': 0, 'train_overlaps_heldout': 0, 'jevbench_overlap': 47, 'jevbench_overlap:8gram': 47, 'train_label_conflict': 2}
+[public] certo …
+  certo: 15000 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 198}
+[public] jev_fr_pilot …
+  jev_fr_pilot: 200 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+  gen_return_window: 8000 train, drops {'heldout_duplicate': 1, 'train_overlaps_heldout': 0}
+  gen_weekday: 8000 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+  gen_invoice_total: 8000 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+  gen_base_rate: 8000 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+  gen_schedule_conflict: 8000 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+  gen_table_argmax: 8000 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+  gen_refund_policy: 8000 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+  gen_long_refund_policy: 4000 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+  gen_ticket_triage: 8000 train, drops {'heldout_duplicate': 3, 'train_overlaps_heldout': 0}
+  gen_spelling_error: 8000 train, drops {'heldout_duplicate': 9, 'train_overlaps_heldout': 0}
+  gen_register: 8000 train, drops {'heldout_duplicate': 12, 'train_overlaps_heldout': 0}
+  [hygiene] boolq: 9426 train, drops {'train_exact_duplicate': 1}
+  [hygiene] paws: 9993 train, drops {'train_exact_duplicate': 7}
+  [hygiene] pawsx_fr: 1965 train, drops {'train_near_heldout': 21, 'train_exact_duplicate': 5}
+  [hygiene] pawsx_fr_mt: 6930 train, drops {'train_exact_duplicate': 70}
+  [hygiene] stsb: 5689 train, drops {'train_exact_duplicate': 41, 'train_near_heldout': 3}
+  [hygiene] sst5: 8528 train, drops {'train_exact_duplicate': 10}
+  [hygiene] allocine_fr: 15985 train, drops {'train_exact_duplicate': 15}
+  [hygiene] mtop_fr: 11503 train, drops {'train_equals_heldout': 13, 'train_near_heldout': 8}
+  [hygiene] piaf_fr: 3553 train, drops {'train_exact_duplicate': 4}
+  [hygiene] helpsteer2_helpfulness: 7998 train, drops {'train_exact_duplicate': 2}
+  [hygiene] helpsteer2_correctness: 7997 train, drops {'train_exact_duplicate': 1, 'train_near_heldout': 1, 'prompt_too_long': 1}
+  [hygiene] banking77: 9977 train, drops {'train_near_heldout': 17, 'train_equals_heldout': 1}
+  [hygiene] clinc_oos: 15233 train, drops {'train_equals_heldout': 7, 'train_near_heldout': 5}
+  [hygiene] massive_en: 11472 train, drops {'train_near_heldout': 26, 'train_equals_heldout': 4}
+  [hygiene] massive_fr: 11384 train, drops {'train_near_heldout': 22, 'train_equals_heldout': 4}
+  [hygiene] vitaminc: 19995 train, drops {'train_exact_duplicate': 5}
+  [hygiene] jailbreak: 958 train, drops {'train_near_heldout': 10, 'train_exact_duplicate': 16}
+  [hygiene] raid: 19924 train, drops {'prompt_too_long': 62, 'train_exact_duplicate': 14}
+  [hygiene] mage: 19997 train, drops {'prompt_too_long': 3}
+  [hygiene] hc3_fr: 9956 train, drops {'train_exact_duplicate': 41, 'train_near_heldout': 3}
+  [hygiene] pavlick_formality: 9212 train, drops {'train_exact_duplicate': 3}
+  [hygiene] tweet_sentiment_fr: 1804 train, drops {'train_near_heldout': 15, 'train_exact_duplicate': 9}
+  [hygiene] go_emotions: 19931 train, drops {'train_exact_duplicate': 69}
+  [hygiene] mlma_fr: 3567 train, drops {'train_near_heldout': 10, 'train_exact_duplicate': 12}
+  [hygiene] mlma_en: 5032 train, drops {'train_exact_duplicate': 6, 'train_near_heldout': 2}
+  [hygiene] textdetox_fr: 4260 train, drops {'train_exact_duplicate': 190}
+  [hygiene] plumb: 4998 train, drops {'prompt_too_long': 9, 'train_exact_duplicate': 7}
+  [hygiene] openjev: 36312 train, drops {'train_near_heldout': 3655, 'train_exact_duplicate': 33}
+  [hygiene] decider_teacher: 28824 train, drops {'train_exact_duplicate': 1166, 'train_near_heldout': 10}
+  [hygiene] certo: 14061 train, drops {'train_near_heldout': 939}
+  [rebalance] raid: yes 0.9728 → 0.7, 19924 → 10891 rows
+  [rebalance] mage: yes 0.7326 → 0.7, 19997 → 18803 rows
+  [rebalance] mlma_fr: yes 0.7553 → 0.7, 3567 → 2910 rows
+  [rebalance] mlma_en: yes 0.8263 → 0.7, 5032 → 2913 rows
+  [rebalance] openjev: yes 0.2919 → 0.3, 36312 → 35969 rows
+  [epoch-cap] boolq: 9426 rows measured
+  [epoch-cap] mnli: 20000 rows measured
+  [epoch-cap] snli: 10000 rows measured
+  [epoch-cap] xnli_fr: 2490 rows measured
+  [epoch-cap] xnli_fr_mt: 10000 rows measured
+  [epoch-cap] paws: 9993 rows measured
+  [epoch-cap] pawsx_fr: 1965 rows measured
+  [epoch-cap] pawsx_fr_mt: 6930 rows measured
+  [epoch-cap] stsb: 5689 rows measured
+  [epoch-cap] sst5: 8528 rows measured
+  [epoch-cap] allocine_fr: 15985 rows measured
+  [epoch-cap] mtop_fr: 11503 rows measured
+  [epoch-cap] piaf_fr: 3553 rows measured
+  [epoch-cap] helpsteer2_helpfulness: 7998 rows measured
+  [epoch-cap] helpsteer2_correctness: 7997 rows measured
+  [epoch-cap] banking77: 9977 rows measured
+  [epoch-cap] clinc_oos: 15233 rows measured
+  [epoch-cap] massive_en: 11472 rows measured
+  [epoch-cap] massive_fr: 11384 rows measured
+  [epoch-cap] squad2: 20000 rows measured
+  [epoch-cap] vitaminc: 19995 rows measured
+  [epoch-cap] jailbreak: 958 rows measured
+  [epoch-cap] prompt_injection: 393 rows measured
+  [epoch-cap] dbpedia: 8000 rows measured
+  [epoch-cap] gsm8k_check: 7473 rows measured
+  [epoch-cap] raid: 10891 rows measured
+  [epoch-cap] mage: 18803 rows measured
+  [epoch-cap] hc3_fr: 9956 rows measured
+  [epoch-cap] pavlick_formality: 9212 rows measured
+  [epoch-cap] tweet_sentiment_en: 1839 rows measured
+  [epoch-cap] tweet_sentiment_fr: 1804 rows measured
+  [epoch-cap] go_emotions: 19931 rows measured
+  [epoch-cap] mlma_fr: 2910 rows measured
+  [epoch-cap] mlma_en: 2913 rows measured
+  [epoch-cap] textdetox_fr: 4260 rows measured
+  [epoch-cap] plumb: 4998 rows measured
+  [epoch-cap] openjev: 35969 rows measured
+  [epoch-cap] decider_teacher: 28824 rows measured
+  [epoch-cap] mghafiri_scenarios: 11042 rows measured
+  [epoch-cap] certo: 14061 rows measured
+  [epoch-cap] jev_fr_pilot: 200 rows measured
+  [epoch-cap] gen_return_window: 8000 rows measured
+  [epoch-cap] gen_weekday: 8000 rows measured
+  [epoch-cap] gen_invoice_total: 8000 rows measured
+  [epoch-cap] gen_base_rate: 8000 rows measured
+  [epoch-cap] gen_schedule_conflict: 8000 rows measured
+  [epoch-cap] gen_table_argmax: 8000 rows measured
+  [epoch-cap] gen_refund_policy: 8000 rows measured
+  [epoch-cap] gen_long_refund_policy: 4000 rows measured
+  [epoch-cap] gen_ticket_triage: 8000 rows measured
+  [epoch-cap] gen_spelling_error: 8000 rows measured
+  [epoch-cap] gen_register: 8000 rows measured
+[epoch-cap] round 0: max jev_fr_pilot 20.67, 0 capped, blocks that cannot absorb: none
+[epoch-cap] round 1: max decider_teacher 2.32, 8 capped, blocks that cannot absorb: none
+[epoch-cap] round 2: max jev_fr_pilot 2.21, 10 capped, blocks that cannot absorb: ['jev']
+[epoch-cap] round 3: max gen_long_refund_policy 2.54, 18 capped, blocks that cannot absorb: ['jev']
+[epoch-cap] round 4: max prompt_injection 2.27, 19 capped, blocks that cannot absorb: ['generators', 'jev']
+[epoch-cap] round 5: max tweet_sentiment_fr 1.00, 19 capped, blocks that cannot absorb: ['generators', 'jev']
+[epoch-cap] round 6: max prompt_injection 2.06, 19 capped, blocks that cannot absorb: ['generators', 'jev']
+[epoch-cap] round 7: max mlma_fr 0.99, 19 capped, blocks that cannot absorb: ['generators', 'jev']
+{
+  "train_rows_by_lang": {
+    "en": 389903,
+    "fr": 108652
+  },
+  "fr_sampled_share": 0.205,
+  "mixture": {
+    "plumb": 0.020346,
+    "openjev": 0.145156,
+    "decider_teacher": 0.117089,
+    "mghafiri_scenarios": 0.045396,
+    "certo": 0.056902,
+    "jev_fr_pilot": 0.000818,
+    "gen_return_window": 0.032252,
+    "gen_weekday": 0.032697,
+    "gen_invoice_total": 0.032516,
+    "gen_base_rate": 0.032778,
+    "gen_schedule_conflict": 0.032309,
+    "gen_table_argmax": 0.032858,
+    "gen_refund_policy": 0.032678,
+    "gen_long_refund_policy": 0.016392,
+    "gen_ticket_triage": 0.032336,
+    "boolq": 0.007141,
+    "mnli": 0.010404,
+    "snli": 0.007355,
+    "xnli_fr": 0.00624,
+    "xnli_fr_mt": 0.006253,
+    "paws": 0.007353,
+    "pawsx_fr": 0.005545,
+    "pawsx_fr_mt": 0.005206,
+    "stsb": 0.00555,
+    "sst5": 0.006793,
+    "allocine_fr": 0.015811,
+    "mtop_fr": 0.013414,
+    "piaf_fr": 0.007454,
+    "helpsteer2_helpfulness": 0.006579,
+    "helpsteer2_correctness": 0.006579,
+    "banking77": 0.007348,
+    "clinc_oos": 0.009079,
+    "massive_en": 0.007879,
+    "massive_fr": 0.013344,
+    "squad2": 0.010404,
+    "vitaminc": 0.010403,
+    "jailbreak": 0.002277,
+    "prompt_injection": 0.001494,
+    "dbpedia": 0.006579,
+    "gsm8k_check": 0.00636,
+    "raid": 0.01176,
+    "mage": 0.015452,
+    "hc3_fr": 0.013324,
+    "pavlick_formality": 0.010814,
+    "tweet_sentiment_en": 0.004833,
+    "tweet_sentiment_fr": 0.003617,
+    "go_emotions": 0.015907,
+    "mlma_fr": 0.005849,
+    "mlma_en": 0.006082,
+    "textdetox_fr": 0.008785,
+    "gen_spelling_error": 0.024105,
+    "gen_register": 0.024105
+  }
+}

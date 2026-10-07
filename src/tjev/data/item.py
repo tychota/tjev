@@ -7,7 +7,9 @@ JSONL row::
                   "criteria": {"label": "description", ...}},   # noul: {"false": .., "true": ..}
      "labels": ["..."],                  # optional for choice/score if criteria given
      "expected": "label",                # or "target": {"label": prob} (soft), or "gold_probs"
-     "source": "...", "family": "...", "lang": "en|fr|..."}
+     "teacher": {"label": prob},         # optional: a teacher model's distribution
+     "source": "...", "family": "...", "lang": "en|fr|...",
+     "license": "...", "license_use": "commercial|non-commercial|unspecified"}  # optional
 
 Noul questions use labels ``["no", "yes"]``; score questions ``["0".."n"]`` in order.
 """
@@ -24,6 +26,10 @@ from typing import Any, Literal
 QuestionType = Literal["noul", "choice", "score"]
 TYPES: tuple[QuestionType, ...] = ("noul", "choice", "score")
 NOUL_LABELS = ("no", "yes")
+# mix-v7: per-row licence use (tasksource's convention): "commercial" (the card allows it,
+# share-alike included), "non-commercial" (NC / academic-only), "unspecified" (no or an
+# unclear licence). A commercial-only mix drops the non-commercial rows.
+LICENSE_USES = ("commercial", "non-commercial", "unspecified")
 
 
 @dataclass(frozen=True)
@@ -44,6 +50,13 @@ class Item:
     family: str = "unknown"
     lang: str = "en"
     positives: tuple[int, ...] = field(default=())  # labels with target mass (never dropped)
+    # a teacher model's distribution over question.labels (plumb teacher_probs, decider
+    # teacher_p), or None: the loss.teacher_* option mixes it into the training target
+    teacher: tuple[float, ...] | None = None
+    # mix-v7: the row's licence and its use (LICENSE_USES); "" when not recorded (the
+    # held-out files of earlier mixes), and then not written
+    license: str = ""
+    license_use: str = ""
 
     @property
     def gold(self) -> int:
@@ -112,9 +125,15 @@ def parse_item(raw: dict, where: str = "item") -> Item:
         if expected not in labels:
             raise ValueError(f"{where}: expected {expected!r} not in labels")
         target = tuple(1.0 if label == expected else 0.0 for label in labels)
+    teacher = raw.get("teacher")
+    if teacher:
+        teacher = _distribution(teacher, labels, f"{where} (teacher)")
     state = rendered_state(raw["state"])
     if not isinstance(state, str) or not state.strip():
         raise ValueError(f"{where}: empty state")
+    license_use = str(raw.get("license_use") or "")
+    if license_use and license_use not in LICENSE_USES:
+        raise ValueError(f"{where}: license_use {license_use!r} not in {LICENSE_USES}")
     return Item(
         id=str(raw.get("id", where)),
         state=state,
@@ -124,6 +143,9 @@ def parse_item(raw: dict, where: str = "item") -> Item:
         family=str(raw.get("family", "unknown")),
         lang=str(raw.get("lang", "en")),
         positives=tuple(i for i, p in enumerate(target) if p > 0),
+        teacher=teacher or None,
+        license=str(raw.get("license") or ""),
+        license_use=license_use,
     )
 
 
@@ -148,6 +170,12 @@ def item_to_json(item: Item) -> dict:
         out["expected"] = q.labels[item.gold]
     else:
         out["target"] = dict(zip(q.labels, item.target, strict=True))
+    if item.teacher is not None:
+        out["teacher"] = dict(zip(q.labels, item.teacher, strict=True))
+    if item.license:
+        out["license"] = item.license
+    if item.license_use:
+        out["license_use"] = item.license_use
     return out
 
 

@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import re
 from collections import defaultdict
 from pathlib import Path
@@ -32,8 +33,48 @@ def _instructions(value) -> str:
     lines = [str(value.get("question", ""))]
     for key, text in value.items():
         if key != "question":
-            lines.append(f"{key.replace('_', ' ').capitalize()}: {text}")
+            lines.append(f"{key.replace('_', ' ').capitalize()}: {criterion_text(text)}")
     return "\n".join(line for line in lines if line)
+
+
+# Structured option descriptors (decider, mghafiri): the head names the option, the main
+# field describes it; any other field follows as "Key: text".
+_HEAD_KEYS = ("level", "name", "label", "company")
+_MAIN_KEYS = ("definition", "description", "desc", "does", "action", "value", "text", "_desc")
+
+
+def criterion_text(value) -> str:
+    """An option descriptor as text: a string as is, None as "", a dict as
+    "head: main; Key: other; …" (e.g. ``{'level': 'Minor', 'definition': 'Cosmetic'}`` →
+    "Minor: Cosmetic", ``{'value': None}`` → ""), a list as its items joined by "; "."""
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, list):
+        return "; ".join(t for v in value if (t := criterion_text(v)))
+    if not isinstance(value, dict):
+        return str(value)
+    fields = {str(k): criterion_text(v) for k, v in value.items()}
+    head = next((fields[k] for k in _HEAD_KEYS if fields.get(k)), "")
+    main = next((fields[k] for k in _MAIN_KEYS if fields.get(k)), "")
+    used = {k for k in (*_HEAD_KEYS, *_MAIN_KEYS) if fields.get(k) in (head, main)}
+    first = f"{head}: {main}" if head and main and head != main else head or main
+    rest = [
+        f"{k.strip('_').replace('_', ' ').capitalize()}: {t}"
+        for k, t in fields.items()
+        if t and k not in used and not k.startswith("_")
+    ]
+    return "; ".join(p for p in (first, *rest) if p)
+
+
+def _criteria_text(criteria, kind: str):
+    """Criteria with every descriptor as text (noul / choice: a dict, score: a list)."""
+    if kind == "score" and isinstance(criteria, list):
+        return [criterion_text(c) for c in criteria]
+    if isinstance(criteria, dict):
+        return {str(k): criterion_text(v) for k, v in criteria.items()}
+    return criteria
 
 
 def _hash01(key: str) -> float:
@@ -54,7 +95,8 @@ NOUL_MAP = {"no": "no", "false": "no", "yes": "yes", "true": "yes"}
 # JevBench schema already. Noul answers and teacher_probs use "true"/"false". teacher_probs
 # is the two-solver share (one-hot on every kept question) except in the ``probability``
 # family, where it is the exact distribution: that becomes the soft target. The test
-# split (131 questions) uses three domains train never uses.
+# split (131 questions) uses three domains train never uses. Every row with teacher_probs
+# carries them as its ``teacher`` (the loss.teacher_* option).
 
 
 def plumb_load(split: str):
@@ -109,7 +151,60 @@ def plumb(row, rng, meta):
         out["target"] = probs
     else:
         out["expected"] = expected
+    labels = _labels(out["question"]["type"], out["question"]["criteria"])
+    if (teacher := _teacher(probs, labels)) is not None:
+        out["teacher"] = teacher
     return [out]
+
+
+def _labels(kind: str, criteria) -> list[str] | None:
+    """The labels parse_item gives a question without explicit ``labels`` (None: unknown)."""
+    if kind == "noul":
+        return ["no", "yes"]
+    if kind == "score" and isinstance(criteria, list):
+        return [str(i) for i in range(len(criteria))]
+    if kind == "choice" and isinstance(criteria, dict):
+        return [str(k) for k in criteria]
+    return None
+
+
+def _teacher(probs: dict, labels: list[str] | None) -> dict | None:
+    """A teacher distribution over ``labels`` (labels it omits get 0), or None when it does
+    not fit them (unknown labels, not a distribution): the row then simply has no teacher."""
+    if not probs or labels is None:
+        return None
+    try:
+        out = {str(k): float(v) for k, v in probs.items()}
+    except (TypeError, ValueError):
+        return None
+    total = sum(out.values())
+    if set(out) - set(labels) or any(v < 0 or not math.isfinite(v) for v in out.values()):
+        return None
+    return out if 0.98 <= total <= 1.02 else None
+
+
+def decider_teacher_dist(
+    kind: str, labels: list[str] | None, gold: str, p_gold, pred
+) -> dict | None:
+    """decider's teacher as a distribution: ``teacher_p`` is the teacher's probability of the
+    gold answer; the rest goes to its prediction ``teacher_pred`` when that is another
+    label (noul: exact, the other answer), else uniformly to the other labels (an
+    approximation: decider keeps only P(gold))."""
+    if p_gold is None or labels is None or gold not in labels:
+        return None
+    p = min(max(float(p_gold), 0.0), 1.0)
+    others = [label for label in labels if label != gold]
+    if kind == "noul":
+        pred = None
+    elif kind == "score" and pred is not None and not isinstance(pred, str):
+        pred = str(int(pred))
+    out = dict.fromkeys(labels, 0.0) | {gold: p}
+    if pred is not None and str(pred) in others:
+        out[str(pred)] = 1.0 - p
+    else:
+        for label in others:
+            out[label] = (1.0 - p) / len(others)
+    return out
 
 
 # --- Open-Jev v1.1 (ZefanCai/Open-Jev-v1.1) --------------------------------------------
@@ -284,28 +379,31 @@ def decider(row, rng, meta):
             continue
         kind, answer, criteria = q["type"], q["answer"], q.get("criteria")
         if kind == "noul":
-            criteria = {k: v or "" for k, v in (criteria or {"false": "", "true": ""}).items()}
+            criteria = _criteria_text(criteria or {"false": "", "true": ""}, kind)
             expected = "yes" if answer is True or str(answer).lower() == "true" else "no"
         elif kind == "choice":
-            criteria = {str(k): v or "" for k, v in criteria.items()}
+            criteria = _criteria_text(criteria, kind)
             expected = str(answer)
         elif kind == "score":
-            criteria = [c or "" for c in criteria]
+            criteria = _criteria_text(criteria, kind)
             expected = str(int(answer))
         else:
             continue
-        out.append(
-            {
-                "state": row["state"],
-                "question": {
-                    "type": kind,
-                    "instructions": _instructions(q["instructions"]),
-                    "criteria": criteria,
-                },
-                "expected": expected,
-                "family": row["recipe"],
-            }
-        )
+        item = {
+            "state": row["state"],
+            "question": {
+                "type": kind,
+                "instructions": _instructions(q["instructions"]),
+                "criteria": criteria,
+            },
+            "expected": expected,
+            "family": row["recipe"],
+        }
+        teacher = decider_teacher_dist(kind, _labels(kind, criteria), expected,
+                                       q.get("teacher_p"), q.get("teacher_pred"))  # fmt: skip
+        if teacher is not None:
+            item["teacher"] = teacher
+        out.append(item)
     return out
 
 
@@ -330,6 +428,7 @@ def mghafiri(row, rng, meta):
             criteria = criteria or {"false": "", "true": ""}
         else:
             target = {str(k): float(v) for k, v in t["probabilities"].items()}
+        criteria = _criteria_text(criteria, q["type"])
         out.append(
             {
                 "state": state,
@@ -447,6 +546,29 @@ def certo(row, rng, meta):
     ]
 
 
+PILOT_FILE = Path(__file__).resolve().parent.parent / "assets" / "jev_fr_pilot.jsonl"
+
+
+def jev_fr_pilot_load(split: str):
+    """The French pilot translations (scripts/jev_fr_pilot.py): ``train`` rows translate
+    English jev train rows, ``heldout`` rows translate English held-out rows. Each row is
+    kept as one JSON string (criteria are dicts or lists: no common Arrow type)."""
+    from datasets import Dataset
+
+    rows = []
+    if PILOT_FILE.exists():
+        with PILOT_FILE.open(encoding="utf-8") as f:
+            rows = [json.loads(line) for line in f if line.strip()]
+    rows = [r for r in rows if r["pilot_split"] == split]
+    return Dataset.from_list([{"row": json.dumps(r, ensure_ascii=False)} for r in rows])
+
+
+def jev_fr_pilot(row, rng, meta):
+    r = json.loads(row["row"])
+    keep = {k: r[k] for k in ("state", "question", "expected", "target", "family") if k in r}
+    return [{**keep, "lang": "fr"}]
+
+
 JEV_SOURCES: dict[str, Source] = {
     s.name: s
     for s in [
@@ -472,6 +594,11 @@ JEV_SOURCES: dict[str, Source] = {
         Source(
             "certo", CERTO_REPO, None, "train", "dev", certo, "certo", "en", "MIT", True,
             cap=15000, load=certo_load,  # few distinct rules: keep its share small
+        ),
+        Source(
+            "jev_fr_pilot", "local:src/tjev/data/assets/jev_fr_pilot.jsonl", None, "train",
+            "heldout", jev_fr_pilot, "jev_fr", "fr", "Claude translations (see licences.py)",
+            False, cap=5000, load=jev_fr_pilot_load,
         ),
     ]
 }  # fmt: skip

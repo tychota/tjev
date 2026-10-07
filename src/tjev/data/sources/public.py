@@ -11,6 +11,7 @@ use; ``commercial_ok=False`` sources are excluded by ``--commercial-only``.
 
 from __future__ import annotations
 
+import html
 import re
 from collections.abc import Callable
 from typing import Any
@@ -87,11 +88,124 @@ MASSIVE_FR = {
     "transport_traffic": "l'état de la circulation",
     "weather_query": "la météo",
 }
+# French descriptions of the MTOP intents (the dataset's names are English identifiers).
+MTOP_FR = {
+    "ADD_TIME_TIMER": "ajouter du temps à un minuteur",
+    "ADD_TO_PLAYLIST_MUSIC": "ajouter un morceau à une playlist",
+    "ANSWER_CALL": "décrocher un appel",
+    "CANCEL_MESSAGE": "annuler un message",
+    "CREATE_ALARM": "créer une alarme",
+    "CREATE_CALL": "passer un appel",
+    "CREATE_PLAYLIST_MUSIC": "créer une playlist",
+    "CREATE_REMINDER": "créer un rappel",
+    "CREATE_TIMER": "lancer un minuteur",
+    "DELETE_ALARM": "supprimer une alarme",
+    "DELETE_PLAYLIST_MUSIC": "supprimer une playlist",
+    "DELETE_REMINDER": "supprimer un rappel",
+    "DELETE_TIMER": "supprimer un minuteur",
+    "DISLIKE_MUSIC": "dire qu'on n'aime pas un morceau",
+    "END_CALL": "raccrocher",
+    "FAST_FORWARD_MUSIC": "avancer dans le morceau",
+    "FOLLOW_MUSIC": "suivre un artiste ou une playlist",
+    "GET_AGE": "l'âge d'une personne",
+    "GET_AIRQUALITY": "la qualité de l'air",
+    "GET_ALARM": "consulter les alarmes",
+    "GET_ATTENDEE_EVENT": "les participants à un événement",
+    "GET_AVAILABILITY": "la disponibilité d'une personne",
+    "GET_CALL": "les informations sur un appel",
+    "GET_CALL_CONTACT": "la personne au bout du fil",
+    "GET_CALL_TIME": "la durée ou l'heure d'un appel",
+    "GET_CATEGORY_EVENT": "le type d'un événement",
+    "GET_CONTACT": "les coordonnées d'un contact",
+    "GET_CONTACT_METHOD": "le moyen de joindre un contact",
+    "GET_DATE_TIME_EVENT": "la date ou l'heure d'un événement",
+    "GET_DETAILS_NEWS": "les détails d'une actualité",
+    "GET_EDUCATION_DEGREE": "le diplôme d'une personne",
+    "GET_EDUCATION_TIME": "les dates d'études d'une personne",
+    "GET_EMPLOYER": "l'employeur d'une personne",
+    "GET_EMPLOYMENT_TIME": "depuis quand une personne occupe son poste",
+    "GET_EVENT": "les événements prévus",
+    "GET_GENDER": "le genre d'une personne",
+    "GET_INFO_CONTACT": "des informations sur un contact",
+    "GET_INFO_RECIPES": "des informations sur une recette",
+    "GET_JOB": "le métier d'une personne",
+    "GET_LANGUAGE": "les langues parlées par une personne",
+    "GET_LIFE_EVENT": "un événement de la vie d'une personne",
+    "GET_LIFE_EVENT_TIME": "la date d'un événement de la vie d'une personne",
+    "GET_LOCATION": "le lieu où se trouve une personne",
+    "GET_LYRICS_MUSIC": "les paroles d'une chanson",
+    "GET_MAJOR": "la spécialité d'études d'une personne",
+    "GET_MESSAGE": "lire ses messages",
+    "GET_MESSAGE_CONTACT": "l'expéditeur d'un message",
+    "GET_MUTUAL_FRIENDS": "les amis en commun",
+    "GET_RECIPES": "trouver une recette",
+    "GET_REMINDER": "consulter ses rappels",
+    "GET_REMINDER_AMOUNT": "le nombre de rappels",
+    "GET_REMINDER_DATE_TIME": "la date ou l'heure d'un rappel",
+    "GET_REMINDER_LOCATION": "le lieu associé à un rappel",
+    "GET_STORIES_NEWS": "les actualités",
+    "GET_SUNRISE": "l'heure du lever du soleil",
+    "GET_SUNSET": "l'heure du coucher du soleil",
+    "GET_TIMER": "consulter un minuteur",
+    "GET_TRACK_INFO_MUSIC": "des informations sur le morceau en cours",
+    "GET_UNDERGRAD": "les études supérieures d'une personne",
+    "GET_WEATHER": "la météo",
+    "HELP_REMINDER": "de l'aide sur les rappels",
+    "HOLD_CALL": "mettre un appel en attente",
+    "IGNORE_CALL": "ignorer un appel",
+    "IS_TRUE_RECIPES": "vérifier une information de cuisine",
+    "LIKE_MUSIC": "dire qu'on aime un morceau",
+    "LOOP_MUSIC": "écouter un morceau en boucle",
+    "MERGE_CALL": "fusionner des appels",
+    "PAUSE_MUSIC": "mettre la musique en pause",
+    "PAUSE_TIMER": "mettre un minuteur en pause",
+    "PLAY_MEDIA": "lire un média (vidéo, podcast, livre audio)",
+    "PLAY_MUSIC": "écouter de la musique",
+    "PREFER": "exprimer une préférence",
+    "PREVIOUS_TRACK_MUSIC": "revenir au morceau précédent",
+    "QUESTION_MUSIC": "une question sur la musique",
+    "QUESTION_NEWS": "une question sur l'actualité",
+    "REMOVE_FROM_PLAYLIST_MUSIC": "retirer un morceau d'une playlist",
+    "REPEAT_ALL_MUSIC": "répéter toute la playlist",
+    "REPEAT_ALL_OFF_MUSIC": "arrêter la répétition de la playlist",
+    "REPLAY_MUSIC": "réécouter un morceau",
+    "RESTART_TIMER": "relancer un minuteur",
+    "RESUME_CALL": "reprendre un appel",
+    "RESUME_MUSIC": "reprendre la musique",
+    "RESUME_TIMER": "reprendre un minuteur",
+    "REWIND_MUSIC": "revenir en arrière dans le morceau",
+    "SEND_MESSAGE": "envoyer un message",
+    "SET_AVAILABLE": "se déclarer disponible",
+    "SET_DEFAULT_PROVIDER_CALLING": "choisir l'application d'appel par défaut",
+    "SET_DEFAULT_PROVIDER_MUSIC": "choisir le service de musique par défaut",
+    "SET_RSVP_INTERESTED": "se dire intéressé par un événement",
+    "SET_RSVP_NO": "décliner une invitation",
+    "SET_RSVP_YES": "accepter une invitation",
+    "SET_UNAVAILABLE": "se déclarer indisponible",
+    "SHARE_EVENT": "partager un événement",
+    "SILENCE_ALARM": "couper une alarme qui sonne",
+    "SKIP_TRACK_MUSIC": "passer au morceau suivant",
+    "SNOOZE_ALARM": "répéter une alarme plus tard",
+    "START_SHUFFLE_MUSIC": "lancer la lecture aléatoire",
+    "STOP_MUSIC": "arrêter la musique",
+    "STOP_SHUFFLE_MUSIC": "arrêter la lecture aléatoire",
+    "SUBTRACT_TIME_TIMER": "retirer du temps à un minuteur",
+    "SWITCH_CALL": "basculer entre deux appels",
+    "UNLOOP_MUSIC": "arrêter la lecture en boucle",
+    "UPDATE_ALARM": "modifier une alarme",
+    "UPDATE_CALL": "modifier un appel en cours",
+    "UPDATE_METHOD_CALL": "passer un appel en vidéo ou en audio",
+    "UPDATE_REMINDER": "modifier un rappel",
+    "UPDATE_REMINDER_DATE_TIME": "changer la date ou l'heure d'un rappel",
+    "UPDATE_REMINDER_LOCATION": "changer le lieu d'un rappel",
+    "UPDATE_REMINDER_TODO": "changer le contenu d'un rappel",
+    "UPDATE_TIMER": "modifier un minuteur",
+}
 MENU_TEXT = {"en": "The request is about {}", "fr": "La demande concerne : {}"}
 
 
 def _describe(name: str, lang: str) -> str:
-    words = MASSIVE_FR.get(name) if lang == "fr" else None
+    words = (MASSIVE_FR.get(name) or MTOP_FR.get(name)) if lang == "fr" else None
     if lang == "fr" and words is None:
         raise KeyError(f"no French description for intent {name!r}")
     return MENU_TEXT[lang].format(words or _human(name))
@@ -177,13 +291,32 @@ NLI_TEXT: dict[str, dict[str, Any]] = {
 NLI_LABELS = ("entailment", "neutral", "contradiction")
 
 
-def _nli(lang: str) -> Adapter:
+def fr_detok(text: str) -> str:
+    """Undo Moses-style tokenisation of French text (XNLI's machine-translated train):
+    no space before , . ) or after (, elisions joined ("l' homme" -> "l'homme"), and
+    "-T-il" lower-cased. French spaces before ; : ! ? and around « » are kept."""
+    text = re.sub(r" +([,.)\]])", r"\1", text)
+    text = re.sub(r"([(\[]) +", r"\1", text)
+    text = re.sub(
+        r"\b([cdjlmnst]|qu|jusqu|lorsqu|puisqu|quoiqu|aujourd)' +",
+        r"\1'",
+        text,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(r"-T-(il|elle|on|ils|elles)\b", r"-t-\1", text)
+    return re.sub(r" {2,}", " ", text).strip()
+
+
+def _nli(lang: str, detok: bool = False) -> Adapter:
     t = NLI_TEXT[lang]
+    clean = fr_detok if detok else (lambda x: x)
 
     def adapter(row, rng, meta):
         if row["label"] not in (0, 1, 2):
             return []
-        state = t["state"].format(p=row["premise"], h=row["hypothesis"])
+        state = t["state"].format(
+            p=clean(html.unescape(row["premise"])), h=clean(html.unescape(row["hypothesis"]))
+        )
         gold = NLI_LABELS[row["label"]]
         if rng.random() < 0.5:
             return [
@@ -315,7 +448,8 @@ def helpsteer(attribute: str) -> Adapter:
     }[attribute]
 
     def adapter(row, rng, meta):
-        state = f"Prompt:\n{row['prompt']}\n\nResponse:\n{row['response']}"
+        prompt, response = html.unescape(row["prompt"]), html.unescape(row["response"])
+        state = f"Prompt:\n{prompt}\n\nResponse:\n{response}"
         return [
             {
                 "state": state,
@@ -362,6 +496,62 @@ def squad_abstain(lang: str) -> Adapter:
     return adapter
 
 
+def piaf_load(split: str):
+    """PIAF (one train split) with unanswerable rows: every question appears once with its
+    own paragraph (answerable) and, half of the time instead, with another paragraph of the
+    same article that does not contain the answer (or of another article when its article has
+    one paragraph). Rows are grouped by article title for the held-out split."""
+    import ast
+
+    from datasets import Dataset, load_dataset
+
+    ds = load_dataset("etalab-ia/piaf", split="train")
+    by_title: dict[str, list[str]] = {}
+    for r in ds:
+        contexts = by_title.setdefault(r["title"], [])
+        if r["context"] not in contexts:
+            contexts.append(r["context"])
+    titles = sorted(by_title)
+    rng = np.random.default_rng(0)
+    rows = []
+    for r in ds:
+        answers = r["answers"]
+        if isinstance(answers, str):
+            answers = ast.literal_eval(answers)
+        texts = [a for a in answers["text"] if a.strip()]
+        if not texts:
+            continue
+        context = r["context"]
+        if rng.random() < 0.5:
+            same = [c for c in by_title[r["title"]] if c != context]
+            pool = same or by_title[_pick_title(rng, titles, r["title"])]
+            pool = [c for c in pool if not any(a.lower() in c.lower() for a in texts)]
+            if pool:
+                context = pool[int(rng.integers(len(pool)))]
+                texts = []
+        rows.append({"title": r["title"], "context": context, "question": r["question"],
+                     "answers": {"text": texts}})  # fmt: skip
+    return Dataset.from_list(rows)
+
+
+def _pick_title(rng, titles: list[str], not_this: str) -> str:
+    while True:
+        t = titles[int(rng.integers(len(titles)))]
+        if t != not_this:
+            return t
+
+
+def mtop_load(split: str):
+    """MTOP French (mteb's parquet copy; its loading script is no longer supported), with
+    the intent name as the label."""
+    from datasets import load_dataset
+
+    base = "hf://datasets/mteb/mtop_intent/fr/"
+    ds = load_dataset("parquet", data_files={split: f"{base}{split}-00000-of-00001.parquet"})
+    ds = ds[split].remove_columns(["label"]).rename_column("label_text", "label")
+    return ds.filter(lambda r: r["label"] in MTOP_FR)
+
+
 def vitaminc(row, rng, meta):
     gold = {"SUPPORTS": "supported", "REFUTES": "refuted", "NOT ENOUGH INFO": "not_enough_info"}[
         row["label"]
@@ -386,7 +576,7 @@ def vitaminc(row, rng, meta):
 def jailbreak(row, rng, meta):
     return [
         {
-            "state": row["prompt"],
+            "state": html.unescape(row["prompt"]),
             "expected": "yes" if row["type"] == "jailbreak" else "no",
             "question": {
                 "type": "noul",
@@ -550,18 +740,35 @@ SOURCES: dict[str, Source] = {
             True,
             cap=10000,
         ),
+        # mix-v5: the human-translated XNLI / PAWS-X dev splits train, their human test
+        # splits stay held out (the same rows as mix-v4); the machine-translated train sets
+        # are kept, detokenised, as separate train-only sources at half weight (WEIGHT_SCALE)
         Source(
             "xnli_fr",
             "facebook/xnli",
             "fr",
-            "train",
+            "validation",
             "test",
             _nli("fr"),
             "entailment",
             "fr",
-            "CC BY-NC 4.0",
+            "not stated on the card",
             False,
             cap=15000,
+        ),
+        Source(
+            "xnli_fr_mt",
+            "facebook/xnli",
+            "fr",
+            "train",
+            None,
+            _nli("fr", detok=True),
+            "entailment",
+            "fr",
+            "not stated on the card",
+            False,
+            cap=10000,
+            train_only=True,
         ),
         Source(
             "paws",
@@ -580,7 +787,7 @@ SOURCES: dict[str, Source] = {
             "pawsx_fr",
             "google-research-datasets/paws-x",
             "fr",
-            "train",
+            "validation",
             "test",
             _paraphrase("fr"),
             "paraphrase",
@@ -588,6 +795,20 @@ SOURCES: dict[str, Source] = {
             "free use (card)",
             True,
             cap=10000,
+        ),
+        Source(
+            "pawsx_fr_mt",
+            "google-research-datasets/paws-x",
+            "fr",
+            "train",
+            None,
+            _paraphrase("fr"),
+            "paraphrase",
+            "fr",
+            "free use (card)",
+            True,
+            cap=7000,
+            train_only=True,
         ),
         Source(
             "stsb",
@@ -624,7 +845,34 @@ SOURCES: dict[str, Source] = {
             "fr",
             "MIT",
             True,
-            cap=8000,
+            cap=16000,  # mix-v5: 8000 -> 16000 (native French, 160k available)
+        ),
+        Source(
+            "mtop_fr",
+            "mteb/mtop_intent",
+            "fr",
+            "train",
+            "test",
+            _intent("text", _massive, "fr"),
+            "routing",
+            "fr",
+            "unknown (mteb card)",
+            False,
+            load=mtop_load,
+        ),
+        Source(
+            "piaf_fr",
+            "etalab-ia/piaf",
+            None,
+            "train",
+            None,
+            squad_abstain("fr"),
+            "abstain",
+            "fr",
+            "MIT (card tag)",
+            True,
+            load=piaf_load,
+            group=lambda r: r["title"],
         ),
         Source(
             "helpsteer2_helpfulness",

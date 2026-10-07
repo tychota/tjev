@@ -37,3 +37,12 @@ class Source:
     # one group, e.g. one source document, never straddle train and held-out)
     group: Callable[[Row], str] | None = None
     near_dedup: bool = False  # drop train rows near-duplicate (5-gram Jaccard) of held-out
+    # no held-out part of its own: a second train set of a source that holds the held-out
+    # rows (e.g. a machine-translated train set next to the human-translated one)
+    train_only: bool = False
+    # mix-v7 sources: the block they belong to (earlier sources: their registry's block),
+    # and the licence use of their rows ("commercial" / "non-commercial" / "unspecified";
+    # None: derived from ``commercial_ok`` and the licence table). An adapter may set a
+    # per-row ``license`` / ``license_use`` (tasksource-jev rows carry their own).
+    block: str | None = None
+    license_use: str | None = None

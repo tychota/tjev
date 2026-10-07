@@ -4,7 +4,9 @@ The public split (231 items: easy 48, original 72, hard 111) is for *final measu
 only*: never part of a training mixture, a validation set or a calibration fit (JevBench
 README; sealed items are never used at all). :class:`JevBenchFilter` drops training rows
 that overlap a public item: an equal normalised state, an equal non-generic instruction,
-or more than two shared word 8-grams with a public state.
+or more than two shared word 8-grams with a public state. :class:`JevBenchGrams` (since
+mix-v6) is stricter: a training row is dropped when its full text (state, instructions and
+option descriptions) shares a single word 8-gram with the full text of a public item.
 """
 
 from __future__ import annotations
@@ -120,3 +122,25 @@ class JevBenchFilter:
                 drops["jevbench_overlap"] += 1
                 drops[f"jevbench_overlap:{why}"] += 1
         return kept, drops
+
+
+def item_text(item: Item) -> str:
+    """Everything a prompt shows of an item: the state, the instructions, the options."""
+    q = item.question
+    return "\n".join([item.state, q.instructions, *q.labels, *q.descriptions])
+
+
+class JevBenchGrams:
+    """The word 8-grams of the public items' full text (:func:`item_text`): a training row
+    overlaps when its own full text shares one of them (the mix-v6 decontamination scan,
+    applied by the train post-pass, :mod:`tjev.data.hygiene`)."""
+
+    def __init__(self, items: list[Item]):
+        self.grams: frozenset[str] = frozenset().union(*(word_ngrams(item_text(i)) for i in items))
+
+    @classmethod
+    def from_jsonl(cls, path: str | Path) -> JevBenchGrams:
+        return cls(list(read_jsonl(path)))
+
+    def overlaps(self, item: Item) -> bool:
+        return not self.grams.isdisjoint(word_ngrams(item_text(item)))

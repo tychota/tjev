@@ -120,3 +120,33 @@ def test_render_keeps_all_options_when_every_label_has_target_mass():
     for s in range(50):
         _, order = render(item, RenderSpec(subsample_prob=1.0), np.random.default_rng(s))
         assert sorted(order) == list(range(7))
+
+
+def test_french_detokeniser_undoes_moses_spacing():
+    from tjev.data.sources.public import fr_detok
+
+    raw = "J' ai vu l' homme ( ici ) , aujourd' hui . Y a-T-il un souci ? Oui : « non » !"
+    assert (
+        fr_detok(raw) == "J'ai vu l'homme (ici), aujourd'hui. Y a-t-il un souci ? Oui : « non » !"
+    )
+
+
+def test_every_source_has_a_card_licence_record():
+    from tjev.data.licences import LICENCES, OPEN, is_open, licence_of
+    from tjev.data.sources import ALL_SOURCES, GENERATORS, V7_LICENCES
+
+    allowed = {"yes", "share-alike", "NC", "no", "unknown", "claude-generated"}
+    for name in [*ALL_SOURCES, *GENERATORS]:
+        _, redistributable, _ = licence_of(name)
+        assert redistributable in allowed, name
+        known = name in LICENCES or name in V7_LICENCES or name in GENERATORS
+        assert known, f"{name}: no licence record"
+    assert not is_open("jev_fr_pilot") and not is_open("xnli_fr") and is_open("gen_weekday")
+    assert {"yes", "share-alike"} == OPEN
+
+
+def test_mtop_has_a_french_description_for_every_intent():
+    from tjev.data.sources.public import MTOP_FR, _describe
+
+    assert len(MTOP_FR) == 110
+    assert _describe("GET_WEATHER", "fr") == "La demande concerne : la météo"

@@ -1,6 +1,7 @@
 # Text analysis in the mix: tasks, datasets, synthetic data (EN + FR)
 
-Design of the "analysis" and "writing" blocks of mix-v3. The goal is a model that analyses a
+Design of the "analysis" and "writing" blocks (written for mix-v3; the shares and the
+datasets since are noted below). The goal is a model that analyses a
 text the way a writing assistant such as Antidote does, and goes beyond it: who wrote it
 (human or AI, which model family), register and formality, sentiment and emotion,
 offensiveness, readability and style issues. Every dimension is asked in the item formats
@@ -13,7 +14,10 @@ Code: `src/tjev/data/sources/text_analysis.py` (`TEXT_SOURCES`, the analysis blo
 
 ## 1. Share of the mix
 
-`BLOCKS` in `src/tjev/data/mix.py`:
+The mix-v3 design (`BLOCKS` in `src/tjev/data/mix.py`). In mix-v7.5 the analysis block is
+5% and writing 3% (the `targeted`, `judge` and `breadth` blocks took the room; see
+[data.md](../data.md#mixture-5000-steps-best_fit)), and `x_stance_fr` joined the analysis
+block in mix-v7 (non-commercial, so it leaves the `c` variants).
 
 | block | share | content |
 |---|---|---|
@@ -82,7 +86,12 @@ Loading notes:
 - Every source carries its license and a `commercial_ok` flag in the build manifest;
   `tjev data build --commercial-only` drops the others.
 
-### 4.2 Candidates not yet in the mix
+### 4.2 Candidates
+
+As surveyed for mix-v3. Since then Allociné (`allocine_fr`, mix-v5, sentiment, in the
+replay block), arena-human-preference-140k (`lmarena_140k`, mix-v7, as a judge source) and
+HelpSteer3 (`helpsteer3`, mix-v6, preference) entered the mix for other tasks than the ones
+listed here; x-stance entered as `x_stance_fr`.
 
 | dim | dataset | lang | size / labels | license |
 |---|---|---|---|---|
@@ -109,7 +118,8 @@ unless stated):
 | [OpAI-Bench](https://huggingface.co/datasets/OpAI-Bench1/OpAI-Bench), [APT-Eval](https://huggingface.co/datasets/smksaha/apt-eval), [Beemo](https://huggingface.co/datasets/toloka/beemo) | various | no | Apache-2.0 / MIT | graded AI polishing; expert-edited AI text |
 
 Not used (non-commercial or research-only terms, gated access, or no redistribution):
-XFORMAL / GYAFC (Yahoo Webscope), SemEval-2023 Task 3, UniversalCEFR / CEFR-SP, x-stance,
+XFORMAL / GYAFC (Yahoo Webscope), SemEval-2023 Task 3, UniversalCEFR / CEFR-SP, x-stance
+(later added as non-commercial),
 MULTITuDE / MultiSocial, RealDet (CC BY-NC), PAN'25/26 Voight-Kampff, flaird-raid-pan26
 (no license). A non-commercial source could enter a build only with `commercial_ok=False`.
 

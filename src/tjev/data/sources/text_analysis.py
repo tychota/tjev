@@ -9,6 +9,7 @@ on 2026-09-29 with ``datasets`` 4.x, which no longer runs loading scripts.
 
 from __future__ import annotations
 
+import html
 import re
 from collections import defaultdict
 
@@ -122,12 +123,21 @@ def mage(row, rng, meta):
     return _authorship(row["text"], family, rng)
 
 
+HC3_LABELS = ("HUMAN", "CHATGPT")  # the ClassLabel names of almanach/hc3_french_ood
+
+
 def hc3_fr(row, rng, meta):
-    """HC3 French (machine-translated QA): human vs ChatGPT answer to a question."""
+    """HC3 French (machine-translated QA): human vs ChatGPT answer to a question.
+    ``label`` is a ClassLabel (0 HUMAN, 1 CHATGPT: an int, never the name)."""
+    label = row["label"]
+    if isinstance(label, int):
+        label = (meta.get("label_names") or HC3_LABELS)[label]
+    if label not in HC3_LABELS:
+        raise ValueError(f"hc3_fr: unknown label {label!r}")
     return [
         {
             "state": f"Question : {row['question']}\nRéponse : {row['answer']}",
-            "expected": "yes" if row["label"] == "CHATGPT" else "no",
+            "expected": "yes" if label == "CHATGPT" else "no",
             "question": {
                 "type": "noul",
                 "instructions": "La réponse a-t-elle été générée par une IA ?",
@@ -229,7 +239,7 @@ def tweet_sentiment(lang: str):
     def adapter(row, rng, meta):
         return [
             {
-                "state": row["text"],
+                "state": html.unescape(row["text"]),
                 "expected": names[row["label"]],
                 "question": {"type": "choice", "instructions": instructions, "criteria": criteria},
             }
@@ -334,7 +344,8 @@ def mlma(lang: str):
         if not labels or not row["tweet"].strip():
             return []
         p = sum(x != "normal" for x in labels) / len(labels)
-        text = re.sub(r"@user\b", "@utilisateur" if lang == "fr" else "@user", row["tweet"])
+        text = html.unescape(row["tweet"])
+        text = re.sub(r"@user\b", "@utilisateur" if lang == "fr" else "@user", text)
         return [
             {
                 "state": text,

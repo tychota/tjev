@@ -1,0 +1,101 @@
+## held-out identity
+identical: 55; different: []; new: ['test/argimi_fr.jsonl', 'test/cold_law_fr.jsonl', 'test/cuad.jsonl', 'test/eikos.jsonl', 'test/eikos_long.jsonl', 'test/helpsteer3.jsonl', 'test/procedural.jsonl', 'test/tempreason.jsonl', 'test/twin_boolq.jsonl', 'test/twin_piaf_fr.jsonl', 'test/twin_squad2.jsonl']
+validation-v6.jsonl 2712
+calibration-v6.jsonl 2675
+
+## overall
+| | mix-v5b | mix-v6 |
+|---|---|---|
+| sources | 52 | 63 |
+| train rows | 498,555 | 569,560 |
+| train rows fr | 108,652 | 127,522 |
+| sampled French share | 0.205 | 0.2095 |
+| sampled type noul/choice/score | 0.421 / 0.468 / 0.111 | 0.455 / 0.441 / 0.104 |
+| block shares | analysis 9.6 / generators 27.7 / jev 38.6 / replay 19.3 / writing 4.8 | analysis 6.5 / generators 23.0 / jev 37.0 / replay 13.0 / targeted 16.5 / writing 4.0 |
+| prompt tokens plain | 139,321,423 | 187,493,367 |
+| segments/step | 161.25 | 142.42 |
+| steps by bucket | {'1024': 1937, '2048': 514, '4096': 549} | {'1024': 1799, '2048': 785, '4096': 416} |
+| fill | 0.86 | 0.8446 |
+| max epochs | 1.967 | 2.0 |
+| noul yes share | 0.4861 | 0.4808 |
+
+## leakage (report)
+| split | v5b exact state | v6 | v5b near state | v6 | v5b near item | v6 |
+|---|---|---|---|---|---|---|
+| validation | 124 | 0 | 178 | 0 | 0 | 0 |
+| calibration | 136 | 0 | 199 | 1 | 0 | 0 |
+| test | 152 | 0 | 197 | 3 | 0 | 0 |
+| jevbench | 1 | 0 | 1 | 0 | 0 | 0 |
+
+## per source
+| source | block | v5b rows | v6 rows | v5b share | v6 share | v5b epochs | v6 epochs | v6 hygiene drops (new checks) |
+|---|---|---|---|---|---|---|---|---|
+| go_emotions | analysis | 19931 | 19926 | 1.59% | 1.04% | 0.382 | 0.22 | {'train_state_in_heldout': 31} |
+| hc3_fr | analysis | 9956 | 9956 | 1.33% | 0.87% | 0.643 | 0.369 |  |
+| mage | analysis | 18803 | 18712 | 1.54% | 1.00% | 0.399 | 0.231 | {'train_state_in_heldout': 33, 'train_state_near_heldout': 8} |
+| mlma_en | analysis | 2913 | 2913 | 0.61% | 0.40% | 0.993 | 0.6 |  |
+| mlma_fr | analysis | 2910 | 2907 | 0.58% | 0.47% | 0.989 | 0.662 | {'train_state_in_heldout': 1} |
+| pavlick_formality | analysis | 9212 | 9211 | 1.08% | 0.70% | 0.58 | 0.326 | {'train_state_in_heldout': 1} |
+| raid | analysis | 10891 | 10891 | 1.18% | 0.77% | 0.543 | 0.302 |  |
+| textdetox_fr | analysis | 4260 | 4260 | 0.88% | 0.57% | 0.983 | 0.575 |  |
+| tweet_sentiment_en | analysis | 1839 | 1839 | 0.48% | 0.32% | 1.263 | 0.764 |  |
+| tweet_sentiment_fr | analysis | 1804 | 1804 | 0.36% | 0.37% | 0.981 | 0.874 |  |
+| gen_base_rate | generators | 8000 | 8000 | 3.28% | 2.75% | 1.963 | 1.458 |  |
+| gen_invoice_total | generators | 8000 | 8000 | 3.25% | 2.75% | 1.966 | 1.454 |  |
+| gen_long_refund_policy | generators | 4000 | 4000 | 1.64% | 0.97% | 1.957 | 1.019 |  |
+| gen_refund_policy | generators | 8000 | 8000 | 3.27% | 2.75% | 1.962 | 1.486 |  |
+| gen_return_window | generators | 8000 | 8000 | 3.23% | 2.75% | 1.964 | 1.482 |  |
+| gen_schedule_conflict | generators | 8000 | 8000 | 3.23% | 2.75% | 1.965 | 1.472 |  |
+| gen_table_argmax | generators | 8000 | 8000 | 3.29% | 2.75% | 1.962 | 1.455 |  |
+| gen_ticket_triage | generators | 8000 | 8000 | 3.23% | 2.75% | 1.961 | 1.475 |  |
+| gen_weekday | generators | 8000 | 8000 | 3.27% | 2.75% | 1.967 | 1.446 |  |
+| certo | jev | 14061 | 14037 | 5.69% | 6.51% | 1.963 | 1.98 | {'train_state_in_heldout': 22, 'train_state_near_heldout': 2} |
+| decider_teacher | jev | 28824 | 28810 | 11.71% | 10.88% | 1.964 | 1.613 | {'train_state_near_heldout': 13, 'jevbench_8gram': 1} |
+| jev_fr_pilot | jev | 200 | 200 | 0.08% | 0.10% | 1.88 | 1.905 |  |
+| mghafiri_scenarios | jev | 11042 | 11004 | 4.54% | 5.16% | 1.959 | 1.974 | {'jevbench_8gram': 38} |
+| openjev | jev | 35969 | 35399 | 14.52% | 12.06% | 1.962 | 1.466 | {'train_state_near_heldout': 422} |
+| plumb | jev | 4998 | 4920 | 2.04% | 2.29% | 1.967 | 2.0 | {'jevbench_8gram': 79} |
+| allocine_fr | replay | 15985 | 15985 | 1.58% | 1.07% | 0.479 | 0.281 |  |
+| banking77 | replay | 9977 | 9977 | 0.73% | 0.50% | 0.355 | 0.212 |  |
+| boolq | replay | 9426 | 8478 | 0.71% | 0.46% | 0.363 | 0.238 | {'train_state_in_heldout': 866, 'train_state_near_heldout': 82} |
+| clinc_oos | replay | 15233 | 15224 | 0.91% | 0.61% | 0.284 | 0.165 | {'train_state_in_heldout': 9} |
+| dbpedia | replay | 8000 | 8000 | 0.66% | 0.45% | 0.388 | 0.236 |  |
+| gsm8k_check | replay | 7473 | 7447 | 0.64% | 0.43% | 0.405 | 0.242 |  |
+| helpsteer2_correctness | replay | 7997 | 7995 | 0.66% | 0.45% | 0.394 | 0.234 | {'train_state_near_heldout': 2} |
+| helpsteer2_helpfulness | replay | 7998 | 7997 | 0.66% | 0.45% | 0.401 | 0.238 | {'train_state_near_heldout': 1} |
+| jailbreak | replay | 958 | 956 | 0.23% | 0.15% | 1.145 | 0.698 | {'train_state_near_heldout': 2} |
+| massive_en | replay | 11472 | 11469 | 0.79% | 0.53% | 0.334 | 0.198 | {'train_state_in_heldout': 2, 'train_state_near_heldout': 1} |
+| massive_fr | replay | 11384 | 11384 | 1.33% | 0.90% | 0.57 | 0.332 |  |
+| mnli | replay | 20000 | 20000 | 1.04% | 0.70% | 0.257 | 0.151 |  |
+| mtop_fr | replay | 11503 | 11503 | 1.34% | 0.91% | 0.567 | 0.346 |  |
+| paws | replay | 9993 | 9993 | 0.73% | 0.50% | 0.351 | 0.209 |  |
+| pawsx_fr | replay | 1965 | 1965 | 0.55% | 0.37% | 1.394 | 0.841 |  |
+| pawsx_fr_mt | replay | 6930 | 6930 | 0.52% | 0.35% | 0.359 | 0.206 |  |
+| piaf_fr | replay | 3553 | 3475 | 0.74% | 0.50% | 1.027 | 0.646 | {'train_state_in_heldout': 78} |
+| prompt_injection | replay | 393 | 392 | 0.15% | 0.10% | 1.944 | 1.069 | {'train_state_near_heldout': 1} |
+| snli | replay | 10000 | 10000 | 0.74% | 0.50% | 0.36 | 0.21 |  |
+| squad2 | replay | 20000 | 19940 | 1.04% | 0.70% | 0.251 | 0.156 | {'train_state_in_heldout': 37, 'train_state_near_heldout': 23} |
+| sst5 | replay | 8528 | 8528 | 0.68% | 0.46% | 0.376 | 0.243 |  |
+| stsb | replay | 5689 | 5689 | 0.56% | 0.38% | 0.494 | 0.29 |  |
+| vitaminc | replay | 19995 | 19995 | 1.04% | 0.70% | 0.254 | 0.15 |  |
+| xnli_fr | replay | 2490 | 2490 | 0.62% | 0.42% | 1.2 | 0.713 |  |
+| xnli_fr_mt | replay | 10000 | 10000 | 0.62% | 0.42% | 0.304 | 0.183 |  |
+| argimi_fr | targeted | | 6000 | | 1.27% |  | 0.911 |  |
+| cold_law_fr | targeted | | 7999 | | 2.93% |  | 1.548 | {'train_state_near_heldout': 1} |
+| cuad | targeted | | 7924 | | 1.11% |  | 0.6 | {'train_state_near_heldout': 5, 'jevbench_8gram': 70} |
+| eikos | targeted | | 10327 | | 2.53% |  | 1.056 | {'train_state_near_heldout': 8, 'jevbench_8gram': 1066} |
+| eikos_long | targeted | | 410 | | 0.13% |  | 1.427 | {'jevbench_8gram': 7} |
+| helpsteer3 | targeted | | 7316 | | 1.06% |  | 0.623 | {'train_state_in_heldout': 90, 'train_state_near_heldout': 77} |
+| procedural | targeted | | 14328 | | 2.98% |  | 0.893 | {'train_state_near_heldout': 38} |
+| tempreason | targeted | | 10000 | | 2.49% |  | 1.066 |  |
+| twin_boolq | targeted | | 2705 | | 0.63% |  | 0.978 | {'train_state_in_heldout': 269, 'train_state_near_heldout': 26} |
+| twin_piaf_fr | targeted | | 1961 | | 0.45% |  | 0.987 | {'train_state_in_heldout': 37} |
+| twin_squad2 | targeted | | 3989 | | 0.92% |  | 0.998 | {'train_state_in_heldout': 5, 'train_state_near_heldout': 5} |
+| gen_register | writing | 8000 | 8000 | 2.41% | 2.00% | 1.45 | 1.067 |  |
+| gen_spelling_error | writing | 8000 | 8000 | 2.41% | 2.00% | 1.474 | 1.076 |  |
+
+new-check drops: {'train_state_in_heldout': 1481, 'train_state_near_heldout': 717, 'jevbench_8gram': 1261}
+hygiene totals v6: {'jevbench_8gram': 1261, 'prompt_too_long': 141, 'train_equals_heldout': 35, 'train_exact_duplicate': 2167, 'train_near_heldout': 5995, 'train_state_in_heldout': 1481, 'train_state_near_heldout': 717}
+v5b jevbench_overlap: 47 v6: 51
+epoch cap block shares v6: {'analysis': {'after': 0.065, 'before': 0.065}, 'generators': {'after': 0.23, 'before': 0.23}, 'jev': {'after': 0.37, 'before': 0.37}, 'replay': {'after': 0.13, 'before': 0.13}, 'targeted': {'after': 0.165, 'before': 0.165}, 'writing': {'after': 0.04, 'before': 0.04}}
+epoch cap overflow v6: {}

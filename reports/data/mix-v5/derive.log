@@ -1,0 +1,232 @@
+  [epoch-cap] allocine_fr: 15985 rows measured
+  [epoch-cap] banking77: 9977 rows measured
+  [epoch-cap] boolq: 9426 rows measured
+  [epoch-cap] certo: 14061 rows measured
+  [epoch-cap] clinc_oos: 15233 rows measured
+  [epoch-cap] dbpedia: 8000 rows measured
+  [epoch-cap] decider_teacher: 28824 rows measured
+  [epoch-cap] gen_base_rate: 8000 rows measured
+  [epoch-cap] gen_invoice_total: 8000 rows measured
+  [epoch-cap] gen_long_refund_policy: 4000 rows measured
+  [epoch-cap] gen_refund_policy: 8000 rows measured
+  [epoch-cap] gen_register: 8000 rows measured
+  [epoch-cap] gen_return_window: 8000 rows measured
+  [epoch-cap] gen_schedule_conflict: 8000 rows measured
+  [epoch-cap] gen_spelling_error: 8000 rows measured
+  [epoch-cap] gen_table_argmax: 8000 rows measured
+  [epoch-cap] gen_ticket_triage: 8000 rows measured
+  [epoch-cap] gen_weekday: 8000 rows measured
+  [epoch-cap] go_emotions: 19931 rows measured
+  [epoch-cap] gsm8k_check: 7473 rows measured
+  [epoch-cap] hc3_fr: 9956 rows measured
+  [epoch-cap] helpsteer2_correctness: 7997 rows measured
+  [epoch-cap] helpsteer2_helpfulness: 7998 rows measured
+  [epoch-cap] jailbreak: 958 rows measured
+  [epoch-cap] jev_fr_pilot: 200 rows measured
+  [epoch-cap] mage: 18803 rows measured
+  [epoch-cap] massive_en: 11472 rows measured
+  [epoch-cap] massive_fr: 11384 rows measured
+  [epoch-cap] mghafiri_scenarios: 11042 rows measured
+  [epoch-cap] mlma_en: 2913 rows measured
+  [epoch-cap] mlma_fr: 2910 rows measured
+  [epoch-cap] mnli: 20000 rows measured
+  [epoch-cap] mtop_fr: 11503 rows measured
+  [epoch-cap] openjev: 35969 rows measured
+  [epoch-cap] pavlick_formality: 9212 rows measured
+  [epoch-cap] paws: 9993 rows measured
+  [epoch-cap] pawsx_fr: 1965 rows measured
+  [epoch-cap] pawsx_fr_mt: 6930 rows measured
+  [epoch-cap] piaf_fr: 3553 rows measured
+  [epoch-cap] plumb: 4998 rows measured
+  [epoch-cap] prompt_injection: 393 rows measured
+  [epoch-cap] raid: 10891 rows measured
+  [epoch-cap] snli: 10000 rows measured
+  [epoch-cap] squad2: 20000 rows measured
+  [epoch-cap] sst5: 8528 rows measured
+  [epoch-cap] stsb: 5689 rows measured
+  [epoch-cap] textdetox_fr: 4260 rows measured
+  [epoch-cap] tweet_sentiment_en: 1839 rows measured
+  [epoch-cap] tweet_sentiment_fr: 1804 rows measured
+  [epoch-cap] vitaminc: 19995 rows measured
+  [epoch-cap] xnli_fr: 2490 rows measured
+  [epoch-cap] xnli_fr_mt: 10000 rows measured
+[epoch-cap] round 0: max jev_fr_pilot 20.67, 0 capped, blocks that cannot absorb: none
+[epoch-cap] round 1: max decider_teacher 2.32, 8 capped, blocks that cannot absorb: none
+[epoch-cap] round 2: max jev_fr_pilot 2.21, 10 capped, blocks that cannot absorb: ['jev']
+[epoch-cap] round 3: max gen_long_refund_policy 2.54, 18 capped, blocks that cannot absorb: ['jev']
+[epoch-cap] round 4: max prompt_injection 2.27, 19 capped, blocks that cannot absorb: ['generators', 'jev']
+[epoch-cap] round 5: max tweet_sentiment_fr 1.01, 19 capped, blocks that cannot absorb: ['generators', 'jev']
+[epoch-cap] round 6: max prompt_injection 2.04, 19 capped, blocks that cannot absorb: ['generators', 'jev']
+[epoch-cap] round 7: max mlma_fr 0.99, 19 capped, blocks that cannot absorb: ['generators', 'jev']
+{
+  "train_rows": 498555,
+  "fr_sampled_share": 0.205,
+  "rebalanced": {
+    "mage": {
+      "capped": false,
+      "dropped": 1194,
+      "loss": 0.0597,
+      "noul_after": 9783,
+      "noul_before": 10977,
+      "rows_after": 18803,
+      "rows_before": 19997,
+      "yes_after": 6848,
+      "yes_before": 8042,
+      "yes_share_after": 0.7,
+      "yes_share_before": 0.7326
+    },
+    "mlma_en": {
+      "capped": false,
+      "dropped": 2119,
+      "loss": 0.4211,
+      "noul_after": 2913,
+      "noul_before": 5032,
+      "rows_after": 2913,
+      "rows_before": 5032,
+      "yes_after": 2039,
+      "yes_before": 4158,
+      "yes_share_after": 0.7,
+      "yes_share_before": 0.8263
+    },
+    "mlma_fr": {
+      "capped": false,
+      "dropped": 657,
+      "loss": 0.1842,
+      "noul_after": 2910,
+      "noul_before": 3567,
+      "rows_after": 2910,
+      "rows_before": 3567,
+      "yes_after": 2037,
+      "yes_before": 2694,
+      "yes_share_after": 0.7,
+      "yes_share_before": 0.7553
+    },
+    "openjev": {
+      "capped": false,
+      "dropped": 343,
+      "loss": 0.0094,
+      "noul_after": 12297,
+      "noul_before": 12640,
+      "rows_after": 35969,
+      "rows_before": 36312,
+      "yes_after": 3689,
+      "yes_before": 3689,
+      "yes_share_after": 0.3,
+      "yes_share_before": 0.2919
+    },
+    "raid": {
+      "capped": false,
+      "dropped": 9033,
+      "loss": 0.4534,
+      "noul_after": 900,
+      "noul_before": 9933,
+      "rows_after": 10891,
+      "rows_before": 19924,
+      "yes_after": 630,
+      "yes_before": 9663,
+      "yes_share_after": 0.7,
+      "yes_share_before": 0.9728
+    }
+  },
+  "capped": [
+    "certo",
+    "decider_teacher",
+    "gen_base_rate",
+    "gen_invoice_total",
+    "gen_long_refund_policy",
+    "gen_refund_policy",
+    "gen_return_window",
+    "gen_schedule_conflict",
+    "gen_table_argmax",
+    "gen_ticket_triage",
+    "gen_weekday",
+    "jev_fr_pilot",
+    "mghafiri_scenarios",
+    "mlma_fr",
+    "openjev",
+    "plumb",
+    "prompt_injection",
+    "textdetox_fr",
+    "tweet_sentiment_fr"
+  ],
+  "block_shares": {
+    "analysis": {
+      "before": 0.1,
+      "after": 0.0963
+    },
+    "generators": {
+      "before": 0.25,
+      "after": 0.27702
+    },
+    "jev": {
+      "before": 0.4,
+      "after": 0.38593
+    },
+    "replay": {
+      "before": 0.2,
+      "after": 0.1926
+    },
+    "writing": {
+      "before": 0.05,
+      "after": 0.04815
+    }
+  },
+  "overflow": {
+    "generators": -0.02703,
+    "jev": 0.01407
+  },
+  "epochs": {
+    "allocine_fr": 0.479,
+    "banking77": 0.355,
+    "boolq": 0.363,
+    "certo": 1.965,
+    "clinc_oos": 0.284,
+    "dbpedia": 0.388,
+    "decider_teacher": 1.965,
+    "gen_base_rate": 1.965,
+    "gen_invoice_total": 1.966,
+    "gen_long_refund_policy": 1.957,
+    "gen_refund_policy": 1.964,
+    "gen_register": 1.447,
+    "gen_return_window": 1.966,
+    "gen_schedule_conflict": 1.968,
+    "gen_spelling_error": 1.471,
+    "gen_table_argmax": 1.966,
+    "gen_ticket_triage": 1.963,
+    "gen_weekday": 1.968,
+    "go_emotions": 0.382,
+    "gsm8k_check": 0.404,
+    "hc3_fr": 0.642,
+    "helpsteer2_correctness": 0.394,
+    "helpsteer2_helpfulness": 0.4,
+    "jailbreak": 1.142,
+    "jev_fr_pilot": 1.905,
+    "mage": 0.399,
+    "massive_en": 0.332,
+    "massive_fr": 0.571,
+    "mghafiri_scenarios": 1.961,
+    "mlma_en": 0.991,
+    "mlma_fr": 0.986,
+    "mnli": 0.257,
+    "mtop_fr": 0.566,
+    "openjev": 1.964,
+    "pavlick_formality": 0.577,
+    "paws": 0.349,
+    "pawsx_fr": 1.393,
+    "pawsx_fr_mt": 0.359,
+    "piaf_fr": 1.03,
+    "plumb": 1.965,
+    "prompt_injection": 1.952,
+    "raid": 0.542,
+    "snli": 0.36,
+    "squad2": 0.249,
+    "sst5": 0.376,
+    "stsb": 0.494,
+    "textdetox_fr": 0.983,
+    "tweet_sentiment_en": 1.262,
+    "tweet_sentiment_fr": 0.977,
+    "vitaminc": 0.254,
+    "xnli_fr": 1.199,
+    "xnli_fr_mt": 0.303
+  }
+}

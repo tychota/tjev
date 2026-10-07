@@ -29,6 +29,9 @@ class Segment:
     lang_id: int
     family_id: int
     index: int  # item index in its dataset (eval bookkeeping), or stream position
+    # the item's teacher distribution in displayed order (renormalised over the displayed
+    # letters), or None
+    teacher: np.ndarray | None = None
 
 
 @jax.tree_util.register_dataclass
@@ -50,6 +53,10 @@ class Batch:
     lang_id: np.ndarray  # [R,S] int32
     family_id: np.ndarray  # [R,S] int32
     index: np.ndarray  # [R,S] int32 (-1 = empty)
+    # [R,S,K] float32, the teacher distribution of each slot (all 0: none). Only the train
+    # stream of a run with loss.teacher_mix > 0 builds it; every other batch has None (no
+    # leaf: today's step and transfers)
+    teacher: np.ndarray | None = None
 
     @property
     def shape_key(self) -> tuple[int, ...]:
@@ -69,7 +76,11 @@ def check_segments(segment_ids: np.ndarray) -> None:
 
 
 def stack_batches(batches: list[Batch]) -> Batch:
-    return Batch(**{f.name: np.stack([getattr(b, f.name) for b in batches]) for f in fields(Batch)})
+    def stack(name: str):
+        parts = [getattr(b, name) for b in batches]
+        return None if parts[0] is None else np.stack(parts)
+
+    return Batch(**{f.name: stack(f.name) for f in fields(Batch)})
 
 
 class Vocab:
@@ -113,6 +124,11 @@ def make_segment(
     tokens = np.asarray(tok.encode(text), np.int32)
     target = np.asarray([item.target[i] for i in order], np.float32)
     target = target / target.sum()  # sub-sampling never drops positives; renormalise anyway
+    teacher = None
+    if item.teacher is not None:
+        shown = np.asarray([item.teacher[i] for i in order], np.float32)
+        if shown.sum() > 0:  # a dropped distractor's teacher mass is renormalised away
+            teacher = shown / shown.sum()
     return Segment(
         tokens=tokens,
         label_ids=np.asarray(tok.letter_ids[: len(order)], np.int32),
@@ -122,14 +138,17 @@ def make_segment(
         lang_id=vocab.id("lang", item.lang),
         family_id=vocab.id("family", item.family),
         index=index,
+        teacher=teacher,
     )
 
 
 class RowBuilder:
-    """First-fit packing of segments into ``rows`` rows of ``length`` tokens."""
+    """First-fit packing of segments into ``rows`` rows of ``length`` tokens. ``teacher``:
+    the batch carries the segments' teacher distributions (Batch.teacher)."""
 
-    def __init__(self, rows: int, length: int, slots: int, labels: int):
+    def __init__(self, rows: int, length: int, slots: int, labels: int, teacher: bool = False):
         self.rows, self.length, self.slots, self.labels = rows, length, slots, labels
+        self.teacher = teacher
         self.content: list[list[Segment]] = [[] for _ in range(rows)]
         self.used = [0] * rows
 
@@ -139,10 +158,14 @@ class RowBuilder:
             raise ValueError(f"segment of {n} tokens / {len(seg.label_ids)} labels does not fit")
         for r in range(self.rows):
             if self.used[r] + n <= self.length and len(self.content[r]) < self.slots:
-                self.content[r].append(seg)
-                self.used[r] += n
+                self.put(seg, r)
                 return True
         return False
+
+    def put(self, seg: Segment, row: int) -> None:
+        """Append ``seg`` to ``row`` (the caller checked that it fits)."""
+        self.content[row].append(seg)
+        self.used[row] += len(seg.tokens)
 
     def empty(self) -> bool:
         return not any(self.content)
@@ -169,6 +192,7 @@ class RowBuilder:
             lang_id=np.zeros((R, S), np.int32),
             family_id=np.zeros((R, S), np.int32),
             index=np.full((R, S), -1, np.int32),
+            teacher=np.zeros((R, S, K), np.float32) if self.teacher else None,
         )
         for r, row in enumerate(self.content):
             start = 0
@@ -187,6 +211,8 @@ class RowBuilder:
                 b.lang_id[r, s] = seg.lang_id
                 b.family_id[r, s] = seg.family_id
                 b.index[r, s] = seg.index
+                if b.teacher is not None and seg.teacher is not None:
+                    b.teacher[r, s, :k] = seg.teacher
                 start += n
         check_segments(b.segment_ids)
         return b
@@ -199,8 +225,11 @@ def bucket_for(n: int, buckets: tuple[int, ...]) -> int | None:
     return None
 
 
-def rows_for(length: int, microbatch_tokens: int) -> int:
-    return max(1, microbatch_tokens // length)
+def rows_for(length: int, microbatch_tokens: int, devices: int = 1) -> int:
+    """Rows of ``length`` tokens in a microbatch of ``microbatch_tokens`` over ``devices``:
+    the per-device budget's rows, at least one per device (a bucket longer than the budget
+    takes one row, so its microbatch holds ``length`` tokens per device)."""
+    return max(1, microbatch_tokens // devices // length) * devices
 
 
 def pack_eval(
@@ -209,6 +238,7 @@ def pack_eval(
     microbatch_tokens: int,
     slots: int,
     labels: int,
+    devices: int = 1,
 ) -> tuple[list[Batch], list[int]]:
     """Pack a finite set (longest first). Returns batches and indices of dropped segments."""
     builders: dict[int, RowBuilder] = {}
@@ -219,7 +249,7 @@ def pack_eval(
             dropped.append(seg.index)
             continue
         builder = builders.setdefault(
-            length, RowBuilder(rows_for(length, microbatch_tokens), length, slots, labels)
+            length, RowBuilder(rows_for(length, microbatch_tokens, devices), length, slots, labels)
         )
         if not builder.add(seg):
             batches.append(builder.build())
@@ -229,14 +259,35 @@ def pack_eval(
     return batches, dropped
 
 
-class BucketPacker:
-    """Routes segments to the smallest bucket that fits and packs them into microbatches,
-    emitting a step once ``accumulation`` microbatches of one bucket are complete.
+PACKINGS = ("bucket", "best_fit")
 
-    ``bins`` open microbatches per bucket (Grain's multi-bin first-fit): a segment goes to
-    the first open one with room; when none has room and all bins are open, the fullest is
-    closed. Nearly full ones (>= ``FULL``) close early. ``bins=1`` is next-fit per bucket:
-    the original packing.
+
+class BucketPacker:
+    """Packs segments into microbatches of one bucket each, emitting a step once
+    ``accumulation`` microbatches of one bucket are complete. ``microbatch_tokens`` is the
+    global budget (per device × ``devices``): see :func:`rows_for`.
+
+    ``bins`` open microbatches per bucket (Grain's multi-bin first-fit). When none has
+    room for a segment and all of its bucket's bins are open, the fullest is closed. Nearly
+    full ones (>= ``FULL``) close early. ``bins=1`` is next-fit per bucket: the original
+    packing. ``packing`` chooses where a segment goes among the open microbatches:
+
+    ``"bucket"`` (the default)
+        Only the smallest bucket that holds it, the first open microbatch with room
+        (first-fit over its rows). Every segment over half a bucket is alone in its row:
+        two 1025–2048-token segments cannot share a 2048 row, and the short segments,
+        which all go to the smallest bucket, never fill the rest of it.
+    ``"best_fit"``
+        Best-fit over the rows of every open microbatch of every bucket that holds it,
+        longer buckets included: the row with the least room left after it (ties: the
+        smaller bucket, then the older microbatch, then the first row). Short segments
+        then fill the tails of the long rows. A new row of the smallest bucket that holds
+        the segment counts as a candidate too: when it would be left with strictly less
+        room than every open row, or no open row has room, the segment opens a
+        microbatch there, as ``"bucket"`` does.
+
+    Both are a deterministic function of the segment order and of the open / ready
+    microbatches, which :meth:`state` records: a restored packer continues exactly.
     """
 
     FULL = 0.99
@@ -251,8 +302,16 @@ class BucketPacker:
         slots: int,
         labels: int,
         bins: int = 1,
+        devices: int = 1,
+        teacher: bool = False,
+        packing: str = "bucket",
     ):
+        if packing not in PACKINGS:
+            raise ValueError(f"packing {packing!r} is not one of {PACKINGS}")
+        self.packing = packing
         self.segment_at = segment_at
+        self.teacher = teacher
+        self.devices = devices
         self.buckets = tuple(sorted(buckets))
         self.microbatch_tokens, self.accumulation = microbatch_tokens, accumulation
         self.slots, self.labels, self.bins = slots, labels, bins
@@ -262,7 +321,8 @@ class BucketPacker:
         self.stats: Counter = Counter()
 
     def _builder(self, length: int) -> RowBuilder:
-        return RowBuilder(rows_for(length, self.microbatch_tokens), length, self.slots, self.labels)
+        rows = rows_for(length, self.microbatch_tokens, self.devices)
+        return RowBuilder(rows, length, self.slots, self.labels, self.teacher)
 
     def place(self, seg: Segment) -> None:
         self.next_index += 1
@@ -272,7 +332,10 @@ class BucketPacker:
             self.stats[f"dropped_{reason}"] += 1
             return
         builders = self.open.setdefault(length, [])
-        target = next((b for b in builders if b.add(seg)), None)
+        if self.packing == "best_fit":
+            target = self._best_fit(seg, length)
+        else:
+            target = next((b for b in builders if b.add(seg)), None)
         if target is None:
             if len(builders) >= self.bins:
                 fullest = max(range(len(builders)), key=lambda i: builders[i].fill())
@@ -281,8 +344,31 @@ class BucketPacker:
             target.add(seg)
             builders.append(target)
         if self.bins > 1 and target.fill() >= self.FULL:
-            builders.remove(target)
-            self.ready[length].append(target)
+            self.open[target.length].remove(target)
+            self.ready[target.length].append(target)
+
+    def _best_fit(self, seg: Segment, length: int) -> RowBuilder | None:
+        """Put ``seg`` in the open row it fills best, in bucket ``length`` or a longer
+        one; the builder it went to, or None: no open row has room, or a new row of
+        ``length`` would be left with strictly less room (a 300-token segment that fits a
+        320 row is better there than in a 1024 row's 450-token tail)."""
+        n = len(seg.tokens)
+        best: tuple[int, RowBuilder, int] | None = None  # (room left, builder, row)
+        for bucket in self.buckets:
+            if bucket < length:
+                continue
+            for builder in self.open.get(bucket, ()):
+                limit, used, content = builder.length - n, builder.used, builder.content
+                for r in range(builder.rows):
+                    room = limit - used[r]
+                    if (room >= 0 and (best is None or room < best[0])
+                            and len(content[r]) < builder.slots):  # fmt: skip
+                        best = (room, builder, r)
+        if best is None or length - n < best[0]:
+            return None
+        _, builder, row = best
+        builder.put(seg, row)
+        return builder
 
     def pop_step(self) -> Batch | None:
         for length in self.buckets:
@@ -308,9 +394,7 @@ class BucketPacker:
             builder = self._builder(length)
             for r, indices in enumerate(rows):
                 for i in indices:
-                    seg = self.segment_at(i)
-                    builder.content[r].append(seg)
-                    builder.used[r] += len(seg.tokens)
+                    builder.put(self.segment_at(i), r)
             return builder
 
         self.next_index = int(state["next_index"])

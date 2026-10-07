@@ -55,6 +55,9 @@ def _assert_same(want, got):
     assert want.shape_key == got.shape_key
     for name in vars(want):
         a, b = getattr(want, name), getattr(got, name)
+        if a is None or b is None:  # Batch.teacher: absent from both or present in both
+            assert a is None and b is None, name
+            continue
         assert a.dtype == b.dtype, name
         np.testing.assert_array_equal(a, b, err_msg=name)
 
@@ -119,6 +122,8 @@ def test_stream_output_is_pinned(setup):
         for _ in range(8):
             batch = next(it)
             for name in sorted(vars(batch)):
+                if getattr(batch, name) is None:  # Batch.teacher off: the pinned hash
+                    continue
                 digest.update(name.encode())
                 digest.update(getattr(batch, name).tobytes())
     finally:
@@ -157,3 +162,36 @@ def test_multi_bin_packing_resumes_exactly_and_pads_less(setup):
             _assert_same(w, next(resumed))
     finally:
         resumed.close()
+
+
+def test_best_fit_grain_stream_equals_trainstream_and_resumes_across_workers(setup):
+    """train.packing=best_fit through Grain: the reference stream's steps for any worker
+    count, and a state saved mid-run (JSON) resumes them exactly."""
+    mixture, tok, vocab = setup
+    # 276-468-token segments: every one over half of 384 / 768 is alone in its row under
+    # "bucket" (25% padding); best_fit puts the short ones in the long rows' tails (11%)
+    plain = {**PACKING, "buckets": (384, 768, 1024), "microbatch_tokens": 3072}
+    packing = {**plain, "packing": "best_fit"}
+    ref = TrainStream(mixture, tok, vocab, seed=SEED, **packing)
+    want = [ref.next_step() for _ in range(8)]
+    base = TrainStream(mixture, tok, vocab, seed=SEED, **plain)
+    assert _padding(want) < 0.7 * _padding([base.next_step() for _ in range(8)])
+
+    def grain(workers):
+        return train_iterator(SegmentAt(mixture, tok, vocab, seed=SEED), workers=workers,
+                              **packing)  # fmt: skip
+
+    it = grain(2)
+    try:
+        got = [next(it) for _ in range(4)]
+        state = json.loads(json.dumps(it.get_state()))
+    finally:
+        it.close()
+    resumed = grain(0)
+    try:
+        resumed.set_state(state)
+        got += [next(resumed) for _ in range(4)]
+    finally:
+        resumed.close()
+    for w, g in zip(want, got, strict=True):
+        _assert_same(w, g)

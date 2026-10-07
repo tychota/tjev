@@ -1,0 +1,393 @@
+[jevbench] filtering against 231 public states
+[public] boolq …
+  boolq: 9427 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+[public] mnli …
+Generating train split:   0%|          | 0/392702 [00:00<?, ? examples/s]Generating train split:  20%|█▉        | 77000/392702 [00:00<00:00, 765676.09 examples/s]Generating train split:  54%|█████▍    | 212000/392702 [00:00<00:00, 1105249.59 examples/s]Generating train split:  85%|████████▍ | 333000/392702 [00:00<00:00, 1149042.07 examples/s]Generating train split: 100%|██████████| 392702/392702 [00:00<00:00, 1128623.20 examples/s]
+Generating validation_matched split:   0%|          | 0/9815 [00:00<?, ? examples/s]Generating validation_matched split: 100%|██████████| 9815/9815 [00:00<00:00, 910071.71 examples/s]
+Generating validation_mismatched split:   0%|          | 0/9832 [00:00<?, ? examples/s]Generating validation_mismatched split: 100%|██████████| 9832/9832 [00:00<00:00, 1008323.07 examples/s]
+Generating test_matched split:   0%|          | 0/9796 [00:00<?, ? examples/s]Generating test_matched split: 100%|██████████| 9796/9796 [00:00<00:00, 981989.01 examples/s]
+Generating test_mismatched split:   0%|          | 0/9847 [00:00<?, ? examples/s]Generating test_mismatched split: 100%|██████████| 9847/9847 [00:00<00:00, 946843.45 examples/s]
+  mnli: 20000 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+[public] snli …
+Generating test split:   0%|          | 0/10000 [00:00<?, ? examples/s]Generating test split: 100%|██████████| 10000/10000 [00:00<00:00, 790274.71 examples/s]
+Generating validation split:   0%|          | 0/10000 [00:00<?, ? examples/s]Generating validation split: 100%|██████████| 10000/10000 [00:00<00:00, 994688.74 examples/s]
+Generating train split:   0%|          | 0/550152 [00:00<?, ? examples/s]Generating train split:  22%|██▏       | 120000/550152 [00:00<00:00, 1191149.10 examples/s]Generating train split:  49%|████▊     | 267000/550152 [00:00<00:00, 1349609.08 examples/s]Generating train split:  76%|███████▌  | 417000/550152 [00:00<00:00, 1414070.41 examples/s]Generating train split: 100%|██████████| 550152/550152 [00:00<00:00, 1466111.91 examples/s]
+  snli: 10000 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+[public] xnli_fr …
+Generating train split:   0%|          | 0/392702 [00:00<?, ? examples/s]Generating train split:  15%|█▍        | 58000/392702 [00:00<00:00, 426707.23 examples/s]Generating train split:  44%|████▍     | 174000/392702 [00:00<00:00, 799541.05 examples/s]Generating train split:  70%|███████   | 275000/392702 [00:00<00:00, 882816.87 examples/s]Generating train split:  99%|█████████▉| 390000/392702 [00:00<00:00, 979009.85 examples/s]Generating train split: 100%|██████████| 392702/392702 [00:00<00:00, 884552.30 examples/s]
+Generating test split:   0%|          | 0/5010 [00:00<?, ? examples/s]Generating test split: 100%|██████████| 5010/5010 [00:00<00:00, 847864.07 examples/s]
+Generating validation split:   0%|          | 0/2490 [00:00<?, ? examples/s]Generating validation split: 100%|██████████| 2490/2490 [00:00<00:00, 542987.26 examples/s]
+  xnli_fr: 2490 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+[public] xnli_fr_mt …
+  xnli_fr_mt: 10000 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+[public] paws …
+Generating train split:   0%|          | 0/49401 [00:00<?, ? examples/s]Generating train split: 100%|██████████| 49401/49401 [00:00<00:00, 902828.76 examples/s]
+Generating test split:   0%|          | 0/8000 [00:00<?, ? examples/s]Generating test split: 100%|██████████| 8000/8000 [00:00<00:00, 631113.89 examples/s]
+Generating validation split:   0%|          | 0/8000 [00:00<?, ? examples/s]Generating validation split: 100%|██████████| 8000/8000 [00:00<00:00, 699240.04 examples/s]
+  paws: 10000 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0, 'train_label_conflict': 2}
+[public] pawsx_fr …
+Generating train split:   0%|          | 0/49401 [00:00<?, ? examples/s]Generating train split: 100%|██████████| 49401/49401 [00:00<00:00, 861317.36 examples/s]
+Generating test split:   0%|          | 0/2000 [00:00<?, ? examples/s]Generating test split: 100%|██████████| 2000/2000 [00:00<00:00, 345110.79 examples/s]
+Generating validation split:   0%|          | 0/2000 [00:00<?, ? examples/s]Generating validation split: 100%|██████████| 2000/2000 [00:00<00:00, 396812.11 examples/s]
+  pawsx_fr: 1991 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 7, 'train_label_conflict': 2}
+[public] pawsx_fr_mt …
+  pawsx_fr_mt: 7000 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0, 'train_label_conflict': 4}
+[public] stsb …
+Generating train split:   0%|          | 0/5749 [00:00<?, ? examples/s]Generating train split: 100%|██████████| 5749/5749 [00:00<00:00, 591934.74 examples/s]
+Generating validation split:   0%|          | 0/1500 [00:00<?, ? examples/s]Generating validation split: 100%|██████████| 1500/1500 [00:00<00:00, 398420.37 examples/s]
+Generating test split:   0%|          | 0/1379 [00:00<?, ? examples/s]Generating test split: 100%|██████████| 1379/1379 [00:00<00:00, 456147.10 examples/s]
+  stsb: 5733 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 6, 'train_label_conflict': 10}
+[public] sst5 …
+Repo card metadata block was not found. Setting CardData to empty.
+Generating train split:   0%|          | 0/8544 [00:00<?, ? examples/s]Generating train split: 100%|██████████| 8544/8544 [00:00<00:00, 573103.04 examples/s]
+Generating validation split:   0%|          | 0/1101 [00:00<?, ? examples/s]Generating validation split: 100%|██████████| 1101/1101 [00:00<00:00, 338483.38 examples/s]
+Generating test split:   0%|          | 0/2210 [00:00<?, ? examples/s]Generating test split: 100%|██████████| 2210/2210 [00:00<00:00, 482204.23 examples/s]
+Repo card metadata block was not found. Setting CardData to empty.
+  sst5: 8538 train, drops {'empty_state': 5, 'heldout_duplicate': 0, 'train_overlaps_heldout': 2}
+[public] allocine_fr …
+Generating train split:   0%|          | 0/160000 [00:00<?, ? examples/s]Generating train split:  15%|█▌        | 24000/160000 [00:00<00:00, 228038.57 examples/s]Generating train split:  40%|████      | 64000/160000 [00:00<00:00, 323899.58 examples/s]Generating train split:  69%|██████▉   | 110000/160000 [00:00<00:00, 288570.58 examples/s]Generating train split:  94%|█████████▍| 150000/160000 [00:00<00:00, 322021.50 examples/s]Generating train split: 100%|██████████| 160000/160000 [00:00<00:00, 313899.39 examples/s]
+Generating validation split:   0%|          | 0/20000 [00:00<?, ? examples/s]Generating validation split: 100%|██████████| 20000/20000 [00:00<00:00, 364455.88 examples/s]
+Generating test split:   0%|          | 0/20000 [00:00<?, ? examples/s]Generating test split: 100%|██████████| 20000/20000 [00:00<00:00, 361132.74 examples/s]
+  allocine_fr: 16000 train, drops {'empty_state': 1, 'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+[public] mtop_fr …
+Generating train split: 0 examples [00:00, ? examples/s]Generating train split: 11548 examples [00:00, 1035595.19 examples/s]
+Filter:   0%|          | 0/11548 [00:00<?, ? examples/s]Filter: 100%|██████████| 11548/11548 [00:00<00:00, 409380.24 examples/s]
+Generating test split: 0 examples [00:00, ? examples/s]Generating test split: 1541 examples [00:00, 324860.40 examples/s]
+Filter:   0%|          | 0/1541 [00:00<?, ? examples/s]Filter: 100%|██████████| 1541/1541 [00:00<00:00, 193654.80 examples/s]
+  mtop_fr: 11524 train, drops {'heldout_duplicate': 1, 'train_overlaps_heldout': 24}
+[public] piaf_fr …
+  piaf_fr: 3557 train, drops {'heldout_duplicate': 1, 'train_overlaps_heldout': 0}
+[public] helpsteer2_helpfulness …
+Generating train split:   0%|          | 0/20324 [00:00<?, ? examples/s]Generating train split:  22%|██▏       | 4457/20324 [00:00<00:00, 41222.27 examples/s]Generating train split:  43%|████▎     | 8804/20324 [00:00<00:00, 35646.42 examples/s]Generating train split:  69%|██████▉   | 13994/20324 [00:00<00:00, 37996.07 examples/s]Generating train split:  90%|█████████ | 18358/20324 [00:00<00:00, 38660.77 examples/s]Generating train split: 100%|██████████| 20324/20324 [00:00<00:00, 37438.11 examples/s]
+Generating validation split:   0%|          | 0/1038 [00:00<?, ? examples/s]Generating validation split: 100%|██████████| 1038/1038 [00:00<00:00, 42448.08 examples/s]
+  helpsteer2_helpfulness: 8000 train, drops {'heldout_duplicate': 1, 'train_overlaps_heldout': 3, 'train_label_conflict': 4}
+[public] helpsteer2_correctness …
+  helpsteer2_correctness: 8000 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 4}
+[public] banking77 …
+Generating train split:   0%|          | 0/10003 [00:00<?, ? examples/s]Generating train split: 100%|██████████| 10003/10003 [00:00<00:00, 945798.53 examples/s]
+Generating test split:   0%|          | 0/3080 [00:00<?, ? examples/s]Generating test split: 100%|██████████| 3080/3080 [00:00<00:00, 636439.86 examples/s]
+  banking77: 9995 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 8}
+[public] clinc_oos …
+Generating train split:   0%|          | 0/15250 [00:00<?, ? examples/s]Generating train split: 100%|██████████| 15250/15250 [00:00<00:00, 1140996.74 examples/s]
+Generating validation split:   0%|          | 0/3100 [00:00<?, ? examples/s]Generating validation split: 100%|██████████| 3100/3100 [00:00<00:00, 580280.38 examples/s]
+Generating test split:   0%|          | 0/5500 [00:00<?, ? examples/s]Generating test split: 100%|██████████| 5500/5500 [00:00<00:00, 891336.19 examples/s]
+  clinc_oos: 15245 train, drops {'empty_state': 4, 'heldout_duplicate': 0, 'train_overlaps_heldout': 2}
+[public] massive_en …
+Generating train split: 0 examples [00:00, ? examples/s]Generating train split: 11514 examples [00:00, 773050.16 examples/s]
+Generating test split: 0 examples [00:00, ? examples/s]Generating test split: 2974 examples [00:00, 372120.76 examples/s]
+Generating validation split: 0 examples [00:00, ? examples/s]Generating validation split: 2033 examples [00:00, 337049.69 examples/s]
+  massive_en: 11502 train, drops {'empty_state': 5, 'heldout_duplicate': 0, 'train_overlaps_heldout': 8}
+[public] massive_fr …
+Generating train split: 0 examples [00:00, ? examples/s]Generating train split: 11514 examples [00:00, 781178.18 examples/s]
+Generating test split: 0 examples [00:00, ? examples/s]Generating test split: 2974 examples [00:00, 379006.44 examples/s]
+Generating validation split: 0 examples [00:00, ? examples/s]Generating validation split: 2033 examples [00:00, 336597.32 examples/s]
+  massive_fr: 11410 train, drops {'empty_state': 1, 'heldout_duplicate': 3, 'train_overlaps_heldout': 103}
+[public] squad2 …
+  squad2: 20000 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0, 'train_label_conflict': 2}
+[public] vitaminc …
+Generating train split:   0%|          | 0/370653 [00:00<?, ? examples/s]Generating train split:  11%|█         | 39501/370653 [00:00<00:01, 248308.98 examples/s]Generating train split:  21%|██▏       | 78950/370653 [00:00<00:01, 262633.55 examples/s]Generating train split:  32%|███▏      | 118456/370653 [00:00<00:00, 261014.54 examples/s]Generating train split:  43%|████▎     | 157930/370653 [00:00<00:00, 271945.76 examples/s]Generating train split:  53%|█████▎    | 197176/370653 [00:00<00:00, 278333.05 examples/s]Generating train split:  63%|██████▎   | 234416/370653 [00:00<00:00, 278346.27 examples/s]Generating train split:  74%|███████▍  | 275365/370653 [00:00<00:00, 284089.18 examples/s]Generating train split:  86%|████████▌ | 317676/370653 [00:01<00:00, 278940.47 examples/s]Generating train split:  97%|█████████▋| 360107/370653 [00:01<00:00, 282427.05 examples/s]Generating train split: 100%|██████████| 370653/370653 [00:01<00:00, 276902.49 examples/s]
+Generating validation split:   0%|          | 0/63054 [00:00<?, ? examples/s]Generating validation split:  62%|██████▏   | 38855/63054 [00:00<00:00, 266097.28 examples/s]Generating validation split: 100%|██████████| 63054/63054 [00:00<00:00, 276466.57 examples/s]
+Generating test split:   0%|          | 0/55197 [00:00<?, ? examples/s]Generating test split:  71%|███████▏  | 39416/55197 [00:00<00:00, 270380.75 examples/s]Generating test split: 100%|██████████| 55197/55197 [00:00<00:00, 274915.89 examples/s]
+  vitaminc: 20000 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+[public] jailbreak …
+Generating train split:   0%|          | 0/1044 [00:00<?, ? examples/s]Generating train split: 100%|██████████| 1044/1044 [00:00<00:00, 34158.82 examples/s]
+Generating test split:   0%|          | 0/262 [00:00<?, ? examples/s]Generating test split: 100%|██████████| 262/262 [00:00<00:00, 22419.82 examples/s]
+  jailbreak: 984 train, drops {'empty_state': 1, 'heldout_duplicate': 0, 'train_overlaps_heldout': 16, 'train_near_duplicate_of_heldout': 43}
+[public] prompt_injection …
+Generating train split:   0%|          | 0/546 [00:00<?, ? examples/s]Generating train split: 100%|██████████| 546/546 [00:00<00:00, 188020.52 examples/s]
+Generating test split:   0%|          | 0/116 [00:00<?, ? examples/s]Generating test split: 100%|██████████| 116/116 [00:00<00:00, 39824.77 examples/s]
+  prompt_injection: 393 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+[public] dbpedia …
+Generating train split:   0%|          | 0/560000 [00:00<?, ? examples/s]Generating train split:   9%|▉         | 49000/560000 [00:00<00:01, 484976.45 examples/s]Generating train split:  22%|██▎       | 126000/560000 [00:00<00:00, 650353.52 examples/s]Generating train split:  36%|███▌      | 201000/560000 [00:00<00:00, 644145.04 examples/s]Generating train split:  49%|████▉     | 273000/560000 [00:00<00:00, 669303.52 examples/s]Generating train split:  70%|███████   | 392000/560000 [00:00<00:00, 684858.07 examples/s]Generating train split:  86%|████████▌ | 479000/560000 [00:00<00:00, 733885.22 examples/s]Generating train split: 100%|██████████| 560000/560000 [00:00<00:00, 714053.34 examples/s]Generating train split: 100%|██████████| 560000/560000 [00:00<00:00, 689377.43 examples/s]
+Generating test split:   0%|          | 0/70000 [00:00<?, ? examples/s]Generating test split: 100%|██████████| 70000/70000 [00:00<00:00, 766909.36 examples/s]
+  dbpedia: 8000 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+[public] gsm8k_check …
+Generating train split:   0%|          | 0/7473 [00:00<?, ? examples/s]Generating train split: 100%|██████████| 7473/7473 [00:00<00:00, 401044.50 examples/s]
+Generating test split:   0%|          | 0/1319 [00:00<?, ? examples/s]Generating test split: 100%|██████████| 1319/1319 [00:00<00:00, 200488.76 examples/s]
+  gsm8k_check: 7473 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+[public] raid …
+Creating parquet from Arrow format:   0%|          | 0/1 [00:00<?, ?ba/s]Creating parquet from Arrow format: 100%|██████████| 1/1 [00:00<00:00,  1.90ba/s]Creating parquet from Arrow format: 100%|██████████| 1/1 [00:00<00:00,  1.90ba/s]
+  raid: 20000 train, drops {'empty_state': 3, 'heldout_duplicate': 0, 'train_overlaps_heldout': 2}
+[public] mage …
+Generating train split:   0%|          | 0/319071 [00:00<?, ? examples/s]Generating train split:   3%|▎         | 10000/319071 [00:00<00:04, 72807.41 examples/s]Generating train split:   6%|▋         | 20000/319071 [00:00<00:04, 69639.59 examples/s]Generating train split:   9%|▉         | 30000/319071 [00:00<00:04, 66932.44 examples/s]Generating train split:  16%|█▌        | 50000/319071 [00:00<00:03, 79717.42 examples/s]Generating train split:  19%|█▉        | 60000/319071 [00:00<00:03, 76814.77 examples/s]Generating train split:  22%|██▏       | 70000/319071 [00:00<00:03, 75679.94 examples/s]Generating train split:  25%|██▌       | 80000/319071 [00:01<00:03, 78139.50 examples/s]Generating train split:  28%|██▊       | 90000/319071 [00:01<00:02, 76373.92 examples/s]Generating train split:  31%|███▏      | 100000/319071 [00:01<00:02, 76445.16 examples/s]Generating train split:  34%|███▍      | 110000/319071 [00:01<00:02, 71475.02 examples/s]Generating train split:  38%|███▊      | 120000/319071 [00:01<00:03, 60230.58 examples/s]Generating train split:  41%|████      | 130000/319071 [00:01<00:03, 62309.11 examples/s]Generating train split:  44%|████▍     | 140000/319071 [00:01<00:02, 67060.04 examples/s]Generating train split:  47%|████▋     | 150000/319071 [00:02<00:02, 67090.85 examples/s]Generating train split:  50%|█████     | 160000/319071 [00:02<00:02, 72449.78 examples/s]Generating train split:  53%|█████▎    | 170000/319071 [00:02<00:02, 72622.25 examples/s]Generating train split:  56%|█████▋    | 180000/319071 [00:02<00:01, 77420.81 examples/s]Generating train split:  60%|█████▉    | 190000/319071 [00:02<00:01, 75729.56 examples/s]Generating train split:  63%|██████▎   | 200000/319071 [00:02<00:01, 74423.37 examples/s]Generating train split:  66%|██████▌   | 210000/319071 [00:02<00:01, 63344.21 examples/s]Generating train split:  69%|██████▉   | 220000/319071 [00:03<00:01, 60102.22 examples/s]Generating train split:  72%|███████▏  | 230000/319071 [00:03<00:01, 54748.79 examples/s]Generating train split:  75%|███████▌  | 240000/319071 [00:03<00:01, 55006.46 examples/s]Generating train split:  78%|███████▊  | 250000/319071 [00:03<00:01, 56440.69 examples/s]Generating train split:  81%|████████▏ | 260000/319071 [00:03<00:01, 54338.08 examples/s]Generating train split:  85%|████████▍ | 270000/319071 [00:04<00:00, 55763.83 examples/s]Generating train split:  91%|█████████ | 290000/319071 [00:04<00:00, 73894.33 examples/s]Generating train split:  97%|█████████▋| 310000/319071 [00:04<00:00, 85155.13 examples/s]Generating train split: 100%|██████████| 319071/319071 [00:04<00:00, 70237.63 examples/s]
+Generating validation split:   0%|          | 0/56792 [00:00<?, ? examples/s]Generating validation split:  18%|█▊        | 10000/56792 [00:00<00:00, 73465.83 examples/s]Generating validation split:  35%|███▌      | 20000/56792 [00:00<00:00, 68836.13 examples/s]Generating validation split:  53%|█████▎    | 30000/56792 [00:00<00:00, 65373.80 examples/s]Generating validation split:  70%|███████   | 40000/56792 [00:00<00:00, 62489.09 examples/s]Generating validation split:  88%|████████▊ | 50000/56792 [00:00<00:00, 66098.93 examples/s]Generating validation split: 100%|██████████| 56792/56792 [00:00<00:00, 68160.96 examples/s]
+Generating test split:   0%|          | 0/60743 [00:00<?, ? examples/s]Generating test split:  16%|█▋        | 10000/60743 [00:00<00:00, 68674.08 examples/s]Generating test split:  33%|███▎      | 20000/60743 [00:00<00:00, 66217.62 examples/s]Generating test split:  49%|████▉     | 30000/60743 [00:00<00:00, 62716.00 examples/s]Generating test split:  66%|██████▌   | 40000/60743 [00:00<00:00, 61773.73 examples/s]Generating test split:  82%|████████▏ | 50000/60743 [00:00<00:00, 65847.66 examples/s]Generating test split: 100%|██████████| 60743/60743 [00:00<00:00, 67940.85 examples/s]Generating test split: 100%|██████████| 60743/60743 [00:00<00:00, 66087.32 examples/s]
+  mage: 20000 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+[public] hc3_fr …
+Generating train split: 0 examples [00:00, ? examples/s]Generating train split: 25000 examples [00:00, 243121.00 examples/s]Generating train split: 58000 examples [00:00, 288255.53 examples/s]Generating train split: 68283 examples [00:00, 274403.30 examples/s]
+Generating validation split: 0 examples [00:00, ? examples/s]Generating validation split: 17107 examples [00:00, 252868.56 examples/s]
+Generating test split: 0 examples [00:00, ? examples/s]Generating test split: 710 examples [00:00, 119156.36 examples/s]
+  hc3_fr: 10000 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 105}
+[public] pavlick_formality …
+Generating train split:   0%|          | 0/9274 [00:00<?, ? examples/s]Generating train split: 100%|██████████| 9274/9274 [00:00<00:00, 346357.05 examples/s]
+Generating test split:   0%|          | 0/2000 [00:00<?, ? examples/s]Generating test split: 100%|██████████| 2000/2000 [00:00<00:00, 219533.85 examples/s]
+  pavlick_formality: 9215 train, drops {'empty_state': 11, 'heldout_duplicate': 0, 'train_overlaps_heldout': 24, 'train_label_conflict': 24}
+[public] tweet_sentiment_en …
+Generating train split: 0 examples [00:00, ? examples/s]Generating train split: 1839 examples [00:00, 354913.04 examples/s]
+Generating validation split: 0 examples [00:00, ? examples/s]Generating validation split: 324 examples [00:00, 92704.45 examples/s]
+Generating test split: 0 examples [00:00, ? examples/s]Generating test split: 870 examples [00:00, 235787.31 examples/s]
+  tweet_sentiment_en: 1839 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+[public] tweet_sentiment_fr …
+Generating train split: 0 examples [00:00, ? examples/s]Generating train split: 1839 examples [00:00, 366568.06 examples/s]
+Generating validation split: 0 examples [00:00, ? examples/s]Generating validation split: 324 examples [00:00, 130180.52 examples/s]
+Generating test split: 0 examples [00:00, ? examples/s]Generating test split: 870 examples [00:00, 348390.73 examples/s]
+  tweet_sentiment_fr: 1828 train, drops {'heldout_duplicate': 5, 'train_overlaps_heldout': 9, 'train_label_conflict': 2}
+[public] go_emotions …
+Generating train split:   0%|          | 0/211225 [00:00<?, ? examples/s]Generating train split:  20%|█▉        | 42000/211225 [00:00<00:00, 408407.29 examples/s]Generating train split:  46%|████▌     | 97000/211225 [00:00<00:00, 482614.47 examples/s]Generating train split:  76%|███████▌  | 161000/211225 [00:00<00:00, 548501.50 examples/s]Generating train split: 100%|██████████| 211225/211225 [00:00<00:00, 554856.67 examples/s]
+  go_emotions: 20000 train, drops {'empty_state': 7, 'heldout_duplicate': 0, 'train_overlaps_heldout': 17, 'train_label_conflict': 187}
+[public] mlma_fr …
+Generating train split: 0 examples [00:00, ? examples/s]Generating train split: 4014 examples [00:00, 175645.12 examples/s]
+  mlma_fr: 3589 train, drops {'heldout_duplicate': 1, 'train_overlaps_heldout': 8, 'train_label_conflict': 7}
+[public] mlma_en …
+Generating train split: 0 examples [00:00, ? examples/s]Generating train split: 5647 examples [00:00, 212123.04 examples/s]
+  mlma_en: 5040 train, drops {'heldout_duplicate': 1, 'train_overlaps_heldout': 8, 'train_label_conflict': 17}
+[public] textdetox_fr …
+Generating en split:   0%|          | 0/5000 [00:00<?, ? examples/s]Generating en split: 100%|██████████| 5000/5000 [00:00<00:00, 788284.47 examples/s]
+Generating ru split:   0%|          | 0/5000 [00:00<?, ? examples/s]Generating ru split: 100%|██████████| 5000/5000 [00:00<00:00, 661457.81 examples/s]
+Generating uk split:   0%|          | 0/5000 [00:00<?, ? examples/s]Generating uk split: 100%|██████████| 5000/5000 [00:00<00:00, 564752.52 examples/s]
+Generating de split:   0%|          | 0/5000 [00:00<?, ? examples/s]Generating de split: 100%|██████████| 5000/5000 [00:00<00:00, 398085.08 examples/s]
+Generating es split:   0%|          | 0/5000 [00:00<?, ? examples/s]Generating es split: 100%|██████████| 5000/5000 [00:00<00:00, 522784.99 examples/s]
+Generating am split:   0%|          | 0/5000 [00:00<?, ? examples/s]Generating am split: 100%|██████████| 5000/5000 [00:00<00:00, 594987.37 examples/s]
+Generating zh split:   0%|          | 0/5000 [00:00<?, ? examples/s]Generating zh split: 100%|██████████| 5000/5000 [00:00<00:00, 1019965.95 examples/s]
+Generating ar split:   0%|          | 0/5000 [00:00<?, ? examples/s]Generating ar split: 100%|██████████| 5000/5000 [00:00<00:00, 773001.11 examples/s]
+Generating hi split:   0%|          | 0/5000 [00:00<?, ? examples/s]Generating hi split: 100%|██████████| 5000/5000 [00:00<00:00, 487426.38 examples/s]
+Generating it split:   0%|          | 0/5000 [00:00<?, ? examples/s]Generating it split: 100%|██████████| 5000/5000 [00:00<00:00, 687816.33 examples/s]
+Generating fr split:   0%|          | 0/5000 [00:00<?, ? examples/s]Generating fr split: 100%|██████████| 5000/5000 [00:00<00:00, 730129.86 examples/s]
+Generating he split:   0%|          | 0/2011 [00:00<?, ? examples/s]Generating he split: 100%|██████████| 2011/2011 [00:00<00:00, 411029.94 examples/s]
+Generating hin split:   0%|          | 0/4363 [00:00<?, ? examples/s]Generating hin split: 100%|██████████| 4363/4363 [00:00<00:00, 636845.25 examples/s]
+Generating tt split:   0%|          | 0/5000 [00:00<?, ? examples/s]Generating tt split: 100%|██████████| 5000/5000 [00:00<00:00, 729089.14 examples/s]
+Generating ja split:   0%|          | 0/5000 [00:00<?, ? examples/s]Generating ja split: 100%|██████████| 5000/5000 [00:00<00:00, 691308.02 examples/s]
+  textdetox_fr: 4450 train, drops {'empty_state': 1, 'heldout_duplicate': 54, 'train_overlaps_heldout': 6}
+[public] plumb …
+  plumb: 5014 train, drops {'heldout_duplicate': 6, 'train_overlaps_heldout': 0}
+[public] openjev …
+  openjev: 40000 train, drops {'heldout_duplicate': 1, 'train_overlaps_heldout': 30}
+[public] decider_teacher …
+  decider_teacher: 30000 train, drops {'heldout_duplicate': 14, 'train_overlaps_heldout': 0, 'train_label_conflict': 45}
+[public] mghafiri_scenarios …
+Generating train split:   0%|          | 0/2240 [00:00<?, ? examples/s]Generating train split: 100%|██████████| 2240/2240 [00:00<00:00, 38052.05 examples/s]
+Generating validation split:   0%|          | 0/217 [00:00<?, ? examples/s]Generating validation split: 100%|██████████| 217/217 [00:00<00:00, 24192.98 examples/s]
+Generating test split:   0%|          | 0/218 [00:00<?, ? examples/s]Generating test split: 100%|██████████| 218/218 [00:00<00:00, 23719.99 examples/s]
+  mghafiri_scenarios: 11042 train, drops {'too_many_options': 32, 'heldout_duplicate': 0, 'train_overlaps_heldout': 0, 'jevbench_overlap': 47, 'jevbench_overlap:8gram': 47, 'train_label_conflict': 2}
+[public] certo …
+  certo: 15000 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 198}
+[public] jev_fr_pilot …
+  jev_fr_pilot: 200 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+[public] eikos …
+  eikos: 12000 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 35, 'jevbench_overlap': 3, 'jevbench_overlap:8gram': 3}
+[public] eikos_long …
+  eikos_long: 424 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0, 'jevbench_overlap': 1, 'jevbench_overlap:8gram': 1}
+[public] procedural …
+  procedural: 15000 train, drops {'too_many_options': 437, 'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+[public] tempreason …
+  tempreason: 10000 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+[public] helpsteer3 …
+  helpsteer3: 8000 train, drops {'heldout_duplicate': 1, 'train_overlaps_heldout': 111}
+[public] cuad …
+  cuad: 8000 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+[public] cold_law_fr …
+  cold_law_fr: 8000 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+[public] argimi_fr …
+  argimi_fr: 6000 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+[public] twin_squad2 …
+  twin_squad2: 4000 train, drops {'heldout_duplicate': 1, 'train_overlaps_heldout': 0}
+[public] twin_boolq …
+  twin_boolq: 3000 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+[public] twin_piaf_fr …
+  twin_piaf_fr: 2000 train, drops {'heldout_duplicate': 1, 'train_overlaps_heldout': 0}
+  gen_return_window: 8000 train, drops {'heldout_duplicate': 1, 'train_overlaps_heldout': 0}
+  gen_weekday: 8000 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+  gen_invoice_total: 8000 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+  gen_base_rate: 8000 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+  gen_schedule_conflict: 8000 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+  gen_table_argmax: 8000 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+  gen_refund_policy: 8000 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+  gen_long_refund_policy: 4000 train, drops {'heldout_duplicate': 0, 'train_overlaps_heldout': 0}
+  gen_ticket_triage: 8000 train, drops {'heldout_duplicate': 3, 'train_overlaps_heldout': 0}
+  gen_spelling_error: 8000 train, drops {'heldout_duplicate': 9, 'train_overlaps_heldout': 0}
+  gen_register: 8000 train, drops {'heldout_duplicate': 12, 'train_overlaps_heldout': 0}
+  [hygiene] boolq: 8478 train, drops {'train_state_in_heldout': 866, 'train_state_near_heldout': 82, 'train_exact_duplicate': 1}
+  [hygiene] paws: 9993 train, drops {'train_exact_duplicate': 7}
+  [hygiene] pawsx_fr: 1965 train, drops {'train_near_heldout': 21, 'train_exact_duplicate': 5}
+  [hygiene] pawsx_fr_mt: 6930 train, drops {'train_exact_duplicate': 70}
+  [hygiene] stsb: 5689 train, drops {'train_exact_duplicate': 41, 'train_near_heldout': 3}
+  [hygiene] sst5: 8528 train, drops {'train_exact_duplicate': 10}
+  [hygiene] allocine_fr: 15985 train, drops {'train_exact_duplicate': 15}
+  [hygiene] mtop_fr: 11503 train, drops {'train_equals_heldout': 13, 'train_near_heldout': 8}
+  [hygiene] piaf_fr: 3475 train, drops {'train_state_in_heldout': 78, 'train_exact_duplicate': 4}
+  [hygiene] helpsteer2_helpfulness: 7997 train, drops {'train_exact_duplicate': 2, 'train_state_near_heldout': 1}
+  [hygiene] helpsteer2_correctness: 7995 train, drops {'train_state_near_heldout': 2, 'train_exact_duplicate': 1, 'train_near_heldout': 1, 'prompt_too_long': 1}
+  [hygiene] banking77: 9977 train, drops {'train_near_heldout': 17, 'train_equals_heldout': 1}
+  [hygiene] clinc_oos: 15224 train, drops {'train_equals_heldout': 7, 'train_state_in_heldout': 9, 'train_near_heldout': 5}
+  [hygiene] massive_en: 11469 train, drops {'train_near_heldout': 26, 'train_equals_heldout': 4, 'train_state_in_heldout': 2, 'train_state_near_heldout': 1}
+  [hygiene] massive_fr: 11384 train, drops {'train_near_heldout': 22, 'train_equals_heldout': 4}
+  [hygiene] squad2: 19940 train, drops {'train_state_in_heldout': 37, 'train_state_near_heldout': 23}
+  [hygiene] vitaminc: 19995 train, drops {'train_exact_duplicate': 5}
+  [hygiene] jailbreak: 956 train, drops {'train_near_heldout': 10, 'train_exact_duplicate': 16, 'train_state_near_heldout': 2}
+  [hygiene] prompt_injection: 392 train, drops {'train_state_near_heldout': 1}
+  [hygiene] gsm8k_check: 7447 train, drops {'train_near_heldout': 20, 'train_equals_heldout': 6}
+  [hygiene] raid: 19924 train, drops {'prompt_too_long': 62, 'train_exact_duplicate': 14}
+  [hygiene] mage: 19956 train, drops {'train_state_in_heldout': 33, 'prompt_too_long': 3, 'train_state_near_heldout': 8}
+  [hygiene] hc3_fr: 9956 train, drops {'train_exact_duplicate': 41, 'train_near_heldout': 3}
+  [hygiene] pavlick_formality: 9211 train, drops {'train_exact_duplicate': 3, 'train_state_in_heldout': 1}
+  [hygiene] tweet_sentiment_fr: 1804 train, drops {'train_near_heldout': 15, 'train_exact_duplicate': 9}
+  [hygiene] go_emotions: 19926 train, drops {'train_state_in_heldout': 31, 'train_exact_duplicate': 43}
+  [hygiene] mlma_fr: 3566 train, drops {'train_near_heldout': 10, 'train_exact_duplicate': 12, 'train_state_in_heldout': 1}
+  [hygiene] mlma_en: 5032 train, drops {'train_exact_duplicate': 6, 'train_near_heldout': 2}
+  [hygiene] textdetox_fr: 4260 train, drops {'train_exact_duplicate': 190}
+  [hygiene] plumb: 4920 train, drops {'jevbench_8gram': 79, 'prompt_too_long': 9, 'train_exact_duplicate': 6}
+  [hygiene] openjev: 35890 train, drops {'train_near_heldout': 3655, 'train_state_near_heldout': 422, 'train_exact_duplicate': 33}
+  [hygiene] decider_teacher: 28810 train, drops {'train_state_near_heldout': 13, 'train_exact_duplicate': 1166, 'train_near_heldout': 10, 'jevbench_8gram': 1}
+  [hygiene] mghafiri_scenarios: 11004 train, drops {'jevbench_8gram': 38}
+  [hygiene] certo: 14037 train, drops {'train_near_heldout': 939, 'train_state_in_heldout': 22, 'train_state_near_heldout': 2}
+  [hygiene] eikos: 10327 train, drops {'train_near_heldout': 541, 'jevbench_8gram': 1066, 'train_exact_duplicate': 56, 'prompt_too_long': 2, 'train_state_near_heldout': 8}
+  [hygiene] eikos_long: 410 train, drops {'prompt_too_long': 7, 'jevbench_8gram': 7}
+  [hygiene] procedural: 14328 train, drops {'train_near_heldout': 580, 'train_state_near_heldout': 38, 'prompt_too_long': 54}
+  [hygiene] helpsteer3: 7316 train, drops {'train_state_near_heldout': 77, 'train_state_in_heldout': 90, 'train_exact_duplicate': 408, 'train_near_heldout': 107, 'prompt_too_long': 2}
+  [hygiene] cuad: 7924 train, drops {'jevbench_8gram': 70, 'prompt_too_long': 1, 'train_state_near_heldout': 5}
+  [hygiene] cold_law_fr: 7999 train, drops {'train_state_near_heldout': 1}
+  [hygiene] twin_squad2: 3989 train, drops {'train_state_in_heldout': 5, 'train_state_near_heldout': 5, 'train_exact_duplicate': 1}
+  [hygiene] twin_boolq: 2705 train, drops {'train_state_in_heldout': 269, 'train_state_near_heldout': 26}
+  [hygiene] twin_piaf_fr: 1961 train, drops {'train_state_in_heldout': 37, 'train_exact_duplicate': 2}
+  [rebalance] raid: yes 0.9728 → 0.7, 19924 → 10891 rows
+  [rebalance] mage: yes 0.7341 → 0.7, 19956 → 18712 rows
+  [rebalance] mlma_fr: yes 0.7555 → 0.7, 3566 → 2907 rows
+  [rebalance] mlma_en: yes 0.8263 → 0.7, 5032 → 2913 rows
+  [rebalance] openjev: yes 0.2882 → 0.3, 35890 → 35399 rows
+  [epoch-cap] boolq: 8478 rows measured
+  [epoch-cap] mnli: 20000 rows measured
+  [epoch-cap] snli: 10000 rows measured
+  [epoch-cap] xnli_fr: 2490 rows measured
+  [epoch-cap] xnli_fr_mt: 10000 rows measured
+  [epoch-cap] paws: 9993 rows measured
+  [epoch-cap] pawsx_fr: 1965 rows measured
+  [epoch-cap] pawsx_fr_mt: 6930 rows measured
+  [epoch-cap] stsb: 5689 rows measured
+  [epoch-cap] sst5: 8528 rows measured
+  [epoch-cap] allocine_fr: 15985 rows measured
+  [epoch-cap] mtop_fr: 11503 rows measured
+  [epoch-cap] piaf_fr: 3475 rows measured
+  [epoch-cap] helpsteer2_helpfulness: 7997 rows measured
+  [epoch-cap] helpsteer2_correctness: 7995 rows measured
+  [epoch-cap] banking77: 9977 rows measured
+  [epoch-cap] clinc_oos: 15224 rows measured
+  [epoch-cap] massive_en: 11469 rows measured
+  [epoch-cap] massive_fr: 11384 rows measured
+  [epoch-cap] squad2: 19940 rows measured
+  [epoch-cap] vitaminc: 19995 rows measured
+  [epoch-cap] jailbreak: 956 rows measured
+  [epoch-cap] prompt_injection: 392 rows measured
+  [epoch-cap] dbpedia: 8000 rows measured
+  [epoch-cap] gsm8k_check: 7447 rows measured
+  [epoch-cap] raid: 10891 rows measured
+  [epoch-cap] mage: 18712 rows measured
+  [epoch-cap] hc3_fr: 9956 rows measured
+  [epoch-cap] pavlick_formality: 9211 rows measured
+  [epoch-cap] tweet_sentiment_en: 1839 rows measured
+  [epoch-cap] tweet_sentiment_fr: 1804 rows measured
+  [epoch-cap] go_emotions: 19926 rows measured
+  [epoch-cap] mlma_fr: 2907 rows measured
+  [epoch-cap] mlma_en: 2913 rows measured
+  [epoch-cap] textdetox_fr: 4260 rows measured
+  [epoch-cap] plumb: 4920 rows measured
+  [epoch-cap] openjev: 35399 rows measured
+  [epoch-cap] decider_teacher: 28810 rows measured
+  [epoch-cap] mghafiri_scenarios: 11004 rows measured
+  [epoch-cap] certo: 14037 rows measured
+  [epoch-cap] jev_fr_pilot: 200 rows measured
+  [epoch-cap] eikos: 10327 rows measured
+  [epoch-cap] eikos_long: 410 rows measured
+  [epoch-cap] procedural: 14328 rows measured
+  [epoch-cap] tempreason: 10000 rows measured
+  [epoch-cap] helpsteer3: 7316 rows measured
+  [epoch-cap] cuad: 7924 rows measured
+  [epoch-cap] cold_law_fr: 7999 rows measured
+  [epoch-cap] argimi_fr: 6000 rows measured
+  [epoch-cap] twin_squad2: 3989 rows measured
+  [epoch-cap] twin_boolq: 2705 rows measured
+  [epoch-cap] twin_piaf_fr: 1961 rows measured
+  [epoch-cap] gen_return_window: 8000 rows measured
+  [epoch-cap] gen_weekday: 8000 rows measured
+  [epoch-cap] gen_invoice_total: 8000 rows measured
+  [epoch-cap] gen_base_rate: 8000 rows measured
+  [epoch-cap] gen_schedule_conflict: 8000 rows measured
+  [epoch-cap] gen_table_argmax: 8000 rows measured
+  [epoch-cap] gen_refund_policy: 8000 rows measured
+  [epoch-cap] gen_long_refund_policy: 4000 rows measured
+  [epoch-cap] gen_ticket_triage: 8000 rows measured
+  [epoch-cap] gen_spelling_error: 8000 rows measured
+  [epoch-cap] gen_register: 8000 rows measured
+[epoch-cap] round 0: max jev_fr_pilot 16.31, 0 capped, blocks that cannot absorb: none
+[epoch-cap] round 1: max plumb 2.00, 7 capped, blocks that cannot absorb: none
+{
+  "train_rows_by_lang": {
+    "en": 445029,
+    "fr": 124531
+  },
+  "fr_sampled_share": 0.2021,
+  "mixture": {
+    "plumb": 0.022911,
+    "openjev": 0.120603,
+    "decider_teacher": 0.108802,
+    "mghafiri_scenarios": 0.051602,
+    "certo": 0.065138,
+    "jev_fr_pilot": 0.000945,
+    "gen_return_window": 0.027533,
+    "gen_weekday": 0.027533,
+    "gen_invoice_total": 0.027533,
+    "gen_base_rate": 0.027533,
+    "gen_schedule_conflict": 0.027533,
+    "gen_table_argmax": 0.027533,
+    "gen_refund_policy": 0.027533,
+    "gen_long_refund_policy": 0.009734,
+    "gen_ticket_triage": 0.027533,
+    "boolq": 0.004582,
+    "mnli": 0.007038,
+    "snli": 0.004977,
+    "xnli_fr": 0.004212,
+    "xnli_fr_mt": 0.004221,
+    "paws": 0.004975,
+    "pawsx_fr": 0.003742,
+    "pawsx_fr_mt": 0.003514,
+    "stsb": 0.003754,
+    "sst5": 0.004596,
+    "allocine_fr": 0.010673,
+    "mtop_fr": 0.009054,
+    "piaf_fr": 0.004976,
+    "helpsteer2_helpfulness": 0.004451,
+    "helpsteer2_correctness": 0.00445,
+    "banking77": 0.004971,
+    "clinc_oos": 0.006141,
+    "massive_en": 0.00533,
+    "massive_fr": 0.009007,
+    "squad2": 0.007028,
+    "vitaminc": 0.007037,
+    "jailbreak": 0.001539,
+    "prompt_injection": 0.000985,
+    "dbpedia": 0.004451,
+    "gsm8k_check": 0.004295,
+    "raid": 0.007666,
+    "mage": 0.010049,
+    "hc3_fr": 0.008683,
+    "pavlick_formality": 0.00705,
+    "tweet_sentiment_en": 0.00315,
+    "tweet_sentiment_fr": 0.003696,
+    "go_emotions": 0.01037,
+    "mlma_fr": 0.004692,
+    "mlma_en": 0.003965,
+    "textdetox_fr": 0.00568,
+    "gen_spelling_error": 0.02,
+    "gen_register": 0.02,
+    "eikos": 0.025308,
+    "eikos_long": 0.001261,
+    "procedural": 0.02981,
+    "tempreason": 0.024905,
+    "helpsteer3": 0.010651,
+    "cuad": 0.011085,
+    "cold_law_fr": 0.029273,
+    "argimi_fr": 0.012676,
+    "twin_squad2": 0.00918,
+    "twin_boolq": 0.00631,
+    "twin_piaf_fr": 0.004541
+  }
+}

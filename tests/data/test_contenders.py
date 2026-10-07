@@ -36,6 +36,7 @@ def test_every_contender_source_is_in_the_jev_registry():
         "decider_teacher",
         "mghafiri_scenarios",
         "certo",
+        "jev_fr_pilot",
     }
     held_out = [s for s in JEV_SOURCES.values() if s.eval_split is None]
     assert all(s.group is not None for s in held_out)
@@ -273,3 +274,61 @@ def test_certo_binary_score_and_posterior():
     assert row["target"] == {"opt0": 0.25, "opt1": 0.75}
     multi = {**choice, "type": "independent_binary"}
     assert certo(_certo(multi, {"kind": "bernoulli_labels"}), RNG, {}) == []
+
+
+def test_jev_fr_pilot_rows_keep_their_labels_and_are_french():
+    from tjev.data.sources.contenders import PILOT_FILE, jev_fr_pilot
+
+    rows = [json.loads(line) for line in PILOT_FILE.read_text(encoding="utf-8").splitlines()]
+    assert {r["pilot_split"] for r in rows} == {"train", "heldout"}
+    for r in rows:
+        (item,) = jev_fr_pilot({"row": json.dumps(r)}, RNG, {})
+        assert item["lang"] == "fr"
+        parse_item({**item, "id": r["id"], "source": "jev_fr_pilot"})
+
+
+def test_plumb_and_decider_rows_carry_their_teacher():
+    """plumb's teacher_probs and decider's teacher_p become the item's ``teacher``
+    (loss.teacher_*), round-trip through the mix's JSONL, and never change the target."""
+    from tjev.data.item import item_to_json
+
+    (row,) = plumb(PLUMB_NOUL, RNG, {})
+    item = parse_item(row)
+    assert item.teacher == pytest.approx((0.64, 0.36))
+    rubric = {**PLUMB_NOUL, "family": "rubric", "expected": "0",
+              "question": {"type": "score", "instructions": "Risk?", "criteria": ["a", "b", "c"]},
+              "teacher_probs": {"0": 0.2, "1": 0.8}}  # fmt: skip
+    (item,) = _parse(plumb(rubric, RNG, {}))
+    assert item.gold == 0 and max(item.target) == 1 and item.teacher == pytest.approx((0.2, 0.8, 0))
+    assert parse_item(item_to_json(item)).teacher == item.teacher
+    bad = {**rubric, "teacher_probs": {"7": 1.0}}  # unknown label: no teacher, the row stays
+    (item,) = _parse(plumb(bad, RNG, {}))
+    assert item.teacher is None and "teacher" not in item_to_json(item)
+
+    row = {"state": "rm -rf /", "domain": "shell", "recipe": "commands", "questions": json.dumps([
+        {"type": "choice", "instructions": "Risk?", "criteria": {"safe": "", "caution": "",
+         "destructive": ""}, "answer": "destructive", "teacher_p": 0.7, "teacher_ok": True,
+         "teacher_pred": "destructive"},
+        {"type": "noul", "instructions": "Outside?", "answer": True, "teacher_p": 0.8,
+         "teacher_ok": True, "teacher_pred": 1},
+        {"type": "score", "instructions": "Urgency?", "criteria": ["low", "mid", "high"],
+         "answer": 2, "teacher_p": 0.55},
+        {"type": "choice", "instructions": "Route", "criteria": {"a": None, "b": None},
+         "answer": "b"},
+    ])}  # fmt: skip
+    a, b, c, d = _parse(decider(row, RNG, {}))
+    assert a.teacher == pytest.approx((0.15, 0.15, 0.7))  # the rest spread over the others
+    assert b.teacher == pytest.approx((0.2, 0.8))  # noul: exact
+    assert c.teacher == pytest.approx((0.225, 0.225, 0.55))
+    assert d.teacher is None  # no teacher_p
+    assert a.target == (0.0, 0.0, 1.0)
+
+
+def test_decider_teacher_puts_the_rest_on_its_own_prediction():
+    from tjev.data.sources.contenders import decider_teacher_dist
+
+    dist = decider_teacher_dist("choice", ["a", "b", "c"], "a", 0.3, "c")
+    assert dist == pytest.approx({"a": 0.3, "b": 0.0, "c": 0.7})
+    assert decider_teacher_dist("score", ["0", "1", "2"], "0", 0.1, 2) == pytest.approx(
+        {"0": 0.1, "1": 0.0, "2": 0.9})  # fmt: skip
+    assert decider_teacher_dist("choice", ["a", "b"], "a", None, "b") is None

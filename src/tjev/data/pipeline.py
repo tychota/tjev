@@ -91,9 +91,14 @@ def train_iterator(
     worker_buffer: int = 32,
     prefetch: int = 2,
     bins: int = 1,
+    devices: int = 1,
+    teacher: bool = False,
+    packing: str = "bucket",
 ) -> grain.DatasetIterator:
     """Iterator of train steps. ``get_state()`` after ``next()`` is the state to checkpoint
-    with that step (ThreadPrefetch hands out the state captured with each element)."""
+    with that step (ThreadPrefetch hands out the state captured with each element).
+    ``teacher``: the steps carry Batch.teacher (loss.teacher_mix). ``packing``: the
+    packer's placement (BucketPacker, train.packing)."""
     if workers:
         from absl import flags
 
@@ -111,6 +116,9 @@ def train_iterator(
         slots=slots,
         labels=labels,
         bins=bins,
+        devices=devices,
+        teacher=teacher,
+        packing=packing,
     )
     if prefetch:
         ds = grain.experimental.ThreadPrefetchIterDataset(ds, prefetch_buffer_size=prefetch)

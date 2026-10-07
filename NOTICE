@@ -27,6 +27,38 @@ MaxText
   saved per-chunk states; the bf16_3x precision policy). The file header describes the
   changes. cloud/tpu_env.sh takes its libtpu flag set from benchmarks/xla_flags_library.py.
 
+  The design of src/tjev/kernels/gated_delta_rule/pallas_tpu_v2.py (saved (I+L)⁻¹ and
+  per-chunk states, one reverse backward kernel, heads as the dot batch dimension, the
+  shared-operand matmuls, the bf16_3x / one-pass precision split) follows the atwigg/mlperf
+  GDN kernels (src/maxtext/kernels/gdn/, gdn_bwd/; pull requests #5153, #5273, #5274,
+  #5399). No code was copied.
+
+  The GDN megakernels of src/tjev/kernels/gated_delta_rule/pallas_tpu_mega.py follow the
+  same branch's forward (src/maxtext/kernels/gdn/wrapper.py, compute_conv1d.py,
+  compute_gdn.py: the conv halo carried in VMEM scratch, the in-kernel gates, l2norm, q
+  scale and GQA) and backward (gdn_bwd/pallas_mosaic_tpu_bwd.py: the in-kernel l2norm and
+  gate backward), and the blocked inverse of pallas_tpu_v2.py its
+  compute_gdn.invert_triangular_matrix (16-row diagonal blocks by forward substitution).
+  No code was copied.
+
+flash-linear-attention
+  https://github.com/fla-org/flash-linear-attention (fla/ops/gated_delta_rule)
+  Copyright (c) 2023-2026 Songlin Yang, Yu Zhang, Zhiyuan Li. Licensed under the MIT License.
+  The closed-form backward of src/tjev/kernels/gated_delta_rule/pallas_tpu_v2.py (the
+  inverse's gradient without differentiating through it, the gate gradient from row sums)
+  follows its algebra. No code was copied.
+  The conv backward of src/tjev/kernels/gated_delta_rule/pallas_tpu_mega.py (the
+  anti-causal d(input) with the pre-activation recomputed, fla/modules/conv/triton/kernels.py)
+  and the 16x16 diagonal solve of pallas_tpu_v2.py's blocked inverse (fla/ops/utils/
+  solve_tril.py) follow its algebra. No code was copied.
+
+causal-conv1d
+  https://github.com/Dao-AILab/causal-conv1d (csrc/causal_conv1d_bwd.cu)
+  Copyright (c) 2024, Tri Dao. Licensed under the BSD 3-Clause License.
+  The conv backward of src/tjev/kernels/gated_delta_rule/pallas_tpu_mega.py (per-token
+  sequence masks on every tap of d(input), SiLU' on the recomputed pre-activation) follows
+  its math. No code was copied.
+
 JAX (Pallas TPU splash attention), used as a library, not copied
   https://github.com/jax-ml/jax (jax.experimental.pallas.ops.tpu.splash_attention)
   Copyright 2023-2026 The JAX Authors. Licensed under the Apache License, Version 2.0.

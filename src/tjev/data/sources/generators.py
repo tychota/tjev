@@ -12,6 +12,9 @@ the training range (1–180 days) and half beyond it (181–540); ``return_windo
 the window lengths (7/21/45/120 days); ``schedule_conflict`` a longer day and other slot
 lengths. ``generate`` drops repeated (state, instructions) keys, normalised as
 ``build_mix`` does, so no item repeats within one call. mix-v2 changed the train output.
+mix-v5b changed the training rows of ``return_window`` (windows of 3–200 days, not only
+whole months) and added exact intermediate quantities to a share of the training rows of
+``return_window`` and ``long_refund_policy`` (``HINT_SHARE``); held-out rows are unchanged.
 """
 
 from __future__ import annotations
@@ -63,9 +66,26 @@ YES_NO = {
 }
 
 
-def _date(d: dt.date, lang: str) -> str:
+def _date(d: dt.date, lang: str, style: int = 0) -> str:
+    """A date as written in ``lang``. Styles: 0 "March 3, 2025" / "3 mars 2025",
+    1 with the weekday ("Monday, March 3, 2025" / "lundi 3 mars 2025"), 2 numeric
+    ("2025-03-03" / "03/03/2025"), 3 day-month ("3 March 2025" / "3 mars 2025")."""
     m = MONTHS[lang][d.month - 1]
-    return f"{m} {d.day}, {d.year}" if lang == "en" else f"{d.day} {m} {d.year}"
+    wd = WEEKDAYS[lang][d.weekday()]
+    if lang == "en":
+        return [
+            f"{m} {d.day}, {d.year}",
+            f"{wd}, {m} {d.day}, {d.year}",
+            d.isoformat(),
+            f"{d.day} {m} {d.year}",
+        ][style]
+    day = "1er" if d.day == 1 else str(d.day)  # French writes the first of the month "1er"
+    return [
+        f"{day} {m} {d.year}",
+        f"{wd} {day} {m} {d.year}",
+        f"{d.day:02d}/{d.month:02d}/{d.year}",
+        f"{day} {m} {d.year}",
+    ][style]
 
 
 def _rand_date(rng, start=dt.date(2024, 1, 1), span=900) -> dt.date:
@@ -88,42 +108,240 @@ def _pick(rng, seq):
     return seq[int(rng.integers(len(seq)))]
 
 
+def _surface(srng, table, split: str, lang: str):
+    """The surface variant of one item: a template drawn with the *surface* rng ``srng``
+    (variant 0, the mix-v4 text, without one). Labels and parameters come from the item rng
+    only, so the template never changes what an item asks or its answer."""
+    variants = table[("train" if split == "train" else "heldout"), lang]
+    return variants[0] if srng is None else _pick(srng, variants)
+
+
 # ---------------------------------------------------------------------------------------
 # Temporal / numeric
 
+# (state template, question, date style); {w} window, {b} purchase, {t} request date,
+# {e} days elapsed. Held-out: other events (delivery, complaint) and wording.
+RETURN_TEXT = {
+    ("train", "en"): [
+        (
+            (
+                "Store policy: items may be returned within {w} days of purchase.\n"
+                "Purchase date: {b}. Today: {t}."
+            ),
+            "Is the return still within the allowed window?",
+            0,
+        ),
+        (
+            (
+                "Return policy: you have {w} days from the date of purchase to send an item back.\n"
+                "Bought on {b}; return request received on {t}."
+            ),
+            "Does the return request meet the deadline?",
+            1,
+        ),
+        (
+            (
+                "Returns are accepted up to {w} days after purchase (the date on the receipt "
+                "is the purchase date).\n"
+                "Receipt dated {b}. The customer comes back to the shop on {t}."
+            ),
+            "Should the shop accept the return, given the time limit?",
+            3,
+        ),
+        (
+            (
+                "Exchange or refund possible until day {w} after purchase.\nPurchase: {b}\n"
+                "Request: {t}"
+            ),
+            "Does the request arrive before the period runs out?",
+            2,
+        ),
+        (
+            (
+                "Rule: an item can be returned within {w} days of purchase.\n"
+                "This item was bought {e} days ago."
+            ),
+            "Can the item still be returned?",
+            0,
+        ),
+        (
+            (
+                'From the terms of sale: "Customers may return a product within {w} days of the '
+                "purchase date.\"\nInvoice date: {b}. Today's date: {t}."
+            ),
+            "Is the return period respected?",
+            3,
+        ),
+        (
+            (
+                "Cooling-off period: {w} days from the order.\nOrder placed on {b}; cancellation "
+                "sent on {t}."
+            ),
+            "Can the customer still cancel within the period?",
+            1,
+        ),
+    ],
+    ("train", "fr"): [
+        (
+            (
+                "Politique du magasin : retour possible dans les {w} jours suivant l'achat.\n"
+                "Date d'achat : {b}. Aujourd'hui : {t}."
+            ),
+            "Le retour est-il encore dans le délai autorisé ?",
+            0,
+        ),
+        (
+            (
+                "Conditions de retour : vous disposez de {w} jours à compter de l'achat pour nous "
+                "renvoyer un article.\nAchat effectué le {b} ; demande de retour reçue le {t}."
+            ),
+            "La demande de retour respecte-t-elle le délai ?",
+            1,
+        ),
+        (
+            (
+                "Reprise des articles sous {w} jours, la date du ticket de caisse faisant foi.\n"
+                "Ticket du {b}. Le client revient en magasin le {t}."
+            ),
+            "Le magasin doit-il accepter la reprise au regard du délai ?",
+            2,
+        ),
+        (
+            (
+                "Échange ou remboursement possible jusqu'à J+{w}, le jour J étant celui de l'achat."
+                "\nAchat : {b}\nDemande : {t}"
+            ),
+            "La demande arrive-t-elle avant l'expiration du délai ?",
+            1,
+        ),
+        (
+            (
+                "Règle : un article peut être rendu dans les {w} jours qui suivent l'achat.\n"
+                "Cet article a été acheté il y a {e} jours."
+            ),
+            "Le retour est-il encore possible ?",
+            0,
+        ),
+        (
+            (
+                "Extrait des CGV : « Le client dispose d'un délai de {w} jours à compter de la date "
+                "d'achat pour retourner le produit. »\nDate de la facture : {b}. Date du jour : {t}."
+            ),
+            "Le délai de retour est-il respecté ?",
+            2,
+        ),
+        (
+            (
+                "Délai de rétractation : {w} jours à compter de la commande.\nCommande passée le "
+                "{b} ; rétractation envoyée le {t}."
+            ),
+            "Le client est-il encore dans le délai pour se rétracter ?",
+            1,
+        ),
+    ],
+    ("heldout", "en"): [
+        (
+            (
+                "Warranty terms: claims are accepted up to {w} days after delivery.\n"
+                "Delivered on {b}; the claim is filed on {t}."
+            ),
+            "Is the claim filed in time?",
+            0,
+        ),
+        (
+            (
+                "Guarantee: any complaint must reach us no later than {w} days after the parcel is "
+                "handed over.\nParcel handed over on {b}. Complaint received on {t}."
+            ),
+            "Is the complaint admissible within the time limit?",
+            1,
+        ),
+        (
+            (
+                "Damage reporting window: {w} days after receipt.\nParcel received {b} — damage "
+                "reported {t}."
+            ),
+            "Was the damage reported within the window?",
+            2,
+        ),
+    ],
+    ("heldout", "fr"): [
+        (
+            (
+                "Garantie : les réclamations sont acceptées jusqu'à {w} jours après la livraison.\n"
+                "Livré le {b} ; réclamation déposée le {t}."
+            ),
+            "La réclamation est-elle déposée à temps ?",
+            0,
+        ),
+        (
+            (
+                "Garantie commerciale : toute plainte doit nous parvenir au plus tard {w} jours "
+                "après la remise du colis.\nColis remis le {b}. Plainte reçue le {t}."
+            ),
+            "La plainte est-elle recevable dans les délais ?",
+            1,
+        ),
+        (
+            (
+                "Signalement des dommages : sous {w} jours après réception.\nColis reçu le {b} — "
+                "dommage signalé le {t}."
+            ),
+            "Le dommage a-t-il été signalé dans le délai ?",
+            2,
+        ),
+    ],
+}
 
-def return_window(rng, lang, split):
+
+# mix-v5b. The held-out window lengths (never trained). Training windows were only the
+# common store windows 10/14/30/60/90/180 up to mix-v5: four of six are whole months, where
+# "has the day of the month passed?" decides 90–97% of the rows without counting days, and
+# the 4B learned that shortcut (8–14% accuracy at 0.82–0.88 confidence on the 45-day
+# held-out window, docs/fr-data.md §7). Training now draws 40% of its windows from the common list and 60%
+# uniformly from 3–200 days minus these.
+HELDOUT_WINDOWS = (7, 21, 45, 120)
+COMMON_WINDOWS = (10, 14, 30, 60, 90, 180)
+TRAIN_WINDOWS = tuple(w for w in range(3, 201) if w not in HELDOUT_WINDOWS)
+# mix-v5b curriculum: a share of the *training* rows state an intermediate quantity (days
+# elapsed or the last day of the window, return_window; the section holding the category's
+# window and the customer's own refund period, long_refund_policy). The quantity is exact,
+# so the label never changes; held-out rows never get one. The rows are chosen by a hash of
+# the state, so a row's parameters, template and label are those it has without hints.
+HINT_SHARE = 0.2
+RETURN_HINT = {
+    "en": ("Days elapsed: {e}.", "Last day of the window: {d}."),
+    "fr": ("Jours écoulés : {e}.", "Dernier jour du délai : {d}."),
+}
+
+
+def _hinted(state: str, split: str) -> int:
+    """0 (no hint) or which hint (1, 2) a training row gets: a stable hash of its state."""
+    if split != "train":
+        return 0
+    h = zlib.crc32(state.encode())
+    return 0 if h % 1000 >= HINT_SHARE * 1000 else 1 + (h >> 10) % 2
+
+
+def return_window(rng, lang, split, srng=None, hints=True):
     bought = _rand_date(rng)
-    window = int(rng.choice([10, 14, 30, 60, 90, 180] if split == "train" else [7, 21, 45, 120]))
+    if split != "train":
+        window = int(rng.choice(list(HELDOUT_WINDOWS)))
+    elif rng.random() < 0.4:
+        window = int(rng.choice(list(COMMON_WINDOWS)))
+    else:
+        window = int(rng.choice(list(TRAIN_WINDOWS)))
     elapsed = int(rng.integers(max(1, window - 10), window + 12))
     today = bought + dt.timedelta(days=elapsed)
     ok = elapsed <= window
-    if split != "train":
-        if lang == "en":
-            state = (
-                f"Warranty terms: claims are accepted up to {window} days after delivery.\n"
-                f"Delivered on {_date(bought, lang)}; the claim is filed on {_date(today, lang)}."
-            )
-            q = "Is the claim filed in time?"
-        else:
-            state = (
-                f"Garantie : les réclamations sont acceptées jusqu'à {window} jours après la "
-                f"livraison.\nLivré le {_date(bought, lang)} ; réclamation déposée le "
-                f"{_date(today, lang)}."
-            )
-            q = "La réclamation est-elle déposée à temps ?"
-    elif lang == "en":
-        state = (
-            f"Store policy: items may be returned within {window} days of purchase.\n"
-            f"Purchase date: {_date(bought, lang)}. Today: {_date(today, lang)}."
-        )
-        q = "Is the return still within the allowed window?"
-    else:
-        state = (
-            f"Politique du magasin : retour possible dans les {window} jours suivant l'achat.\n"
-            f"Date d'achat : {_date(bought, lang)}. Aujourd'hui : {_date(today, lang)}."
-        )
-        q = "Le retour est-il encore dans le délai autorisé ?"
+    template, q, style = _surface(srng, RETURN_TEXT, split, lang)
+    state = template.format(
+        w=window, b=_date(bought, lang, style), t=_date(today, lang, style), e=elapsed
+    )
+    hint = _hinted(state, split) if hints and "{e}" not in template else 0
+    if hint:
+        last = _date(bought + dt.timedelta(days=window), lang, style)
+        state += "\n" + RETURN_HINT[lang][hint - 1].format(e=elapsed, d=last)
     return {
         "state": state,
         "expected": "yes" if ok else "no",
@@ -131,7 +349,117 @@ def return_window(rng, lang, split):
     }
 
 
-def weekday(rng, lang, split):
+# (state template, question, date style); {wd} start weekday, {d} start date, {o} offset.
+# Every template states the start weekday: the item asks for day-of-week arithmetic.
+WEEKDAY_TEXT = {
+    ("train", "en"): [
+        (
+            "The kickoff was on {wd}, {d}. The review is {o} days later.",
+            "On which weekday is the review?",
+            0,
+        ),
+        (
+            "Project start (day 0): {wd}, {d}.\nHandover is scheduled for day {o}.",
+            "On which weekday does the handover fall?",
+            3,
+        ),
+        (
+            "The order was placed on {wd}, {d}; it ships {o} days later.",
+            "What day of the week does the order ship?",
+            0,
+        ),
+        (
+            "Today is {wd}, {d}. The file must be submitted in {o} days.",
+            "On what weekday is the file due?",
+            3,
+        ),
+        (
+            "Registration was confirmed on {wd} ({d}). The course starts {o} days afterwards.",
+            "Which day of the week does the course start?",
+            2,
+        ),
+        (
+            "Departure: {wd}, {d}.\nReturn: {o} days after departure.",
+            "Which weekday is the return planned for?",
+            0,
+        ),
+    ],
+    ("train", "fr"): [
+        (
+            "Le lancement a eu lieu le {wd} {d}. La revue a lieu {o} jours plus tard.",
+            "Quel jour de la semaine a lieu la revue ?",
+            0,
+        ),
+        (
+            "Début du chantier (jour J) : {wd} {d}.\nLivraison prévue à J+{o}.",
+            "Quel jour de la semaine tombe la livraison ?",
+            0,
+        ),
+        (
+            "La commande a été passée le {wd} {d} ; l'expédition intervient {o} jours après.",
+            "Quel jour de la semaine la commande est-elle expédiée ?",
+            0,
+        ),
+        (
+            "Nous sommes le {wd} {d}. Le dossier doit être rendu dans {o} jours.",
+            "Quel jour de la semaine le dossier doit-il être rendu ?",
+            0,
+        ),
+        (
+            "Inscription validée le {wd} {d}. La formation commence {o} jours plus tard.",
+            "Quel jour de la semaine commence la formation ?",
+            2,
+        ),
+        (
+            "Départ : {wd} {d}.\nRetour : {o} jours après le départ.",
+            "Quel jour de la semaine le retour est-il prévu ?",
+            2,
+        ),
+    ],
+    ("heldout", "en"): [
+        (
+            "The contract was signed on {wd}, {d}. Payment is due {o} days after signature.",
+            "On which weekday is the payment due?",
+            0,
+        ),
+        (
+            "The lease takes effect on {wd}, {d}. The inspection takes place {o} days later.",
+            "On which weekday is the inspection held?",
+            3,
+        ),
+        (
+            (
+                "The outbound flight leaves on {wd}, {d}; the return flight takes off {o} days "
+                "later."
+            ),
+            "What weekday does the return flight take off?",
+            2,
+        ),
+    ],
+    ("heldout", "fr"): [
+        (
+            (
+                "Le contrat a été signé le {wd} {d}. Le paiement est dû {o} jours après la "
+                "signature."
+            ),
+            "Quel jour de la semaine le paiement est-il dû ?",
+            0,
+        ),
+        (
+            "Le bail prend effet le {wd} {d}. L'état des lieux a lieu {o} jours plus tard.",
+            "Quel jour de la semaine se tient l'état des lieux ?",
+            0,
+        ),
+        (
+            "Le vol aller part le {wd} {d} ; le vol retour décolle {o} jours après.",
+            "Quel jour de la semaine décolle le vol retour ?",
+            2,
+        ),
+    ],
+}
+
+
+def weekday(rng, lang, split, srng=None):
     d = _rand_date(rng, span=3000)
     if split == "train":
         offset = int(rng.integers(1, 181))
@@ -139,25 +467,8 @@ def weekday(rng, lang, split):
         offset = int(rng.integers(1, 181) if rng.random() < 0.5 else rng.integers(181, 541))
     target = d + dt.timedelta(days=offset)
     names = WEEKDAYS[lang]
-    if split != "train":
-        if lang == "en":
-            state = (
-                f"The contract was signed on {names[d.weekday()]}, {_date(d, lang)}. "
-                f"Payment is due {offset} days after signature."
-            )
-            q = "On which weekday is the payment due?"
-        else:
-            state = (
-                f"Le contrat a été signé le {names[d.weekday()]} {_date(d, lang)}. "
-                f"Le paiement est dû {offset} jours après la signature."
-            )
-            q = "Quel jour de la semaine le paiement est-il dû ?"
-    elif lang == "en":
-        state = f"The kickoff was on {names[d.weekday()]}, {_date(d, lang)}. The review is {offset} days later."
-        q = "On which weekday is the review?"
-    else:
-        state = f"Le lancement a eu lieu le {names[d.weekday()]} {_date(d, lang)}. La revue a lieu {offset} jours plus tard."
-        q = "Quel jour de la semaine a lieu la revue ?"
+    template, q, style = _surface(srng, WEEKDAY_TEXT, split, lang)
+    state = template.format(wd=names[d.weekday()], d=_date(d, lang, style), o=offset)
     return {
         "state": state,
         "expected": names[target.weekday()],
@@ -165,35 +476,133 @@ def weekday(rng, lang, split):
     }
 
 
-INVOICE_TEXT = {  # (header, discount line, total line, question)
-    ("train", "en"): (
-        "Invoice lines:",
-        "Discount: {p}% on the whole order.",
-        "Stated total: {t}",
-        "Is the stated total correct (to the cent)?",
-    ),
-    ("train", "fr"): (
-        "Lignes de facture :",
-        "Remise : {p} % sur toute la commande.",
-        "Total indiqué : {t}",
-        "Le total indiqué est-il correct (au centime près) ?",
-    ),
-    ("heldout", "en"): (
-        "Purchase order items:",
-        "Rebate applied to the full order: {p}%.",
-        "Amount billed: {t}",
-        "Does the amount billed match the items and the rebate exactly?",
-    ),
-    ("heldout", "fr"): (
-        "Articles du bon de commande :",
-        "Rabais appliqué à l'ensemble : {p} %.",
-        "Montant facturé : {t}",
-        "Le montant facturé correspond-il exactement aux articles et au rabais ?",
-    ),
+# (header, item line, discount line, total line, question); {n} item, {q} quantity, {p} unit
+# price, {d} discount %, {t} stated total, {r} a reference number.
+INVOICE_TEXT = {
+    ("train", "en"): [
+        (
+            "Invoice lines:",
+            "- {n}: {q} × {p}",
+            "Discount: {d}% on the whole order.",
+            "Stated total: {t}",
+            "Is the stated total correct (to the cent)?",
+        ),
+        (
+            "Order details:",
+            "- {q} {n} at {p} each",
+            "Trade discount: {d}%.",
+            "Total amount: {t}",
+            "Is the total amount exact?",
+        ),
+        (
+            "Invoice no. {r}",
+            "{n} | qty {q} | unit price {p}",
+            "Overall discount applied: {d}%",
+            "Amount due: {t}",
+            "Is the amount due right to the cent?",
+        ),
+        (
+            "Basket:",
+            "- {n} ×{q} ({p} apiece)",
+            "Promo code: -{d}% on the basket.",
+            "Displayed total: {t}",
+            "Does the displayed total match the basket?",
+        ),
+        (
+            "Priced delivery note:",
+            "• {n}: {q} units at {p}",
+            "Early-payment discount of {d}% on everything.",
+            "Announced total: {t}",
+            "Is the announced total correct?",
+        ),
+        (
+            "Purchase summary:",
+            "- {n}, {q} × {p}",
+            "Reduction: {d}% off the total.",
+            "To pay: {t}",
+            "Has the amount to pay been calculated correctly?",
+        ),
+    ],
+    ("train", "fr"): [
+        (
+            "Lignes de facture :",
+            "- {n} : {q} × {p}",
+            "Remise : {d} % sur toute la commande.",
+            "Total indiqué : {t}",
+            "Le total indiqué est-il correct (au centime près) ?",
+        ),
+        (
+            "Détail de la commande :",
+            "- {q} {n} à {p} l'unité",
+            "Remise commerciale : {d} %.",
+            "Montant total : {t}",
+            "Le montant total est-il exact ?",
+        ),
+        (
+            "Facture n° {r}",
+            "{n} | qté {q} | prix unitaire {p}",
+            "Remise globale appliquée : {d} %",
+            "Net à payer : {t}",
+            "Le net à payer est-il juste, au centime près ?",
+        ),
+        (
+            "Panier :",
+            "- {n} ×{q} ({p} pièce)",
+            "Code promo : -{d} % sur le panier.",
+            "Total affiché : {t}",
+            "Le total affiché correspond-il au panier ?",
+        ),
+        (
+            "Bon de livraison valorisé :",
+            "• {n} : {q} unités à {p}",
+            "Escompte de {d} % sur l'ensemble.",
+            "Total annoncé : {t}",
+            "Le total annoncé est-il correct ?",
+        ),
+        (
+            "Récapitulatif d'achat :",
+            "- {n}, {q} × {p}",
+            "Réduction : {d} % sur le total.",
+            "À régler : {t}",
+            "La somme à régler est-elle bien calculée ?",
+        ),
+    ],
+    ("heldout", "en"): [
+        (
+            "Purchase order items:",
+            "- {n}: {q} × {p}",
+            "Rebate applied to the full order: {d}%.",
+            "Amount billed: {t}",
+            "Does the amount billed match the items and the rebate exactly?",
+        ),
+        (
+            "Quote accepted by the client:",
+            "{q} × {n} — {p} per unit",
+            "Negotiated reduction across the quote: {d}%.",
+            "Grand total invoiced: {t}",
+            "Is the grand total consistent with the quote?",
+        ),
+    ],
+    ("heldout", "fr"): [
+        (
+            "Articles du bon de commande :",
+            "- {n} : {q} × {p}",
+            "Rabais appliqué à l'ensemble : {d} %.",
+            "Montant facturé : {t}",
+            "Le montant facturé correspond-il exactement aux articles et au rabais ?",
+        ),
+        (
+            "Devis accepté par le client :",
+            "{q} × {n} — {p} par unité",
+            "Réduction négociée sur l'ensemble du devis : {d} %.",
+            "Total général facturé : {t}",
+            "Le total général est-il cohérent avec le devis ?",
+        ),
+    ],
 }
 
 
-def invoice_total(rng, lang, split):
+def invoice_total(rng, lang, split, srng=None):
     items = []
     total = 0.0
     goods = {
@@ -223,9 +632,12 @@ def invoice_total(rng, lang, split):
             total + float(rng.choice([-1, 1])) * float(rng.choice([1, 9.99, 10, 0.5 * total])), 2
         )
     )
-    lines = "\n".join(f"- {n}: {q} × {_money(p, lang)}" for n, q, p in items)
-    head, disc, stated, q = INVOICE_TEXT[split, lang]
-    state = "\n".join([head, lines, disc.format(p=discount), stated.format(t=_money(shown, lang))])
+    head, line, disc, stated, q = _surface(srng, INVOICE_TEXT, split, lang)
+    ref = int(srng.integers(10**4, 10**5)) if srng is not None else 0
+    lines = "\n".join(line.format(n=n, q=k, p=_money(p, lang)) for n, k, p in items)
+    state = "\n".join(
+        [head.format(r=ref), lines, disc.format(d=discount), stated.format(t=_money(shown, lang))]
+    )
     return {
         "state": state,
         "expected": "yes" if abs(shown - total) < 0.005 else "no",
@@ -233,41 +645,139 @@ def invoice_total(rng, lang, split):
     }
 
 
-BASE_RATE_TEXT = {  # (state template, question template); {p} prior, {s} sens, {f} fpr
-    ("train", "en"): (
+# (state template, question template); {p} prior, {s} sensitivity, {f} false-positive rate,
+# {t} the event.
+BASE_RATE_TEXT = {
+    ("train", "en"): [
         (
-            "Base rate: {p} of cases are positive. The detector flags {s} of positives "
-            "and {f} of negatives. This case was flagged."
+            (
+                "Base rate: {p} of cases are positive. The detector flags {s} of positives "
+                "and {f} of negatives. This case was flagged."
+            ),
+            "Is it true that the {t}?",
         ),
-        "Is it true that the {t}?",
-    ),
-    ("train", "fr"): (
         (
-            "Taux de base : {p} des cas sont positifs. Le détecteur signale {s} des "
-            "positifs et {f} des négatifs. Ce cas a été signalé."
+            (
+                "Across all files, {p} are positive. The alert system catches {s} of the positive "
+                "files but also wrongly flags {f} of the negative ones. This file triggered an alert."
+            ),
+            "Given the alert, is the {t}?",
         ),
-        "Est-il vrai que {t} ?",
-    ),
-    ("heldout", "en"): (
         (
-            "Prevalence: {p} of all cases are positive. The screening test catches {s} of true "
-            "positives but also raises an alert on {f} of negatives. An alert was raised for "
-            "this case."
+            (
+                "Known figures: positives make up {p} of the population; sensitivity {s}; "
+                "false-positive rate {f}.\nResult for this case: positive."
+            ),
+            "Should we conclude that the {t}?",
         ),
-        "Given the alert, is it the case that the {t}?",
-    ),
-    ("heldout", "fr"): (
         (
-            "Prévalence : {p} de l'ensemble des cas sont positifs. Le test de dépistage détecte "
-            "{s} des vrais positifs mais déclenche aussi une alerte pour {f} des négatifs. Une "
-            "alerte a été déclenchée pour ce cas."
+            (
+                "The screening flags a case as suspicious. Historically, {p} of cases really are "
+                "positive; the screening spots {s} of them and raises a false alarm on {f} of the "
+                "others."
+            ),
+            "Is the {t}?",
         ),
-        "Compte tenu de l'alerte, peut-on dire que {t} ?",
-    ),
+        (
+            (
+                "Statistics: prevalence {p}. Detection rate among positives: {s}. Alarm rate among "
+                "negatives: {f}. The alarm went off for this one."
+            ),
+            "Can we say that the {t}?",
+        ),
+        (
+            (
+                "A rule-based filter was triggered. It fires on {s} of genuine positives and on {f} "
+                "of negatives, and genuine positives are {p} of all cases."
+            ),
+            "Taking the filter's signal into account, is the {t}?",
+        ),
+    ],
+    ("train", "fr"): [
+        (
+            (
+                "Taux de base : {p} des cas sont positifs. Le détecteur signale {s} des "
+                "positifs et {f} des négatifs. Ce cas a été signalé."
+            ),
+            "Est-il vrai que {t} ?",
+        ),
+        (
+            (
+                "Sur l'ensemble des dossiers, {p} sont positifs. Le système d'alerte repère {s} des "
+                "dossiers positifs, mais signale aussi à tort {f} des dossiers négatifs. Ce dossier "
+                "a déclenché une alerte."
+            ),
+            "Compte tenu de cette alerte, est-ce que {t} ?",
+        ),
+        (
+            (
+                "Chiffres connus : les positifs représentent {p} de la population ; sensibilité "
+                "{s} ; taux de faux positifs {f}.\nRésultat pour ce cas : positif."
+            ),
+            "Faut-il en conclure que {t} ?",
+        ),
+        (
+            (
+                "Le contrôle signale ce cas comme suspect. Historiquement, {p} des cas sont "
+                "réellement positifs ; le contrôle en repère {s} et déclenche une fausse alerte "
+                "pour {f} des autres."
+            ),
+            "Est-ce que {t} ?",
+        ),
+        (
+            (
+                "Statistiques : prévalence de {p}. Taux de détection parmi les positifs : {s}. Taux "
+                "d'alerte parmi les négatifs : {f}. L'alerte s'est déclenchée pour ce cas."
+            ),
+            "Peut-on affirmer que {t} ?",
+        ),
+        (
+            (
+                "Un filtre automatique s'est déclenché. Il réagit à {s} des vrais positifs et à {f} "
+                "des négatifs, et les vrais positifs représentent {p} de l'ensemble des cas."
+            ),
+            "En tenant compte du signal du filtre, est-ce que {t} ?",
+        ),
+    ],
+    ("heldout", "en"): [
+        (
+            (
+                "Prevalence: {p} of all cases are positive. The screening test catches {s} of true "
+                "positives but also raises an alert on {f} of negatives. An alert was raised for "
+                "this case."
+            ),
+            "Given the alert, is it the case that the {t}?",
+        ),
+        (
+            (
+                "An audit model marked this record. In past audits, {p} of records turned out to be "
+                "genuine problems; the model marks {s} of those and {f} of the clean records."
+            ),
+            "Following the mark, is it likely the case that the {t}?",
+        ),
+    ],
+    ("heldout", "fr"): [
+        (
+            (
+                "Prévalence : {p} de l'ensemble des cas sont positifs. Le test de dépistage détecte "
+                "{s} des vrais positifs mais déclenche aussi une alerte pour {f} des négatifs. Une "
+                "alerte a été déclenchée pour ce cas."
+            ),
+            "Compte tenu de l'alerte, peut-on dire que {t} ?",
+        ),
+        (
+            (
+                "Un modèle d'audit a marqué cet enregistrement. Lors des audits précédents, {p} des "
+                "enregistrements posaient réellement problème ; le modèle en marque {s}, ainsi que "
+                "{f} des enregistrements sains."
+            ),
+            "Après ce marquage, doit-on considérer que {t} ?",
+        ),
+    ],
 }
 
 
-def base_rate(rng, lang, split):
+def base_rate(rng, lang, split, srng=None):
     # Continuous parameters (rounded as displayed): no template collisions across splits.
     prior = round(float(10 ** rng.uniform(-3, -0.5)), 4)
     sens = round(float(rng.uniform(0.7, 0.995)), 3)
@@ -304,7 +814,7 @@ def base_rate(rng, lang, split):
         ],
     }[split, lang]
     i = int(rng.integers(len(thing)))
-    template, question = BASE_RATE_TEXT[split, lang]
+    template, question = _surface(srng, BASE_RATE_TEXT, split, lang)
     state = template.format(p=_pct(prior, 2, lang), s=_pct(sens, 1, lang), f=_pct(fpr, 2, lang))
     return {
         "state": state,
@@ -317,7 +827,69 @@ def base_rate(rng, lang, split):
     }
 
 
-def schedule_conflict(rng, lang, split):
+# (header, slot line, request line, question, time style); {a}–{b} a slot, {l} the listing.
+# Time styles: 0 "09:00" (en) / "9h00" (fr), 1 "9:00 am" (en) / "9 h 00" (fr), 2 "0900" / "09:00".
+SCHEDULE_TEXT = {
+    ("train", "en"): [
+        ("Calendar (busy):", "- {a}–{b}", "Proposed meeting: {a}–{b}.",
+         "Does the proposed meeting overlap an existing one?", 0),
+        ("Slots already taken:", "- from {a} to {b}", "I am offered an appointment from {a} to {b}.",
+         "Does this appointment cut into a slot that is already taken?", 1),
+        ("Meeting room B12, today's schedule:", "• {a} → {b}", "Booking request: {a} → {b}.",
+         "Does the request fall on a slot that is already booked?", 0),
+        ("Dr Martin is unavailable at these times:", "- {a}–{b}",
+         "A patient wants an appointment starting at {a} and ending at {b}.",
+         "Does the requested appointment conflict with an unavailability?", 1),
+        ("My timetable:", "{a}-{b} busy", "Suggested call: {a} to {b}.",
+         "Is there an overlap with the suggested call?", 2),
+        ("Pool car usage:", "- out {a}–{b}", "New loan being considered: {a}–{b}.",
+         "Is the car already taken during that slot?", 0),
+    ],
+    ("train", "fr"): [
+        ("Agenda (occupé) :", "- {a}–{b}", "Réunion proposée : {a}–{b}.",
+         "La réunion proposée chevauche-t-elle un créneau existant ?", 0),
+        ("Créneaux déjà pris :", "- de {a} à {b}", "On me propose un rendez-vous de {a} à {b}.",
+         "Ce rendez-vous empiète-t-il sur un créneau déjà pris ?", 1),
+        ("Salle B12, planning du jour :", "• {a} → {b}", "Demande de réservation : {a} → {b}.",
+         "La demande tombe-t-elle sur un créneau déjà réservé ?", 0),
+        ("Indisponibilités du docteur Martin :", "- {a}–{b}",
+         "Une patiente souhaite un rendez-vous de {a} à {b}.",
+         "Le rendez-vous souhaité est-il en conflit avec une indisponibilité ?", 1),
+        ("Mon emploi du temps :", "{a}-{b} occupé", "Appel proposé : de {a} à {b}.",
+         "Y a-t-il un chevauchement avec l'appel proposé ?", 2),
+        ("Véhicule de service, sorties prévues :", "- {a}–{b}",
+         "Nouvel emprunt envisagé : {a}–{b}.",
+         "Le véhicule est-il déjà pris sur ce créneau ?", 0),
+    ],
+    ("heldout", "en"): [
+        ("Room bookings today:", "- {a}–{b}", "New request: {a}–{b}.",
+         "Does the new request clash with a booking?", 0),
+        ("Technician rota, jobs already assigned:", "* {a} until {b}",
+         "Emergency job to slot in: {a} until {b}.",
+         "Would the emergency job collide with an assigned job?", 1),
+    ],
+    ("heldout", "fr"): [
+        ("Réservations de la salle :", "- {a}–{b}", "Nouvelle demande : {a}–{b}.",
+         "La nouvelle demande entre-t-elle en conflit avec une réservation ?", 0),
+        ("Tournée du technicien, interventions déjà planifiées :", "* {a} jusqu'à {b}",
+         "Dépannage urgent à caser : {a} jusqu'à {b}.",
+         "Le dépannage urgent tomberait-il en même temps qu'une intervention planifiée ?", 1),
+    ],
+}  # fmt: skip
+
+
+def _clock(m: int, lang: str, style: int) -> str:
+    h, mm = m // 60, m % 60
+    if lang == "en":
+        if style == 1:
+            return f"{(h - 1) % 12 + 1}:{mm:02d} {'am' if h < 12 else 'pm'}"
+        return f"{h:02d}{mm:02d}" if style == 2 else f"{h:02d}:{mm:02d}"
+    if style == 1:
+        return f"{h} h {mm:02d}"
+    return f"{h:02d}:{mm:02d}" if style == 2 else f"{h}h{mm:02d}"
+
+
+def schedule_conflict(rng, lang, split, srng=None):
     # held-out: a longer day and other slot lengths (7:00-20:00, 20-120 min)
     lo, hi = (8 * 4, 17 * 4) if split == "train" else (7 * 4, 20 * 4)
     lengths = [30, 45, 60, 90] if split == "train" else [20, 50, 75, 120]
@@ -329,27 +901,13 @@ def schedule_conflict(rng, lang, split):
     start = int(rng.integers(lo, hi)) * 15
     new = (start, start + int(rng.choice(proposed)))
     conflict = any(a < new[1] and new[0] < b for a, b in busy)
+    head, slot, request, q, style = _surface(srng, SCHEDULE_TEXT, split, lang)
 
     def hm(m):
-        return f"{m // 60:02d}:{m % 60:02d}" if lang == "en" else f"{m // 60}h{m % 60:02d}"
+        return _clock(m, lang, style)
 
-    listing = "\n".join(f"- {hm(a)}–{hm(b)}" for a, b in sorted(busy))
-    if split != "train":
-        if lang == "en":
-            state = f"Room bookings today:\n{listing}\nNew request: {hm(new[0])}–{hm(new[1])}."
-            q = "Does the new request clash with a booking?"
-        else:
-            state = (
-                f"Réservations de la salle :\n{listing}\n"
-                f"Nouvelle demande : {hm(new[0])}–{hm(new[1])}."
-            )
-            q = "La nouvelle demande entre-t-elle en conflit avec une réservation ?"
-    elif lang == "en":
-        state = f"Calendar (busy):\n{listing}\nProposed meeting: {hm(new[0])}–{hm(new[1])}."
-        q = "Does the proposed meeting overlap an existing one?"
-    else:
-        state = f"Agenda (occupé) :\n{listing}\nRéunion proposée : {hm(new[0])}–{hm(new[1])}."
-        q = "La réunion proposée chevauche-t-elle un créneau existant ?"
+    listing = "\n".join(slot.format(a=hm(a), b=hm(b)) for a, b in sorted(busy))
+    state = f"{head}\n{listing}\n{request.format(a=hm(new[0]), b=hm(new[1]))}"
     return {
         "state": state,
         "expected": "yes" if conflict else "no",
@@ -357,7 +915,49 @@ def schedule_conflict(rng, lang, split):
     }
 
 
-def table_argmax(rng, lang, split):
+# (table builder key, header, question for the highest, question for the lowest); {m} the
+# metric, {de} "de " / "d'" before it (French). Table keys: md (markdown), lines, csv, prose.
+TABLE_TEXT = {
+    ("train", "en"): [
+        ("md", "name", "Who has the most {m}?", "Who has the fewest {m}?"),
+        ("lines", "Monthly report ({m}):", "Who has the most {m}?", "Who has the fewest {m}?"),
+        ("lines", "Unsorted ranking, {m}:", "Who comes first for {m}?",
+         "Who comes last for {m}?"),
+        ("csv", "name;{m}", "Which person has the highest total of {m}?",
+         "Which person has the lowest total of {m}?"),
+        ("prose", "Team results:", "Who achieved the best result in {m}?",
+         "Who achieved the weakest result in {m}?"),
+        ("md", "team member", "Which team member shows the highest {m} figure?",
+         "Which team member shows the lowest {m} figure?"),
+    ],
+    ("train", "fr"): [
+        ("md", "nom", "Qui a le plus {de}{m} ?", "Qui a le moins {de}{m} ?"),
+        ("lines", "Bilan du mois ({m}) :", "Qui a le plus {de}{m} ?", "Qui a le moins {de}{m} ?"),
+        ("lines", "Classement non trié, {m} :", "Qui arrive en tête pour les {m} ?",
+         "Qui arrive en dernier pour les {m} ?"),
+        ("csv", "nom;{m}", "Quelle personne totalise le plus {de}{m} ?",
+         "Quelle personne totalise le moins {de}{m} ?"),
+        ("prose", "Résultats de l'équipe :", "Qui a obtenu le meilleur résultat en {m} ?",
+         "Qui a obtenu le résultat le plus faible en {m} ?"),
+        ("md", "collaborateur", "Quel collaborateur affiche le chiffre le plus élevé en {m} ?",
+         "Quel collaborateur affiche le chiffre le plus bas en {m} ?"),
+    ],
+    ("heldout", "en"): [
+        ("md", "employee", "Which employee has the most {m}?",
+         "Which employee has the fewest {m}?"),
+        ("lines", "Shift tally — {m}:", "Whose tally of {m} is the largest?",
+         "Whose tally of {m} is the smallest?"),
+    ],
+    ("heldout", "fr"): [
+        ("md", "agent", "Quel agent compte le plus {de}{m} ?",
+         "Quel agent compte le moins {de}{m} ?"),
+        ("lines", "Relevé de l'équipe de nuit — {m} :", "Quel relevé de {m} est le plus important ?",
+         "Quel relevé de {m} est le plus faible ?"),
+    ],
+}  # fmt: skip
+
+
+def table_argmax(rng, lang, split, srng=None):
     names = (
         ["Alice", "Bruno", "Chloé", "Dmitri", "Emma", "Farid", "Grace", "Hugo"]
         if split == "train"
@@ -373,15 +973,22 @@ def table_argmax(rng, lang, split):
     }[split, lang]
     m = metric[int(rng.integers(len(metric)))]
     lowest = rng.random() < 0.3
-    rows = "\n".join(f"| {n} | {int(v)} |" for n, v in zip(picked, values, strict=True))
     gold = picked[int(np.argmin(values) if lowest else np.argmax(values))]
-    if lang == "en":
-        state = f"| name | {m} |\n|---|---|\n{rows}"
-        q = f"Who has the {'fewest' if lowest else 'most'} {m}?"
+    kind, header, q_high, q_low = _surface(srng, TABLE_TEXT, split, lang)
+    pairs = list(zip(picked, (int(v) for v in values), strict=True))
+    sep = " : " if lang == "fr" else ": "
+    if kind == "md":
+        rows = "\n".join(f"| {n} | {v} |" for n, v in pairs)
+        state = f"| {header} | {m} |\n|---|---|\n{rows}"
+    elif kind == "lines":
+        state = header.format(m=m) + "\n" + "\n".join(f"- {n}{sep}{v}" for n, v in pairs)
+    elif kind == "csv":
+        state = header.format(m=m) + "\n" + "\n".join(f"{n};{v}" for n, v in pairs)
     else:
-        state = f"| nom | {m} |\n|---|---|\n{rows}"
-        de = "d'" if m[0] in "aeéèiouh" else "de "
-        q = f"Qui a le {'moins' if lowest else 'plus'} {de}{m} ?"
+        joiner = " ; " if lang == "fr" else "; "
+        state = header + " " + joiner.join(f"{n}{sep}{v} {m}" for n, v in pairs) + "."
+    de = "d'" if m[0] in "aeéèiouh" else "de "
+    q = (q_low if lowest else q_high).format(m=m, de=de)
     return {
         "state": state,
         "expected": gold,
@@ -412,9 +1019,8 @@ NO_OPEN = {  # the one domain whose opened items are never refunded
     "train": ("software", "logiciels"),
     "heldout": ("medical devices", "dispositifs médicaux"),
 }
-POLICY_TEXT: dict[
-    tuple[str, str], dict[str, Any]
-] = {  # {d} domain, {w} window, {b} member bonus, {l} limit
+POLICY_TEXT_V0: dict[tuple[str, str], dict[str, Any]] = {  # {d} domain, {w} window,
+    # {b} member bonus, {l} limit
     ("train", "en"): {
         "head": "Policy:",
         "window": "Refunds for {d} are accepted within {w} days of delivery.",
@@ -500,6 +1106,221 @@ POLICY_TEXT: dict[
         },
     },
 }
+
+# More surface variants of the same five rules (window, member bonus, opened-domain
+# exclusion, escalation limit, final sale), case line, question and options. Variant 0 is
+# POLICY_TEXT_V0 (the mix-v4 text). {d} domain, {w} window, {b} member bonus, {l} limit.
+POLICY_EXTRA: dict[tuple[str, str], list[dict[str, Any]]] = {
+    ("train", "en"): [
+        {
+            "head": "Refund rules:",
+            "window": "Purchases in the {d} category can be refunded up to {w} days after "
+                      "delivery.",
+            "member": "Club members get {b} more days.",
+            "no_open": "Software that has been opened is not refundable.",
+            "limit": "A supervisor must approve any refund over {l}.",
+            "final": "Final-sale items are excluded from refunds.",
+            "case": "Customer: {m}. {c}Delivered {days} days ago. Item {o}. Amount: {a}{f}.",
+            "words": (("club member", "not a club member"), ("opened", "sealed"),
+                      ". Sold as final sale"),
+            "category": "Category: {d}. ",
+            "q": "How should the agent handle this request?",
+            "crit": {"approve": "Approve the refund", "deny": "Reject it",
+                     "escalate": "Escalate to a supervisor"},
+        },
+        {
+            "head": "Returns desk guidelines",
+            "window": "The refund period for {d} is {w} days from the delivery date.",
+            "member": "Members' refund period is extended by {b} days.",
+            "no_open": "No refunds on software once the package is opened.",
+            "limit": "Refunds larger than {l} go to a supervisor.",
+            "final": "No refunds on anything sold as final sale.",
+            "case": "Ticket: {m}; {c}delivery {days} days ago; condition: {o}; "
+                    "requested {a}{f}.",
+            "words": (("member", "non-member"), ("opened", "unopened"), "; final sale"),
+            "category": "category {d}; ",
+            "q": "Which action is correct for this ticket?",
+            "crit": {"approve": "Pay the refund", "deny": "Decline the refund",
+                     "escalate": "Hand over to a supervisor"},
+        },
+        {
+            "head": "Customer refund policy (internal):",
+            "window": "We refund {d} if the request comes within {w} days of delivery.",
+            "member": "Loyalty-card holders have {b} extra days.",
+            "no_open": "We do not refund opened software.",
+            "limit": "Requests above {l} need a supervisor's sign-off.",
+            "final": "Final-sale goods cannot be refunded.",
+            "case": "The customer ({m}) asks for {a} back; {c}the parcel arrived {days} days "
+                    "ago and the item is {o}{f}.",
+            "words": (("loyalty-card holder", "no loyalty card"), ("opened", "unopened"),
+                      "; it was a final-sale item"),
+            "category": "the product is in category {d}; ",
+            "q": "What is the right outcome for this refund request?",
+            "crit": {"approve": "Refund the customer", "deny": "Turn the request down",
+                     "escalate": "Pass it to a supervisor"},
+        },
+        {
+            "head": "Policy summary",
+            "window": "Category {d}: refundable within {w} days of delivery.",
+            "member": "Membership adds {b} days to the refund period.",
+            "no_open": "Opened software: never refundable.",
+            "limit": "Above {l}: supervisor approval required.",
+            "final": "Final sale: never refundable.",
+            "case": "Request details: {m}, {c}{days} days since delivery, {o}, {a}{f}.",
+            "words": (("member", "non-member"), ("opened", "unopened"), ", final sale"),
+            "category": "category {d}, ",
+            "q": "Decide what to do with the request.",
+            "crit": {"approve": "Approve", "deny": "Deny",
+                     "escalate": "Escalate for supervisor approval"},
+        },
+        {
+            "head": "Policy:",
+            "window": "Customers have {w} days after delivery to request a refund in "
+                      "category {d}.",
+            "member": "For members the deadline is {b} days later.",
+            "no_open": "Once opened, software is no longer eligible for a refund.",
+            "limit": "Only a supervisor can authorise refunds of more than {l}.",
+            "final": "Items sold as final sale are never eligible.",
+            "case": "Incoming request: a {m} customer wants a refund of {a}, {c}item {o}, "
+                    "delivered {days} days ago{f}.",
+            "words": (("member", "non-member"), ("opened", "unopened"),
+                      " (the item was marked final sale)"),
+            "category": "category {d}, ",
+            "q": "What should happen to this request?",
+            "crit": {"approve": "Grant the refund", "deny": "Refuse it",
+                     "escalate": "Refer to a supervisor"},
+        },
+    ],
+    ("train", "fr"): [
+        {
+            "head": "Règles de remboursement :",
+            "window": "Les achats de la catégorie {d} sont remboursables jusqu'à {w} jours "
+                      "après la livraison.",
+            "member": "Les membres du club ont droit à {b} jours de plus.",
+            "no_open": "Un logiciel dont l'emballage a été ouvert n'est pas remboursable.",
+            "limit": "Un superviseur doit valider tout remboursement de plus de {l}.",
+            "final": "Les articles vendus en « vente finale » sont exclus des remboursements.",
+            "case": "Client : {m}. {c}Livré il y a {days} jours. Article {o}. Montant : {a}{f}.",
+            "words": (("membre du club", "non membre du club"), ("ouvert", "intact"),
+                      ". Vendu en « vente finale »"),
+            "category": "Catégorie {d}. ",
+            "q": "Comment l'agent doit-il traiter cette demande ?",
+            "crit": {"approve": "Accepter le remboursement", "deny": "Le refuser",
+                     "escalate": "Faire valider par un superviseur"},
+        },
+        {
+            "head": "Consignes du service retours",
+            "window": "Le délai de remboursement pour la catégorie {d} est de {w} jours à "
+                      "compter de la livraison.",
+            "member": "Pour les membres, ce délai est prolongé de {b} jours.",
+            "no_open": "Aucun remboursement pour un logiciel une fois l'emballage ouvert.",
+            "limit": "Les remboursements supérieurs à {l} sont transmis à un superviseur.",
+            "final": "Aucun remboursement pour un article vendu en « vente finale ».",
+            "case": "Ticket : client {m} ; {c}livraison il y a {days} jours ; état : {o} ; "
+                    "montant demandé : {a}{f}.",
+            "words": (("membre", "non membre"), ("ouvert", "non ouvert"),
+                      " ; « vente finale »"),
+            "category": "catégorie {d} ; ",
+            "q": "Quelle action est la bonne pour ce ticket ?",
+            "crit": {"approve": "Verser le remboursement", "deny": "Refuser le remboursement",
+                     "escalate": "Confier le dossier à un superviseur"},
+        },
+        {
+            "head": "Politique de remboursement (document interne) :",
+            "window": "Nous remboursons les produits de la catégorie {d} si la demande arrive "
+                      "sous {w} jours après la livraison.",
+            "member": "Les titulaires de la carte de fidélité disposent de {b} jours "
+                      "supplémentaires.",
+            "no_open": "Nous ne remboursons pas les logiciels ouverts.",
+            "limit": "Au-dessus de {l}, la demande doit être validée par un superviseur.",
+            "final": "Les produits en « vente finale » ne peuvent pas être remboursés.",
+            "case": "Le client ({m}) demande le remboursement de {a} ; {c}le colis est arrivé "
+                    "il y a {days} jours et l'article est {o}{f}.",
+            "words": (("titulaire de la carte de fidélité", "sans carte de fidélité"),
+                      ("ouvert", "non ouvert"), " ; il s'agit d'un article en « vente finale »"),
+            "category": "le produit relève de la catégorie {d} ; ",
+            "q": "Quelle est la bonne issue pour cette demande de remboursement ?",
+            "crit": {"approve": "Rembourser le client", "deny": "Ne pas donner suite",
+                     "escalate": "Transmettre à un superviseur"},
+        },
+        {
+            "head": "Politique en bref",
+            "window": "Catégorie {d} : remboursable sous {w} jours après la livraison.",
+            "member": "Adhésion : {b} jours de plus pour demander un remboursement.",
+            "no_open": "Logiciel ouvert : jamais remboursable.",
+            "limit": "Au-delà de {l} : accord d'un superviseur obligatoire.",
+            "final": "« Vente finale » : jamais remboursable.",
+            "case": "Détail de la demande : {m}, {c}livré depuis {days} jours, {o}, {a}{f}.",
+            "words": (("adhérent", "non adhérent"), ("ouvert", "non ouvert"),
+                      ", « vente finale »"),
+            "category": "catégorie {d}, ",
+            "q": "Décidez du sort de cette demande.",
+            "crit": {"approve": "Accepter", "deny": "Refuser",
+                     "escalate": "Faire remonter à un superviseur"},
+        },
+        {
+            "head": "Politique :",
+            "window": "Le client dispose de {w} jours après la livraison pour demander le "
+                      "remboursement d'un produit de la catégorie {d}.",
+            "member": "Pour les membres, l'échéance est repoussée de {b} jours.",
+            "no_open": "Une fois ouvert, un logiciel n'est plus remboursable.",
+            "limit": "Seul un superviseur peut autoriser un remboursement de plus de {l}.",
+            "final": "Les articles vendus en « vente finale » ne sont jamais remboursables.",
+            "case": "Nouvelle demande : un client {m} réclame {a} ; {c}article {o}, livré "
+                    "il y a {days} jours{f}.",
+            "words": (("membre", "non membre"), ("ouvert", "non ouvert"),
+                      " (article marqué « vente finale »)"),
+            "category": "catégorie {d}, ",
+            "q": "Que faut-il faire de cette demande ?",
+            "crit": {"approve": "Accorder le remboursement", "deny": "Le refuser",
+                     "escalate": "Renvoyer vers un superviseur"},
+        },
+    ],
+    ("heldout", "en"): [
+        {
+            "head": "Aftersales charter:",
+            "window": "Refund claims for goods in the {d} line are honoured for {w} days "
+                      "following the handover.",
+            "member": "Subscribers to the loyalty scheme enjoy {b} additional days.",
+            "no_open": "Medical devices whose seal is broken cannot be taken back for a refund.",
+            "limit": "Claims worth more than {l} are subject to a manager's approval.",
+            "final": "Clearance lines sold as final are not covered.",
+            "case": "File: purchaser {m}; {c}handover {days} days ago; seal {o}; claim of "
+                    "{a}{f}.",
+            "words": (("subscribed to the loyalty scheme", "not subscribed"),
+                      ("broken", "intact"), "; clearance line sold as final"),
+            "category": "goods in the {d} line; ",
+            "q": "What is the appropriate response to this claim?",
+            "crit": {"approve": "Honour the claim", "deny": "Reject the claim",
+                     "escalate": "Submit it for a manager's approval"},
+        },
+    ],
+    ("heldout", "fr"): [
+        {
+            "head": "Charte après-vente :",
+            "window": "Les demandes de remboursement pour la gamme {d} sont honorées pendant "
+                      "{w} jours après la remise.",
+            "member": "Les abonnés au programme de fidélité bénéficient de {b} jours de plus.",
+            "no_open": "Un dispositif médical dont le scellé est rompu ne peut pas être repris "
+                       "contre remboursement.",
+            "limit": "Les demandes d'un montant supérieur à {l} sont soumises à l'accord d'un "
+                     "responsable.",
+            "final": "Les lots de déstockage vendus comme définitifs ne sont pas couverts.",
+            "case": "Fiche : acheteur {m} ; {c}remise il y a {days} jours ; scellé {o} ; "
+                    "demande de {a}{f}.",
+            "words": (("abonné au programme de fidélité", "non abonné"),
+                      ("rompu", "intact"), " ; lot de déstockage vendu comme définitif"),
+            "category": "gamme {d} ; ",
+            "q": "Quelle suite donner à cette demande ?",
+            "crit": {"approve": "Honorer la demande", "deny": "Rejeter la demande",
+                     "escalate": "La soumettre à l'accord d'un responsable"},
+        },
+    ],
+}  # fmt: skip
+POLICY_TEXT: dict[tuple[str, str], list[dict[str, Any]]] = {
+    key: [v0, *POLICY_EXTRA[key]] for key, v0 in POLICY_TEXT_V0.items()
+}
+
 
 # Long documents: numbered sections of boilerplate (general topics, per-category notes with
 # windows for *other* categories, refund procedure) in which the five decisive rules are
@@ -985,13 +1806,14 @@ LONG_POLICY: dict[tuple[str, str], dict[str, Any]] = {
 LONG_BUDGET = {"en": (10500, 15500), "fr": (9500, 14500)}  # characters of boilerplate
 
 
-def _long_policy(rng, lang, split, domain, window_rule, rules):
-    """A long numbered document; the domain's window and the other rules sit at random places."""
+def _long_policy(rng, lang, split, domain, window_rule, rules, policy, budget=None):
+    """A long numbered document; the domain's window and the other rules sit at random places.
+    ``policy`` is the item's POLICY_TEXT variant (windows of other categories use its wording);
+    ``budget``: the boilerplate characters' range (default ``LONG_BUDGET``)."""
     t = LONG_POLICY[split, lang]
     li = 0 if lang == "en" else 1
     others = [d[li] for d in POLICY_DOMAINS[split] if d[li] != domain] + t["extra_categories"]
     windows = [7, 10, 14, 21, 30, 45, 60, 90]
-    policy = POLICY_TEXT[split, lang]
 
     def fill(s, c=""):
         return s.format(k=int(rng.integers(2, 10)), c=c)
@@ -1017,7 +1839,7 @@ def _long_policy(rng, lang, split, domain, window_rule, rules):
             body.insert(int(rng.integers(len(body) + 1)), rule)
         blocks.append((title, body))
     blocks = [blocks[i] for i in rng.permutation(len(blocks))]
-    budget = int(rng.integers(*LONG_BUDGET[lang]))
+    budget = int(rng.integers(*(budget or LONG_BUDGET[lang])))
     kept, size = [], 0
     for block in blocks:
         if size >= budget:
@@ -1039,7 +1861,30 @@ def _long_policy(rng, lang, split, domain, window_rule, rules):
     )
 
 
-def refund_policy(rng, lang, split, long=False):
+# mix-v5b curriculum (training rows of long_refund_policy only, HINT_SHARE): where the
+# category's window is, and the customer's own period. The 4B's long-policy errors are mostly
+# cases the member bonus decides (docs/fr-data.md §7).
+POLICY_HINT = {
+    "en": {
+        "note": "Case note: the window for {d} is in {s} {n}; {p}",
+        "member": "this customer is a member, so the refund period is {w} + {b} = {a} days.",
+        "plain": "this customer is not a member, so the refund period is {w} days.",
+    },
+    "fr": {
+        "note": "Note de dossier : le délai de la catégorie {d} figure à l'{s} {n} ; {p}",
+        "member": "ce client est membre, son délai de remboursement est donc de {w} + {b} = "
+        "{a} jours.",
+        "plain": "ce client n'est pas membre, son délai de remboursement est donc de {w} jours.",
+    },
+}
+
+
+def _section_word(split: str, lang: str) -> str:
+    word = LONG_POLICY[split, lang]["section"]
+    return word if lang == "en" else word.lower()  # "à l'article 4"
+
+
+def refund_policy(rng, lang, split, srng=None, long=False, hints=True):
     domain = POLICY_DOMAINS[split][int(rng.integers(len(POLICY_DOMAINS[split])))][
         0 if lang == "en" else 1
     ]
@@ -1058,7 +1903,7 @@ def refund_policy(rng, lang, split, long=False):
         decision = "escalate"
     else:
         decision = "approve"
-    t = POLICY_TEXT[split, lang]
+    t = _surface(srng, POLICY_TEXT, split, lang)
     rules = [
         t["window"].format(d=domain, w=window),
         t["member"].format(b=member_bonus),
@@ -1079,19 +1924,152 @@ def refund_policy(rng, lang, split, long=False):
     sections = [rules[i] for i in order]
     if long:  # bury the rules in a long policy document (2–4k tokens)
         policy = _long_policy(
-            rng, lang, split, domain, rules[0], [r for r in sections if r != rules[0]]
+            rng, lang, split, domain, rules[0], [r for r in sections if r != rules[0]], t
         )
     else:
         policy = "\n".join(f"- {r}" for r in sections)
+    state = f"{t['head']}\n{policy}\n\n{case}"
+    if long and hints and _hinted(state, split):
+        section = next(n for n, line in enumerate(policy.split("\n"), 1) if rules[0] in line)
+        period = (POLICY_HINT[lang]["member"] if member else POLICY_HINT[lang]["plain"]).format(
+            w=window, b=member_bonus, a=allowed
+        )
+        state += "\n" + POLICY_HINT[lang]["note"].format(
+            d=domain, s=_section_word(split, lang), n=section, p=period
+        )
     return {
-        "state": f"{t['head']}\n{policy}\n\n{case}",
+        "state": state,
         "expected": decision,
         "question": {"type": "choice", "instructions": t["q"], "criteria": t["crit"]},
     }
 
 
-def long_refund_policy(rng, lang, split):
-    return refund_policy(rng, lang, split, long=True)
+def long_refund_policy(rng, lang, split, srng=None, hints=True):
+    return refund_policy(rng, lang, split, srng, long=True, hints=hints)
+
+
+# ---------------------------------------------------------------------------------------
+# Long documents (8–16k-token buckets): a handbook of several stores' long policies
+
+STORES = {  # the same names in both languages
+    "train": ["Northwind", "Bluebird", "Copperline", "Harbor & Pine", "Maple Street",
+              "Summit Supply", "Greenleaf"],
+    "heldout": ["Kestrel", "Oakridge", "Lumen", "Riverstone", "Saffron", "Tidewater",
+                "Juniper Hall"],
+}  # fmt: skip
+HANDBOOK_TEXT = {  # (handbook title, chapter title, the line naming the case's store)
+    ("train", "en"): ("Partner stores handbook: each store applies only its own chapter.",
+                      "Chapter {n}: {s} refund and sales policy",
+                      "This request was sent to {s}."),
+    ("train", "fr"): (("Guide des magasins partenaires : chaque magasin applique uniquement "
+                       "son propre chapitre."),
+                      "Chapitre {n} : conditions de vente et de remboursement de {s}",
+                      "Cette demande a été adressée à {s}."),
+    ("heldout", "en"): ("Merchant directory: the terms below differ from merchant to merchant.",
+                        "Part {n}. Terms of {s}",
+                        "This ticket concerns an order placed with {s}."),
+    ("heldout", "fr"): (("Annuaire des marchands : les conditions ci-dessous varient d'un "
+                         "marchand à l'autre."),
+                        "Partie {n}. Conditions de {s}",
+                        "Ce dossier concerne une commande passée chez {s}."),
+}  # fmt: skip
+# characters of boilerplate over the whole handbook (~5–14.5k prompt tokens: both the 8192
+# and the 16384 buckets get rows; the prompt stays under 16384)
+LONGDOC_BUDGET = {"en": (24000, 66000), "fr": (22000, 60000)}
+
+
+def _refund_decision(split, domain, *, window, bonus, limit, days, member, opened, amount,
+                     final_sale) -> str:  # fmt: skip
+    """refund_policy's rule order: final sale, the window (plus the member bonus) and the
+    no-open domain deny; then the amount limit escalates."""
+    if (
+        final_sale
+        or days > window + (bonus if member else 0)
+        or (opened and domain in NO_OPEN[split])
+    ):
+        return "deny"
+    return "escalate" if amount > limit else "approve"
+
+
+def longdoc_refund_policy(rng, lang, split, srng=None):
+    """refund_policy's case against a handbook of 3–5 stores' long policies (each
+    ``_long_policy``): every chapter has its own window for the case's category, member
+    bonus and limit. Cases that some rules would decide differently are preferred (others
+    kept with probability 0.3: final sales stay), and then another store's rules do decide
+    them differently: only the named store's chapter answers them. The rule wording, case
+    line, question and options are one POLICY_TEXT variant, drawn with the surface rng."""
+    t = _surface(srng, POLICY_TEXT, split, lang)
+    domain = POLICY_DOMAINS[split][int(rng.integers(len(POLICY_DOMAINS[split])))][
+        0 if lang == "en" else 1
+    ]
+
+    def draw_rules():
+        return {"window": int(rng.choice([14, 30, 45])), "bonus": int(rng.choice([15, 30])),
+                "limit": int(rng.choice([200, 500, 1000]))}  # fmt: skip
+
+    grid = [{"window": w, "bonus": b, "limit": lim}
+            for w in (14, 30, 45) for b in (15, 30) for lim in (200, 500, 1000)]  # fmt: skip
+    for _ in range(20):  # mostly cases that another store's rules would decide differently
+        own = draw_rules()  # the case's store; the case is drawn around its rules
+        case = {
+            "days": int(rng.integers(1, own["window"] + own["bonus"] + 15)),
+            "member": bool(rng.integers(2)),
+            "opened": bool(rng.integers(2)),
+            "amount": float(rng.integers(20, 2 * own["limit"])),
+            "final_sale": rng.random() < 0.15,
+        }
+        decision = _refund_decision(split, domain, **own, **case)
+        decidable = any(_refund_decision(split, domain, **g, **case) != decision for g in grid)
+        if decidable or rng.random() < 0.3:
+            break
+    stores = [STORES[split][i] for i in rng.permutation(len(STORES[split]))]
+    count = int(rng.integers(3, 6))
+    rules_of = [own]
+    for i in range(1, count):
+        rule = draw_rules()
+        for _ in range(50):  # the first other store decides the case differently, if any can
+            if (
+                i > 1
+                or not decidable
+                or _refund_decision(split, domain, **rule, **case) != decision
+            ):
+                break
+            rule = draw_rules()
+        rules_of.append(rule)
+    title, chapter_title, named = HANDBOOK_TEXT[split, lang]
+    per_chapter = int(rng.integers(*LONGDOC_BUDGET[lang])) // count
+    chapters = []
+    for store, rule in zip(stores, rules_of, strict=False):
+        rules = [
+            t["window"].format(d=domain, w=rule["window"]),
+            t["member"].format(b=rule["bonus"]),
+            t["no_open"],
+            t["limit"].format(l=_money(rule["limit"], lang)),
+            t["final"],
+        ]
+        others = [rules[i] for i in rng.permutation(len(rules)) if i != 0]
+        body = _long_policy(rng, lang, split, domain, rules[0], others, t,
+                            budget=(per_chapter, per_chapter + 1))  # fmt: skip
+        chapters.append((store, body))
+    order = rng.permutation(count)  # the case's store (chapters[0]) at a random place
+    text = "\n\n".join(
+        f"{chapter_title.format(n=n, s=chapters[i][0])}\n{chapters[i][1]}"
+        for n, i in enumerate(order, 1)
+    )
+    (member_w, opened_w, final_w) = t["words"]
+    request = t["case"].format(
+        m=member_w[0] if case["member"] else member_w[1],
+        c=t["category"].format(d=domain),
+        days=case["days"],
+        o=opened_w[0] if case["opened"] else opened_w[1],
+        a=_money(case["amount"], lang),
+        f=final_w if case["final_sale"] else "",
+    )
+    return {
+        "state": f"{title}\n\n{text}\n\n{named.format(s=chapters[0][0])}\n{request}",
+        "expected": decision,
+        "question": {"type": "choice", "instructions": t["q"], "criteria": t["crit"]},
+    }
 
 
 # ---------------------------------------------------------------------------------------
@@ -1273,51 +2251,183 @@ PRODUCTS = {  # (name, kind); brand names are the same in both languages
         ("l'application bancaire", "service"),
     ],
 }  # fmt: skip
-QUEUE_TEXT = {  # (queue descriptions, "other" description, question)
-    ("train", "en"): (
-        {
-            "billing": "Requests about billing and payments",
-            "technical": "Requests about technical problems",
-            "account": "Requests about account access and settings",
-            "shipping": "Requests about deliveries",
-        },
-        "Not a support request for these queues",
-        "Which support queue should handle this message?",
-    ),
-    ("train", "fr"): (
-        {
-            "billing": "Demandes liées à la facturation et aux paiements",
-            "technical": "Demandes liées aux problèmes techniques",
-            "account": "Demandes liées à l'accès et aux réglages du compte",
-            "shipping": "Demandes liées aux livraisons",
-        },
-        "Pas une demande pour ces files",
-        "Quelle file de support doit traiter ce message ?",
-    ),
-    ("heldout", "en"): (
-        {
-            "billing": "Payments, charges and invoices",
-            "technical": "Faults, errors and bugs",
-            "account": "Sign-in, passwords and profiles",
-            "shipping": "Parcels, couriers and delivery issues",
-            "privacy": "Personal data and privacy",
-            "cancellation": "Ending or not renewing a subscription",
-        },
-        "None of these teams: not a customer-support matter",
-        "Which team should this message be routed to?",
-    ),
-    ("heldout", "fr"): (
-        {
-            "billing": "Paiements, prélèvements et factures",
-            "technical": "Pannes, erreurs et bogues",
-            "account": "Connexion, mots de passe et profils",
-            "shipping": "Colis, transporteurs et problèmes de livraison",
-            "privacy": "Données personnelles et confidentialité",
-            "cancellation": "Résiliation ou non-renouvellement d'un abonnement",
-        },
-        "Aucune de ces équipes : pas une demande de support",
-        "À quelle équipe faut-il transmettre ce message ?",
-    ),
+QUEUE_TEXT = {  # variants of (queue descriptions, "other" description, question)
+    ("train", "en"): [
+        (
+            {
+                "billing": "Requests about billing and payments",
+                "technical": "Requests about technical problems",
+                "account": "Requests about account access and settings",
+                "shipping": "Requests about deliveries",
+            },
+            "Not a support request for these queues",
+            "Which support queue should handle this message?",
+        ),
+        (
+            {
+                "billing": "Billing team: charges, invoices, refunds of payments",
+                "technical": "Tech support: crashes, errors, things not working",
+                "account": "Accounts team: login, passwords, user settings",
+                "shipping": "Logistics: orders in transit, deliveries, parcels",
+            },
+            "Off-topic: no team needed",
+            "Route this customer message to the right team.",
+        ),
+        (
+            {
+                "billing": "Money and invoices",
+                "technical": "Bugs and breakdowns",
+                "account": "Access and profile",
+                "shipping": "Delivery and parcels",
+            },
+            "Unrelated to customer support",
+            "What kind of support request is this?",
+        ),
+        (
+            {
+                "billing": "Billing",
+                "technical": "Technical",
+                "account": "Account",
+                "shipping": "Shipping",
+            },
+            "Other (not a support request)",
+            "Pick the queue for this ticket.",
+        ),
+        (
+            {
+                "billing": "Payment questions and invoice errors",
+                "technical": "Faulty products and software issues",
+                "account": "Sign-in problems and account changes",
+                "shipping": "Late, lost or damaged deliveries",
+            },
+            "The message is not a support request at all",
+            "Where should this message be sent?",
+        ),
+        (
+            {
+                "billing": "Billing desk",
+                "technical": "Technical helpdesk",
+                "account": "Customer accounts",
+                "shipping": "Shipping desk",
+            },
+            "No queue applies",
+            "Which desk is responsible for this request?",
+        ),
+    ],
+    ("train", "fr"): [
+        (
+            {
+                "billing": "Demandes liées à la facturation et aux paiements",
+                "technical": "Demandes liées aux problèmes techniques",
+                "account": "Demandes liées à l'accès et aux réglages du compte",
+                "shipping": "Demandes liées aux livraisons",
+            },
+            "Pas une demande pour ces files",
+            "Quelle file de support doit traiter ce message ?",
+        ),
+        (
+            {
+                "billing": "Service facturation : débits, factures, remboursements de paiements",
+                "technical": "Support technique : plantages, erreurs, appareils en panne",
+                "account": "Gestion des comptes : connexion, mots de passe, paramètres",
+                "shipping": "Logistique : commandes en cours, livraisons, colis",
+            },
+            "Hors sujet : aucun service concerné",
+            "Orientez ce message client vers le bon service.",
+        ),
+        (
+            {
+                "billing": "Argent et factures",
+                "technical": "Bugs et pannes",
+                "account": "Accès et profil",
+                "shipping": "Livraison et colis",
+            },
+            "Sans rapport avec le service client",
+            "De quel type de demande s'agit-il ?",
+        ),
+        (
+            {
+                "billing": "Facturation",
+                "technical": "Technique",
+                "account": "Compte",
+                "shipping": "Livraison",
+            },
+            "Autre (pas une demande de support)",
+            "Choisissez la file pour ce ticket.",
+        ),
+        (
+            {
+                "billing": "Questions de paiement et erreurs de facture",
+                "technical": "Produits défectueux et problèmes logiciels",
+                "account": "Problèmes de connexion et modifications du compte",
+                "shipping": "Livraisons en retard, perdues ou abîmées",
+            },
+            "Le message n'est pas du tout une demande de support",
+            "À qui faut-il envoyer ce message ?",
+        ),
+        (
+            {
+                "billing": "Pôle facturation",
+                "technical": "Assistance technique",
+                "account": "Comptes clients",
+                "shipping": "Pôle expéditions",
+            },
+            "Aucune file ne convient",
+            "Quel pôle est responsable de cette demande ?",
+        ),
+    ],
+    ("heldout", "en"): [
+        (
+            {
+                "billing": "Payments, charges and invoices",
+                "technical": "Faults, errors and bugs",
+                "account": "Sign-in, passwords and profiles",
+                "shipping": "Parcels, couriers and delivery issues",
+                "privacy": "Personal data and privacy",
+                "cancellation": "Ending or not renewing a subscription",
+            },
+            "None of these teams: not a customer-support matter",
+            "Which team should this message be routed to?",
+        ),
+        (
+            {
+                "billing": "Accounts receivable",
+                "technical": "Product engineering on call",
+                "account": "Identity and login",
+                "shipping": "Carrier relations",
+                "privacy": "Data protection officer",
+                "cancellation": "Retention and contract ends",
+            },
+            "Nobody: this is small talk or an unrelated question",
+            "Assign the incoming message to one department.",
+        ),
+    ],
+    ("heldout", "fr"): [
+        (
+            {
+                "billing": "Paiements, prélèvements et factures",
+                "technical": "Pannes, erreurs et bogues",
+                "account": "Connexion, mots de passe et profils",
+                "shipping": "Colis, transporteurs et problèmes de livraison",
+                "privacy": "Données personnelles et confidentialité",
+                "cancellation": "Résiliation ou non-renouvellement d'un abonnement",
+            },
+            "Aucune de ces équipes : pas une demande de support",
+            "À quelle équipe faut-il transmettre ce message ?",
+        ),
+        (
+            {
+                "billing": "Recouvrement et encaissements",
+                "technical": "Ingénierie produit d'astreinte",
+                "account": "Identité et authentification",
+                "shipping": "Relations transporteurs",
+                "privacy": "Délégué à la protection des données",
+                "cancellation": "Fidélisation et fins de contrat",
+            },
+            "Personne : simple bavardage ou question sans rapport",
+            "Attribuez le message entrant à un seul département.",
+        ),
+    ],
 }
 OFF_TOPIC = {
     ("train", "en"): [
@@ -1384,7 +2494,7 @@ def _after_greeting(template: str, x: str, greeting: str) -> str:
     return text
 
 
-def ticket_triage(rng, lang, split):
+def ticket_triage(rng, lang, split, srng=None):
     table = TRIAGE[split]
     li = 0 if lang == "en" else 1
     queues = list(table)
@@ -1400,7 +2510,7 @@ def ticket_triage(rng, lang, split):
         products = [p for p, k in PRODUCTS[split, lang] if kind in (None, k)]
         x = _pick(rng, products)
         state = greeting + _after_greeting(_pick(rng, table[gold][li]), x, greeting) + closing
-    names, other, q = QUEUE_TEXT[split, lang]
+    names, other, q = _surface(srng, QUEUE_TEXT, split, lang)
     crit = {k: names[k] for k in queues}
     crit["other"] = other
     return {
@@ -1593,7 +2703,43 @@ WRITING_TEMPLATES = {
 }
 
 
-def spelling_error(rng, lang, split):
+# (wrapper, question); {t} the text. Variant 0 is the mix-v4 text.
+SPELLING_TEXT = {
+    ("train", "en"): [
+        ("{t}", "Does the text contain a spelling or agreement error?"),
+        ("Draft email: {t}", "Is there a typo or an agreement error in this draft?"),
+        ('Proofread: "{t}"', "Does this text need a spelling or grammar correction?"),
+        ("Message to check:\n{t}", ("Would a careful reader find a misspelled word or a "
+                                    "wrong agreement?")),
+        ("Text: {t}", "Would a proofreader flag a spelling or agreement mistake here?"),
+        ("Note from the team: {t}", "Does this note contain at least one mistake?"),
+    ],
+    ("train", "fr"): [
+        ("{t}", "Le texte contient-il une faute d'orthographe ou d'accord ?"),
+        ("Brouillon de mail : {t}", ("Y a-t-il une coquille ou une faute d'accord dans ce "
+                                    "brouillon ?")),
+        ("À relire : « {t} »", ("Ce texte doit-il être corrigé (orthographe ou "
+                               "grammaire) ?")),
+        ("Message à vérifier :\n{t}", ("Un correcteur relèverait-il une faute d'orthographe "
+                                       "ou d'accord ?")),
+        ("Texte : {t}", "Ce texte comporte-t-il au moins une faute ?"),
+        ("Note de l'équipe : {t}", ("Relève-t-on une erreur d'orthographe ou d'accord dans "
+                                   "cette note ?")),
+    ],
+    ("heldout", "en"): [
+        ("{t}", "Is there a spelling or grammar mistake in this text?"),
+        ("Minutes excerpt — {t}", ("Does the excerpt contain any misspelling or grammatical "
+                                  "slip?")),
+    ],
+    ("heldout", "fr"): [
+        ("{t}", "Y a-t-il une faute d'orthographe ou de grammaire dans ce texte ?"),
+        ("Extrait du procès-verbal — {t}", ("L'extrait renferme-t-il une faute "
+                                           "d'orthographe ou une erreur de grammaire ?")),
+    ],
+}  # fmt: skip
+
+
+def spelling_error(rng, lang, split, srng=None):
     templates = WRITING_TEMPLATES[lang][split]
     names = NAMES[split]
     docs = DOCS[split, lang]
@@ -1612,14 +2758,9 @@ def spelling_error(rng, lang, split):
         errors = templates[picked[j]][1]
         word = list(errors)[int(rng.integers(len(errors)))]
         sentences[j] = re.sub(rf"\b{re.escape(word)}\b", errors[word], sentences[j], count=1)
-    q = {
-        ("train", "en"): "Does the text contain a spelling or agreement error?",
-        ("train", "fr"): "Le texte contient-il une faute d'orthographe ou d'accord ?",
-        ("heldout", "en"): "Is there a spelling or grammar mistake in this text?",
-        ("heldout", "fr"): "Y a-t-il une faute d'orthographe ou de grammaire dans ce texte ?",
-    }[split, lang]
+    wrapper, q = _surface(srng, SPELLING_TEXT, split, lang)
     return {
-        "state": " ".join(sentences),
+        "state": wrapper.format(t=" ".join(sentences)),
         "expected": "yes" if has_error else "no",
         "question": {"type": "noul", "instructions": q, "criteria": YES_NO[lang]},
     }
@@ -1770,15 +2911,48 @@ REGISTER = {
         ),
     },
 }
-REGISTER_CRITERIA = {
-    ("train", "en"): ["informal / casual", "neutral / everyday professional", "formal"],
-    ("train", "fr"): ["familier", "courant", "soutenu"],
-    ("heldout", "en"): ["casual / chatty", "standard workplace tone", "very formal / official"],
-    ("heldout", "fr"): ["relâché / très familier", "standard", "très soutenu / officiel"],
-}
+# (question, score levels low → high). Variant 0 is the mix-v4 text.
+REGISTER_TEXT = {
+    ("train", "en"): [
+        ("Rate the formality of the text.",
+         ["informal / casual", "neutral / everyday professional", "formal"]),
+        ("How formal is the tone of this message?", ["casual", "neutral", "formal"]),
+        ("Which register is this written in?",
+         ["informal, as between friends", "everyday workplace", "formal, as in an official letter"]),
+        ("Grade the politeness level of the wording.", ["familiar", "standard", "very polite"]),
+        ("Classify the style of the message from relaxed to formal.",
+         ["relaxed", "plain professional", "ceremonious"]),
+        ("What level of formality does the writer use?", ["low", "medium", "high"]),
+    ],
+    ("train", "fr"): [
+        ("Évaluez le niveau de formalité du texte.", ["familier", "courant", "soutenu"]),
+        ("Quel est le registre de ce message ?",
+         ["familier, comme entre amis", "courant, comme entre collègues",
+          "soutenu, comme dans un courrier officiel"]),
+        ("Le ton du message est-il plutôt relâché ou formel ?",
+         ["relâché", "neutre", "formel"]),
+        ("Notez le degré de politesse de la formulation.",
+         ["familière", "standard", "très polie"]),
+        ("Classez le style du message, du plus détendu au plus solennel.",
+         ["détendu", "professionnel sans plus", "solennel"]),
+        ("Quel niveau de langue l'auteur emploie-t-il ?", ["bas", "moyen", "élevé"]),
+    ],
+    ("heldout", "en"): [
+        ("How formal is this message?",
+         ["casual / chatty", "standard workplace tone", "very formal / official"]),
+        ("Place the message on a formality scale.",
+         ["slangy", "businesslike", "stately"]),
+    ],
+    ("heldout", "fr"): [
+        ("Quel est le degré de formalité de ce message ?",
+         ["relâché / très familier", "standard", "très soutenu / officiel"]),
+        ("Situez ce message sur une échelle de formalité.",
+         ["argotique", "de bureau", "protocolaire"]),
+    ],
+}  # fmt: skip
 
 
-def register(rng, lang, split):
+def register(rng, lang, split, srng=None):
     levels = ["informal", "neutral", "formal"]
     gold = levels[int(rng.integers(3))]
     openings, bodies, closings = REGISTER[split, lang][gold]
@@ -1795,20 +2969,11 @@ def register(rng, lang, split):
         closings[int(rng.integers(len(closings)))],
     ]
     text = " ".join(p.format(**fill) for p in parts)
-    q = {
-        ("train", "en"): "Rate the formality of the text.",
-        ("train", "fr"): "Évaluez le niveau de formalité du texte.",
-        ("heldout", "en"): "How formal is this message?",
-        ("heldout", "fr"): "Quel est le degré de formalité de ce message ?",
-    }[split, lang]
+    q, criteria = _surface(srng, REGISTER_TEXT, split, lang)
     return {
         "state": text,
         "expected": str(levels.index(gold)),
-        "question": {
-            "type": "score",
-            "instructions": q,
-            "criteria": REGISTER_CRITERIA[split, lang],
-        },
+        "question": {"type": "score", "instructions": q, "criteria": list(criteria)},
     }
 
 
@@ -1825,6 +2990,12 @@ GENERATORS = {
     "gen_spelling_error": (spelling_error, "writing"),
     "gen_register": (register, "writing"),
 }
+# Prompts over the 4096 bucket (6–14k tokens): built only into a mix whose prompt limit
+# admits them (``tjev data build --max-prompt-tokens 16384``) or when named; never part of
+# the default held-out generator sets (tjev.data.heldout)
+LONG_GENERATORS = {
+    "gen_longdoc_refund_policy": (longdoc_refund_policy, "long_policy"),
+}
 
 
 def _normalized(text: str) -> str:  # as tjev.data.mix.normalized
@@ -1838,15 +3009,24 @@ def item_key(item: dict) -> str:
 def generate(
     name: str, n: int, seed: int, *, fr_share: float = 0.3, split: str = "train"
 ) -> list[dict]:
-    """``n`` items with distinct keys (fewer if the generator's space runs out)."""
-    fn, family = GENERATORS[name]
+    """``n`` items with distinct keys (fewer if the generator's space runs out). mix-v7
+    sources (``gen_v7.V7_GENERATORS``) are built by ``gen_v7.generate_v7``."""
+    if name not in GENERATORS and name not in LONG_GENERATORS:
+        from tjev.data.sources.gen_v7 import V7_GENERATORS, generate_v7
+
+        if name in V7_GENERATORS:
+            return generate_v7(name, n, seed, fr_share=fr_share, split=split)
+    fn, family = {**GENERATORS, **LONG_GENERATORS}[name]
     rng = np.random.default_rng([seed, zlib.crc32(name.encode()), zlib.crc32(split.encode())])
+    # the surface (template) draws: a stream of their own, so the item parameters and labels
+    # are those of mix-v4 for the same seed, whatever the number of templates
+    srng = np.random.default_rng([seed, zlib.crc32(name.encode()), zlib.crc32(split.encode()), 5])
     out, seen = [], set()
     for _ in range(20 * n + 100):
         if len(out) == n:
             break
         lang = "fr" if rng.random() < fr_share else "en"
-        item = fn(rng, lang, split)
+        item = fn(rng, lang, split, srng)
         key = item_key(item)
         if key in seen:
             continue
