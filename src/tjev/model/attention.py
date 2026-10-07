@@ -31,8 +31,11 @@ class GatedAttention(nnx.Module):
         self.q_norm = RMSNorm(w["q_norm.weight"], config.rms_norm_eps)
         self.k_norm = RMSNorm(w["k_norm.weight"], config.rms_norm_eps)
 
-    def __call__(self, x: jax.Array, segment_ids: jax.Array, positions: jax.Array) -> jax.Array:
+    def __call__(self, x: jax.Array, segment_ids: jax.Array, positions: jax.Array,
+                 remat: str | None = None) -> jax.Array:  # fmt: skip
+        """``remat``: the decoder layer's policy (None: ``compute.remat``)."""
         c = self.config
+        remat = self.compute.remat if remat is None else remat
         batch, length, _ = x.shape
         with jax.named_scope("attn_proj"):
             qg, k, v = grouped(x, self.q_proj, self.k_proj, self.v_proj, names=("attn_qkv",) * 3)
@@ -51,7 +54,10 @@ class GatedAttention(nnx.Module):
                 segment_ids,
                 impl=self.compute.attention,
                 block=self.compute.attention_block,
-                remat=self.compute.remat != "none",
+                remat=remat != "none",
+                splash_block=self.compute.attention_splash_block,
+                splash_compute=self.compute.attention_splash_compute,
+                splash_fused_bwd=self.compute.attention_fused_bwd,
             )
         with jax.named_scope("attn_out"):
             out = out.reshape(batch, length, -1) * jax.nn.sigmoid(gate)

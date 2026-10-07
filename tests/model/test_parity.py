@@ -39,7 +39,14 @@ def _ids(batch=2, length=70, vocab=512, seed=0):
     return np.random.default_rng(seed).integers(0, vocab, (batch, length))
 
 
-@pytest.mark.parametrize("compute", [{}, {"gdn_impl": "recurrent"}, {"remat": "none"}])
+MEGA = [
+    {"gdn_impl": "pallas_tpu_mega1"},
+    {"gdn_impl": "pallas_tpu_mega2"},
+    {"gdn_impl": "pallas_tpu_mega2", "gdn_inverse": "blocked"},
+]
+
+
+@pytest.mark.parametrize("compute", [{}, {"gdn_impl": "recurrent"}, {"remat": "none"}, *MEGA])
 def test_logits_match_hf(tiny_hf, compute):
     folder, hf = tiny_hf
     ids = _ids()
@@ -52,13 +59,14 @@ def test_logits_match_hf(tiny_hf, compute):
     np.testing.assert_allclose(got, want, atol=2e-4, rtol=2e-4)
 
 
-def test_packed_rows_equal_separate_sequences(tiny_hf):
+@pytest.mark.parametrize("compute", [{}, *MEGA[:2]])
+def test_packed_rows_equal_separate_sequences(tiny_hf, compute):
     folder, hf = tiny_hf
     a, b = _ids(1, 23, seed=1)[0], _ids(1, 41, seed=2)[0]
     with torch.no_grad():
         want_a = hf(torch.tensor(a[None])).logits.numpy()[0]
         want_b = hf(torch.tensor(b[None])).logits.numpy()[0]
-    model = _ours(folder, gdn_chunk=16)
+    model = _ours(folder, gdn_chunk=16, **compute)
     pad = 6
     tokens = np.concatenate([a, b, np.zeros(pad, int)])[None]
     seg = np.concatenate([np.full(23, 1), np.full(41, 2), np.zeros(pad, int)])[None]
@@ -134,6 +142,7 @@ def test_lora_gradients_independent_of_remat_and_blocking(tiny_hf):
         ComputeSpec(remat="none", attention_block=0),
         ComputeSpec(remat="full", attention_block=16),
         ComputeSpec(remat="minimal", attention_block=8, gdn_chunk=16),
+        ComputeSpec(remat="full", attention_block=16, lora_impl="merged"),
     ):
         model = Qwen35(
             stack_layers(dict(tensors), config),
@@ -144,8 +153,15 @@ def test_lora_gradients_independent_of_remat_and_blocking(tiny_hf):
             rngs=nnx.Rngs(0),
         )
         g, lora, frozen = nnx.split(model, nnx.LoRAParam, ...)
-        # non-zero B so gradients reach A too
-        lora = jax.tree.map(lambda x: x + 0.01, lora)
+        # non-zero B so gradients reach A too: a seeded random offset per entry (the same in
+        # every config). A constant +0.01 made every B a constant matrix, so dA = s·xᵀ(dy Bᵀ)
+        # was 0.01·(row sums of dy): a near-cancelling sum (the worst leaf 70× below the
+        # median), which amplified any fp32 reordering to ~1e-3 (the pure-reordering
+        # recurrent GDN: 5.5e-4, merged LoRA 1.4e-3); with random B every config is ≤ 1.1e-5
+        leaves, treedef = jax.tree.flatten(lora)
+        offsets = [0.01 * jax.random.normal(jax.random.fold_in(jax.random.key(7), i), x.shape)
+                   for i, x in enumerate(leaves)]  # fmt: skip
+        lora = jax.tree.unflatten(treedef, [x + o for x, o in zip(leaves, offsets, strict=True)])
 
         def loss(lo, g=g, frozen=frozen):
             m = nnx.merge(g, lo, frozen)
@@ -155,9 +171,10 @@ def test_lora_gradients_independent_of_remat_and_blocking(tiny_hf):
     # Same chunking: remat/blocking must not change gradients beyond fp32 noise. A different
     # chunk size reorders fp32 sums (loss is a large sum of squares), hence the looser bound.
     # Error normalised by each leaf's max magnitude (element-wise rtol amplifies noise in
-    # near-cancelling entries). This randomly-normed HF fixture amplifies fp32 reordering
-    # noise to ~4e-4; a structural bug gives O(1). (On the tjev.testing fixture: ~2e-5.)
-    for other, tol in ((grads[1], 1e-3), (grads[2], 5e-3)):
+    # near-cancelling entries). Measured with the random offsets: ≤ 1.1e-5 for every config;
+    # a structural bug gives O(1).
+    # merged LoRA (x·(W + s·AB), custom VJP): the same function as remat=full
+    for other, tol in ((grads[1], 1e-3), (grads[2], 5e-3), (grads[3], 1e-3)):
         for a, b in zip(jax.tree.leaves(grads[0]), jax.tree.leaves(other), strict=True):
             err = np.max(np.abs(np.asarray(a) - np.asarray(b))) / (np.max(np.abs(a)) + 1e-12)
             assert err < tol, err

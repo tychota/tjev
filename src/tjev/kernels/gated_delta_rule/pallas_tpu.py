@@ -39,22 +39,32 @@ backward
 
 Matmul precision (``precision``): "highest" = fp32 (6 bf16 passes on the MXU, the parity
 reference), "high" = bf16_3x (MaxText's choice for the intra-chunk products: 1-pass bf16
-there broke the gate gradients), "bf16" = bf16 operands with fp32 accumulation. The state
-and every gate stay fp32 in all modes. On a non-TPU backend the kernels run in Pallas
+there broke the gate gradients), "bf16" = bf16 operands with fp32 accumulation, "mixed" =
+bf16_3x for the intra-chunk products and one bf16 pass for the dots with the state (or its
+gradient) as an operand (xla.part). The state and every gate stay fp32 in all modes. On a non-TPU backend the kernels run in Pallas
 interpret mode (tests).
 """
 
 from __future__ import annotations
 
 import functools
+import os
 
 import jax
 import jax.numpy as jnp
 import numpy as np
+from jax.ad_checkpoint import checkpoint_name
 from jax.experimental import pallas as pl
 from jax.experimental.pallas import tpu as pltpu
 
-from tjev.kernels.gated_delta_rule.xla import PRECISIONS, doubling_masks, mm, unit_lower_inverse
+from tjev.kernels.gated_delta_rule.xla import (
+    INVERSES,
+    PRECISIONS,
+    doubling_masks,
+    mm,
+    part,
+    solve_unit_lower,
+)
 
 F32 = jnp.float32
 _LAX_PRECISION = {
@@ -72,6 +82,11 @@ def prepare(q, k, v, g, beta, segment_ids, chunk: int):
     """[B,T,H,*] -> chunked fp32 core inputs [B·H, N, C, *] (+ carry [B·H, N]).
 
     The chunked form's quantities (xla.chunk_gated_delta_rule), for any chunk size."""
+    with jax.named_scope("gdn_prepare"):
+        return _prepare(q, k, v, g, beta, segment_ids, chunk)
+
+
+def _prepare(q, k, v, g, beta, segment_ids, chunk: int):
     batch, length, heads, _ = k.shape
     n = length // chunk
 
@@ -106,16 +121,24 @@ def prepare(q, k, v, g, beta, segment_ids, chunk: int):
     }
 
 
-def local(p, precision: str):
-    """Chunk-local WY terms (u, w, intra), batched over [B·H, N]."""
+def local(p, precision: str, inverse: str = "doubling"):
+    """Chunk-local WY terms (u, w, intra), batched over [B·H, N]. ``inverse``: how
+    [u, w] = (I+L)⁻¹ [vβ, kbe] is solved (xla.solve_unit_lower)."""
+    with jax.named_scope("gdn_local"):
+        return _local(p, precision, inverse)
+
+
+def _local(p, precision: str, inverse: str):
     chunk = p["decay"].shape[-1]
     dv = p["vb"].shape[-1]
     strict = jnp.tril(jnp.ones((chunk, chunk), bool), -1)
     kt = jnp.swapaxes(p["k"], -1, -2)
-    lower = jnp.where(strict, mm(p["kb"], kt, precision) * p["decay"], 0.0)
-    tinv = unit_lower_inverse(lower, precision)
-    uw = mm(tinv, jnp.concatenate([p["vb"], p["kbe"]], axis=-1), precision)
-    intra = mm(p["q"], kt, precision) * p["decay"]
+    mode = part(precision, "intra")  # all chunk-local
+    lower = jnp.where(strict, mm(p["kb"], kt, mode) * p["decay"], 0.0)
+    with jax.named_scope("gdn_inverse"):
+        rhs = jnp.concatenate([p["vb"], p["kbe"]], axis=-1)
+        uw = solve_unit_lower(lower, rhs, inverse, mode)
+    intra = mm(p["q"], kt, mode) * p["decay"]
     return uw[..., :dv], uw[..., dv:], intra
 
 
@@ -147,14 +170,15 @@ def _fwd_kernel(
     def _():
         s_scr[...] = jnp.zeros(s_scr.shape, F32)
 
+    hi, st = part(precision, "intra"), part(precision, "state")
     for h in range(heads):
         s = s_scr[h]
         st_ref[h] = s
-        v_new = u_ref[h] - _dot(w_ref[h], s, precision)
-        out_ref[h] = _dot(qr_ref[h], s, precision) + _dot(intra_ref[h], v_new, precision)
+        v_new = u_ref[h] - _dot(w_ref[h], s, st)
+        out_ref[h] = _dot(qr_ref[h], s, st) + _dot(intra_ref[h], v_new, hi)
         vn_ref[h] = v_new
         # carry_ref[h] is [1, Dv] (the chunk's scalar decay broadcast along lanes)
-        s_scr[h] = s * carry_ref[h] + _dot_tn(kw_ref[h], v_new, precision)
+        s_scr[h] = s * carry_ref[h] + _dot_tn(kw_ref[h], v_new, hi)
 
 
 def _bwd_kernel(
@@ -166,26 +190,32 @@ def _bwd_kernel(
     def _():
         g_scr[...] = jnp.zeros(g_scr.shape, F32)
 
+    hi, st = part(precision, "intra"), part(precision, "state")
     for h in range(heads):
         grad, s, d_out, v_new = g_scr[h], st_ref[h], do_ref[h], vn_ref[h]
-        d_vnew = _dot_tn(intra_ref[h], d_out, precision) + _dot(kw_ref[h], grad, precision)
+        d_vnew = _dot_tn(intra_ref[h], d_out, hi) + _dot(kw_ref[h], grad, st)
         du_ref[h] = d_vnew
-        dw_ref[h] = -_dot_nt(d_vnew, s, precision)
-        dintra_ref[h] = _dot_nt(d_out, v_new, precision)
-        dqr_ref[h] = _dot_nt(d_out, s, precision)
-        dkw_ref[h] = _dot_nt(v_new, grad, precision)
+        dw_ref[h] = -_dot_nt(d_vnew, s, st)
+        dintra_ref[h] = _dot_nt(d_out, v_new, hi)
+        dqr_ref[h] = _dot_nt(d_out, s, st)
+        dkw_ref[h] = _dot_nt(v_new, grad, st)
         total = jnp.sum(jnp.sum(s * grad, axis=0, keepdims=True), axis=1, keepdims=True)
         dcarry_ref[h] = jnp.broadcast_to(total, dcarry_ref.shape[1:])
         g_scr[h] = (
-            grad * carry_ref[h]
-            + _dot_tn(qr_ref[h], d_out, precision)
-            - _dot_tn(w_ref[h], d_vnew, precision)
+            grad * carry_ref[h] + _dot_tn(qr_ref[h], d_out, hi) - _dot_tn(w_ref[h], d_vnew, hi)
         )
 
 
 def _interpret():
-    # the generic interpreter (no effects, unlike pltpu.InterpretParams: remat can't AD those)
-    return jax.default_backend() != "tpu"
+    """Off a TPU: the generic interpreter (no effects, unlike pltpu.InterpretParams: remat
+    can't AD those). TJEV_PALLAS_TPU_INTERPRET=1 selects the TPU interpreter instead, for
+    tests without remat: every uninitialised VMEM / scratch read is NaN, and races between
+    grid steps are detected (pltpu.InterpretParams(detect_races=True))."""
+    if jax.default_backend() == "tpu":
+        return False
+    if os.environ.get("TJEV_PALLAS_TPU_INTERPRET") == "1":
+        return pltpu.InterpretParams(detect_races=True, uninitialized_memory="nan")
+    return True
 
 
 def _specs(heads: int, n: int, reverse: bool, *tails):
@@ -253,6 +283,12 @@ def _backward(states, w, q_read, k_write, intra, carry, v_new, d_out, *, heads, 
     return dw, du, dqr, dkw, dintra, dcarry[..., 0, 0]
 
 
+def _named_residuals(states, v_new):
+    """The kernel's residuals, named for remat policies (``core_states`` saves them, so the
+    backward never reruns the forward kernel)."""
+    return checkpoint_name(states, "gdn_states"), checkpoint_name(v_new, "gdn_vnew")
+
+
 @functools.partial(jax.custom_vjp, nondiff_argnums=(6, 7))
 def recurrence(w, u, q_read, k_write, intra, carry, heads: int, precision: str):
     """Chunk recurrence over [B·H, N, C, *] core inputs; returns out [B·H, N, C, Dv]."""
@@ -263,6 +299,7 @@ def _recurrence_fwd(w, u, q_read, k_write, intra, carry, heads, precision):
     out, states, v_new = _forward(
         w, u, q_read, k_write, intra, carry, heads=heads, precision=precision
     )
+    states, v_new = _named_residuals(states, v_new)
     return out, (w, q_read, k_write, intra, carry, states, v_new)
 
 
@@ -305,6 +342,7 @@ def _fused_fwd_kernel(
     in_last = (seg_col == seg_col[c - 1 : c, :]).astype(F32)  # writes the outgoing state
     same = (seg_col == seg_row) & (row >= col)
     strict = row > col
+    hi, st = part(precision, "intra"), part(precision, "state")
     for h in range(heads):
         q = q_ref[:, h * dk : (h + 1) * dk]
         k = k_ref[:, h * dk : (h + 1) * dk]
@@ -314,26 +352,24 @@ def _fused_fwd_kernel(
         cum_row = _dot_tn(cum, eye, "highest")
         decay = jnp.where(same, jnp.exp(jnp.where(same, cum - cum_row, 0.0)), 0.0)
         kb = k * beta
-        lower = jnp.where(strict, _dot_nt(kb, k, precision) * decay, 0.0)
+        lower = jnp.where(strict, _dot_nt(kb, k, hi) * decay, 0.0)
         tinv = eye  # (I + L)⁻¹ by recursive doubling (xla.unit_lower_inverse)
         for level in range(m_ref.shape[0]):
             off = lower * m_ref[level]
-            tinv = tinv - _dot(_dot(tinv, off, precision), tinv, precision)
+            tinv = tinv - _dot(_dot(tinv, off, hi), tinv, hi)
         grow = jnp.exp(cum) * cont
-        u = _dot(tinv, v * beta, precision)
-        w = _dot(tinv, kb * grow, precision)
-        intra = _dot_nt(q, k, precision) * decay
+        u = _dot(tinv, v * beta, hi)
+        w = _dot(tinv, kb * grow, hi)
+        intra = _dot_nt(q, k, hi) * decay
         cum_last = cum[c - 1 : c, :]
         k_write = k * (jnp.exp(cum_last - cum) * in_last)
         carry = jnp.exp(cum_last) * cont[c - 1 : c, :]  # [1, 1]
         s = s_scr[h]
         st_ref[h] = s
-        v_new = u - _dot(w, s, precision)
-        o_ref[:, h * dv : (h + 1) * dv] = _dot(q * grow, s, precision) + _dot(
-            intra, v_new, precision
-        )
+        v_new = u - _dot(w, s, st)
+        o_ref[:, h * dv : (h + 1) * dv] = _dot(q * grow, s, st) + _dot(intra, v_new, hi)
         vn_ref[h] = v_new
-        s_scr[h] = s * carry + _dot_tn(k_write, v_new, precision)
+        s_scr[h] = s * carry + _dot_tn(k_write, v_new, hi)
 
 
 def _fused_forward(q, k, v, g, beta, segment_ids, *, chunk: int, heads: int, precision: str):
@@ -392,29 +428,32 @@ def _fused_forward(q, k, v, g, beta, segment_ids, *, chunk: int, heads: int, pre
     return out, states, v_new
 
 
-@functools.partial(jax.custom_vjp, nondiff_argnums=(6, 7, 8))
-def fused_rule(q, k, v, g, beta, segment_ids, chunk: int, heads: int, precision: str):
+@functools.partial(jax.custom_vjp, nondiff_argnums=(6, 7, 8, 9))
+def fused_rule(q, k, v, g, beta, segment_ids, chunk: int, heads: int, precision: str,
+               inverse: str = "doubling"):  # fmt: skip
     """Fused-forward GDN: out [B,T,H·Dv] fp32. The backward recomputes the chunk-local
-    terms in XLA (their VJP by autodiff) around the Pallas reverse-recurrence kernel."""
+    terms in XLA (their VJP by autodiff, ``inverse`` solving the UT transform there) around
+    the Pallas reverse-recurrence kernel."""
     return _fused_forward(q, k, v, g, beta, segment_ids, chunk=chunk, heads=heads,
                           precision=precision)[0]  # fmt: skip
 
 
-def _fused_rule_fwd(q, k, v, g, beta, segment_ids, chunk, heads, precision):
+def _fused_rule_fwd(q, k, v, g, beta, segment_ids, chunk, heads, precision, inverse):
     out, states, v_new = _fused_forward(
         q, k, v, g, beta, segment_ids, chunk=chunk, heads=heads, precision=precision
     )
+    states, v_new = _named_residuals(states, v_new)
     return out, ((q, k, v, g, beta, segment_ids), states, v_new)
 
 
-def _fused_rule_bwd(chunk, heads, precision, res, d_out):
+def _fused_rule_bwd(chunk, heads, precision, inverse, res, d_out):
     (q, k, v, g, beta, segment_ids), states, v_new = res
     batch, length, n_heads, dk = k.shape
     dv, n = v.shape[-1], length // chunk
 
     def terms(q, k, v, g, beta):
         p = prepare(q, k, v, g, beta, segment_ids, chunk)
-        u, w, intra = local(p, precision)
+        u, w, intra = local(p, precision, inverse)
         return w, u, p["q_read"], p["k_write"], intra, p["carry"]
 
     (w, u, q_read, k_write, intra, carry), back = jax.vjp(terms, q, k, v, g, beta)
@@ -432,6 +471,21 @@ def _fused_rule_bwd(chunk, heads, precision, res, d_out):
 fused_rule.defvjp(_fused_rule_fwd, _fused_rule_bwd)
 
 
+def check_tpu_shapes(dk: int, dv: int, chunk: int, fused: bool) -> None:
+    """Mosaic's layout rules for these kernels, checked before lowering (a clear error, not
+    a Mosaic one or a silent relayout). The fused kernel slices heads out of lane-dense
+    [C, heads·D] blocks, so D must be a whole number of 128-lane tiles (Qwen3.5: 128); every
+    block's chunk rows must fill 8-row sublane tiles. Interpret mode (off TPU) has no such
+    limits and runs any shape exactly."""
+    if chunk % 8:
+        raise ValueError(f"the Pallas TPU GDN needs a chunk that is a multiple of 8, not {chunk}")
+    if fused and (dk % 128 or dv % 128):
+        raise ValueError(
+            f"gdn_impl=pallas_tpu (fused) needs head dims that are multiples of 128 on TPU, "
+            f"not Dk={dk}, Dv={dv}: use gdn_impl=pallas_tpu_split or chunked"
+        )
+
+
 def heads_per_block(lead: int, preferred: int = 8) -> int:
     """Heads per kernel program: fewer, larger grid steps (8 × 64 rows per MXU pass)."""
     size = preferred
@@ -442,18 +496,24 @@ def heads_per_block(lead: int, preferred: int = 8) -> int:
 
 def chunk_gated_delta_rule_tpu(
     q, k, v, g, beta, segment_ids=None, *, chunk: int = 64, precision: str = "high",
-    fused: bool = True,
+    fused: bool = True, inverse: str = "doubling",
 ) -> jax.Array:  # fmt: skip
     """The chunked XLA reference's contract, without an initial or final state.
 
     ``fused``: one forward kernel for prepare + chunk-local terms + recurrence (default);
     False: those in XLA around the recurrence kernel (``compute.gdn_impl=pallas_tpu_split``).
-    Returns out [B,T,H,Dv] fp32. T is padded to a multiple of ``chunk`` with segment-0
-    tokens (an isolated segment with q = k = v = β = 0, g = 0)."""
+    ``inverse``: how the XLA terms solve the UT transform, ``doubling``, ``solve`` or
+    ``blocked`` (xla.solve_unit_lower): the split forward and backward, the fused
+    backward's recompute (the fused forward kernel always uses doubling). Returns out [B,T,H,Dv] fp32. T is padded to a multiple of ``chunk`` with
+    segment-0 tokens (an isolated segment with q = k = v = β = 0, g = 0)."""
     if precision not in PRECISIONS:
         raise ValueError(f"precision in {PRECISIONS}")
-    batch, length, heads, _ = k.shape
+    if inverse not in INVERSES:
+        raise ValueError(f"inverse in {INVERSES}")
+    batch, length, heads, dk = k.shape
     dv = v.shape[-1]
+    if not _interpret():
+        check_tpu_shapes(dk, dv, chunk, fused)
     if segment_ids is None:
         segment_ids = jnp.ones((batch, length), jnp.int32)
     pad = (-length) % chunk
@@ -463,10 +523,11 @@ def chunk_gated_delta_rule_tpu(
             jnp.pad(x, width(x)) for x in (q, k, v, g, beta, segment_ids)
         )
     if fused:
-        out = fused_rule(q, k, v, g, beta, segment_ids, chunk, heads_per_block(heads), precision)
+        heads_ = heads_per_block(heads)
+        out = fused_rule(q, k, v, g, beta, segment_ids, chunk, heads_, precision, inverse)
         return out.reshape(batch, length + pad, heads, dv)[:, :length]
     p = prepare(q, k, v, g, beta, segment_ids, chunk)
-    u, w, intra = local(p, precision)
+    u, w, intra = local(p, precision, inverse)
     lead = batch * heads
     out = recurrence(
         w, u, p["q_read"], p["k_write"], intra, p["carry"], heads_per_block(lead), precision

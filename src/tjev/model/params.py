@@ -19,5 +19,10 @@ class Frozen(nnx.Variable):
     """Pretrained weight: never differentiated, never touched by the optimizer."""
 
 
+class Probe(nnx.Variable):
+    """Transient statistics gathered by a forward pass (EVA's activation sketches); only
+    present while an initialisation runs, never in a trained model."""
+
+
 def sub_weights(w: Weights, prefix: str) -> Weights:
     return {k[len(prefix) :]: v for k, v in w.items() if k.startswith(prefix)}

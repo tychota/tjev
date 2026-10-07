@@ -22,3 +22,18 @@ def batch_parallel[T](fn: Callable[..., T], *args: jax.Array) -> T:
         return fn(*args)
     spec = P(tuple(mesh.axis_names))
     return jax.shard_map(fn, mesh=mesh, in_specs=spec, out_specs=spec, check_vma=False)(*args)
+
+
+def batch_parallel_with[T](
+    fn: Callable[..., T], batched: tuple[jax.Array, ...], replicated: tuple[jax.Array, ...]
+) -> T:
+    """``fn(*batched, *replicated)`` on each device's rows: the ``batched`` arguments and the
+    outputs are batch-leading, the ``replicated`` ones (frozen parameters) are whole."""
+    mesh = jax.sharding.get_abstract_mesh()
+    if mesh.empty or mesh.size == 1:
+        return fn(*batched, *replicated)
+    spec = P(tuple(mesh.axis_names))
+    specs = (spec,) * len(batched) + (P(),) * len(replicated)
+    return jax.shard_map(fn, mesh=mesh, in_specs=specs, out_specs=spec, check_vma=False)(
+        *batched, *replicated
+    )

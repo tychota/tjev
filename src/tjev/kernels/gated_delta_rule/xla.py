@@ -20,13 +20,37 @@ import numpy as np
 from jax.scipy.linalg import solve_triangular
 
 _HI = jax.lax.Precision.HIGHEST
-PRECISIONS = ("highest", "high", "bf16")
-INVERSES = ("solve", "doubling")
+PRECISIONS = ("highest", "high", "bf16", "mixed")
+# "mixed" (MaxText PR #5154/#5386/#5399): the intra-chunk products, whose errors reach the
+# gate gradients through the decay (q kᵀ, kβ kᵀ, the UT solve, T·[vβ, kbe], intra·v_new, and
+# the products that form a state update or its gradient) at bf16_3x; the dots with the
+# state S or its gradient G as an operand (w·S, q_read·S and, backward, k_write·G, ·Sᵀ, ·Gᵀ)
+# as one bf16 pass with fp32 accumulation.
+_MIXED = {"intra": "high", "state": "bf16"}
+
+
+def part(precision: str, kind: str) -> str:
+    """The matmul mode of an ``intra``-chunk or ``state``-path product under ``precision``."""
+    if kind not in _MIXED:
+        raise ValueError(f"kind in {tuple(_MIXED)}")
+    return _MIXED[kind] if precision == "mixed" else precision
+
+
+INVERSES = ("solve", "doubling", "blocked")
 
 
 def l2norm(x: jax.Array, eps: float = 1e-6) -> jax.Array:
-    """x / ||x|| over the last axis; eps inside the rsqrt keeps the gradient finite at 0."""
-    return x * jax.lax.rsqrt(jnp.sum(x * x, axis=-1, keepdims=True) + eps)
+    """x / sqrt(||x||² + eps) over the last axis (the HF / FLA definition).
+
+    An all-zero row maps to 0 with a zero gradient: through the plain formula its Jacobian
+    is 1/sqrt(eps) = 1000·I, and the delta-rule state does send gradient into such rows (a
+    1000× gain per layer; MaxText #5295 / #5363). The double ``where`` keeps the masked
+    branch's gradient out of the result."""
+    sq = jnp.sum(x * x, axis=-1, keepdims=True)
+    zero = sq == 0
+    safe = jnp.where(zero, jnp.ones_like(x), x)
+    out = safe * jax.lax.rsqrt(jnp.where(zero, jnp.ones_like(sq), sq) + eps)
+    return jnp.where(zero, jnp.zeros_like(x), out)
 
 
 def mm(a: jax.Array, b: jax.Array, mode: str = "highest") -> jax.Array:
@@ -76,6 +100,44 @@ def unit_lower_inverse(lower: jax.Array, mode: str) -> jax.Array:
     return inverse
 
 
+def blocked_solve(lower: jax.Array, rhs: jax.Array, mode: str, block: int = 16) -> jax.Array:
+    """(I + L)⁻¹ rhs by blocked forward substitution (L strictly lower, [..., C, C]).
+
+    The ``block``×``block`` diagonal blocks are inverted by doubling (2·log2(block) tiny
+    matmuls, all blocks batched), then the block rows are solved in order:
+        X_i = (I + L_ii)⁻¹ (rhs_i − L_i,<i X_<i)
+    C/block sequential steps of one [block, i·block] × [i·block, W] matmul each: far fewer
+    FLOPs and [C,C] HBM round trips than the dense doubling (MaxText / tpu-inference
+    ``invert_triangular_matrix``, FLA ``solve_tril``, applied to the right-hand side)."""
+    size = lower.shape[-1]
+    block = min(block, size)
+    if size % block:
+        raise ValueError(f"chunk {size} is not a multiple of the block {block}")
+    starts = range(0, size, block)
+    diagonal = jnp.stack([lower[..., i : i + block, i : i + block] for i in starts], axis=-3)
+    diagonal_inverse = unit_lower_inverse(diagonal, mode)  # [..., C/block, block, block]
+    rows: list[jax.Array] = []
+    for n, i in enumerate(starts):
+        part = rhs[..., i : i + block, :]
+        if rows:
+            part = part - mm(lower[..., i : i + block, :i], jnp.concatenate(rows, axis=-2), mode)
+        rows.append(mm(diagonal_inverse[..., n, :, :], part, mode))
+    return jnp.concatenate(rows, axis=-2)
+
+
+def solve_unit_lower(lower: jax.Array, rhs: jax.Array, inverse: str, mode: str) -> jax.Array:
+    """(I + L)⁻¹ rhs for strictly lower-triangular L: ``solve`` (XLA's triangular solve),
+    ``doubling`` (the dense inverse by matmuls, as in the fused kernel) or ``blocked``."""
+    if inverse == "solve":
+        eye = jnp.eye(lower.shape[-1], dtype=lower.dtype)
+        return solve_triangular(lower + eye, rhs, lower=True, unit_diagonal=True)
+    if inverse == "doubling":
+        return mm(unit_lower_inverse(lower, mode), rhs, mode)
+    if inverse == "blocked":
+        return blocked_solve(lower, rhs, mode)
+    raise ValueError(f"inverse in {INVERSES}, not {inverse!r}")
+
+
 def recurrent_gated_delta_rule(q, k, v, g, beta, segment_ids=None, initial_state=None):
     """Token-by-token reference (and T=1 decode step). Returns (out, final_state)."""
     batch, length, heads, dk = k.shape
@@ -122,7 +184,8 @@ def chunk_gated_delta_rule(
     ``precision`` sets the matmuls (``highest`` = true fp32, the parity reference;
     ``high`` = TF32 on GPU / bf16_3x on TPU; ``bf16`` = bf16 operands with fp32
     accumulation). ``inverse`` picks the UT transform: ``solve`` (triangular solve, the
-    reference) or ``doubling`` (matmuls only: what the Pallas TPU kernels use).
+    reference), ``doubling`` (matmuls only: what the Pallas TPU kernels use) or ``blocked``
+    (blocked forward substitution, :func:`blocked_solve`).
     Gates, exponentials and the carried state are fp32 in every mode.
     """
     if precision not in PRECISIONS or inverse not in INVERSES:
@@ -166,17 +229,15 @@ def chunk_gated_delta_rule(
     decay = jnp.exp(jnp.where(same, cum[..., :, None] - cum[..., None, :], -jnp.inf))
     k_beta = k * beta[..., None]
     v_beta = v * beta[..., None]
-    lower = mm(k_beta, jnp.swapaxes(k, -1, -2), precision) * decay
+    intra_mode, state_mode = part(precision, "intra"), part(precision, "state")
+    lower = mm(k_beta, jnp.swapaxes(k, -1, -2), intra_mode) * decay
     lower = jnp.where(jnp.tril(jnp.ones((chunk, chunk), bool), -1), lower, 0.0)
     # (I + L) [u, w] = [v β, k β e^cum]: the UT transform of the in-chunk delta updates.
     rhs = jnp.concatenate([v_beta, k_beta * (jnp.exp(cum) * continues)[..., None]], axis=-1)
-    if inverse == "solve":
-        system = lower + jnp.eye(chunk, dtype=jnp.float32)
-        solved = solve_triangular(system, rhs, lower=True, unit_diagonal=True)
-    else:
-        solved = mm(unit_lower_inverse(lower, precision), rhs, precision)
+    with jax.named_scope("gdn_inverse"):
+        solved = solve_unit_lower(lower, rhs, inverse, intra_mode)
     u, w = solved[..., :dv], solved[..., dv:]
-    intra = mm(q, jnp.swapaxes(k, -1, -2), precision) * decay
+    intra = mm(q, jnp.swapaxes(k, -1, -2), intra_mode) * decay
     q_read = q * (jnp.exp(cum) * continues)[..., None]
     k_write = k * (jnp.exp(cum[..., -1:] - cum) * in_last)[..., None]
     carry = jnp.exp(cum[..., -1]) * carry_keep  # [B,H,N]
@@ -189,12 +250,13 @@ def chunk_gated_delta_rule(
 
     def step(s, xs):
         u_c, w_c, q_c, k_c, intra_c, carry_c = xs
-        v_new = u_c - mm(w_c, s, precision)
-        out = mm(q_c, s, precision) + mm(intra_c, v_new, precision)
-        s = s * carry_c[..., None, None] + mm(jnp.swapaxes(k_c, -1, -2), v_new, precision)
+        v_new = u_c - mm(w_c, s, state_mode)
+        out = mm(q_c, s, state_mode) + mm(intra_c, v_new, intra_mode)
+        s = s * carry_c[..., None, None] + mm(jnp.swapaxes(k_c, -1, -2), v_new, intra_mode)
         return s, out
 
     xs = tuple(jnp.moveaxis(x, 2, 0) for x in (u, w, q_read, k_write, intra, carry))
-    state, out = jax.lax.scan(step, state, xs)  # out [N,B,H,C,Dv]
+    with jax.named_scope("gdn_scan"):
+        state, out = jax.lax.scan(step, state, xs)  # out [N,B,H,C,Dv]
     out = jnp.moveaxis(out, 0, 2).reshape(batch, heads, n * chunk, dv)
     return jnp.swapaxes(out, 1, 2)[:, :length], state

@@ -7,6 +7,7 @@ import pytest
 
 from tjev.kernels.gated_delta_rule import gated_delta_rule
 from tjev.kernels.gated_delta_rule.xla import (
+    blocked_solve,
     chunk_gated_delta_rule,
     l2norm,
     recurrent_gated_delta_rule,
@@ -98,13 +99,27 @@ def test_doubling_inverse_matches_triangular_solve():
     np.testing.assert_allclose(unit_lower_inverse(lower, "highest"), want, atol=1e-4, rtol=1e-4)
 
 
+@pytest.mark.parametrize("size", [8, 16, 64, 128])
+def test_blocked_solve_matches_triangular_solve(size):
+    """Correlated keys (L ≈ β on the strict lower triangle), a 256-wide right-hand side."""
+    base = jax.random.normal(jax.random.key(21), (1, 1, 128))
+    keys = l2norm(base + 0.3 * jax.random.normal(jax.random.key(22), (3, size, 128)))
+    lower = jnp.tril(0.9 * keys @ jnp.swapaxes(keys, -1, -2), -1)
+    rhs = jax.random.normal(jax.random.key(23), (3, size, 256))
+    want = jnp.linalg.solve(lower + jnp.eye(size), rhs)
+    np.testing.assert_allclose(blocked_solve(lower, rhs, "highest"), want, atol=2e-4, rtol=2e-4)
+
+
 @pytest.mark.parametrize(
     ("precision", "inverse", "tol"),
     [
         ("highest", "doubling", 5e-5),
+        ("highest", "blocked", 5e-5),
+        ("high", "blocked", 3e-3),
         ("high", "solve", 3e-3),
         ("bf16", "solve", 3e-2),
         ("bf16", "doubling", 3e-2),
+        ("mixed", "solve", 3e-2),
     ],
 )
 def test_fast_variants_match_recurrence(precision, inverse, tol):
@@ -152,3 +167,17 @@ def test_dispatch_matches_the_reference(impl):
     np.testing.assert_allclose(got, want, atol=2e-5, rtol=2e-5)
     with pytest.raises(ValueError, match="impl"):
         gated_delta_rule(q, k, v, g, beta, seg, impl="mosaic")
+
+
+def test_l2norm_zero_rows_have_zero_gradient():
+    """A zero row normalises to 0 with no gradient (the plain formula's is 1/sqrt(eps) =
+    1000·I, which the delta-rule state feeds from padding rows back into the step)."""
+    x = jnp.array([[0.0, 0.0, 0.0, 0.0], [3.0, 0.0, 4.0, 0.0]])
+    cot = jnp.array([[1.0, -2.0, 0.5, 3.0], [1.0, 2.0, -1.0, 0.5]])
+    out, vjp = jax.vjp(l2norm, x)
+    (grad,) = vjp(cot)
+    assert bool(jnp.all(out[0] == 0)) and bool(jnp.all(grad[0] == 0))
+    ref = x[1] * jax.lax.rsqrt(jnp.sum(x[1] ** 2) + 1e-6)  # the plain formula elsewhere
+    ref_grad = jax.vjp(lambda r: r * jax.lax.rsqrt(jnp.sum(r**2) + 1e-6), x[1])[1](cot[1])[0]
+    np.testing.assert_allclose(out[1], ref, rtol=1e-6)
+    np.testing.assert_allclose(grad[1], ref_grad, rtol=1e-5)

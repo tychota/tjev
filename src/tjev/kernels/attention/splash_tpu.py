@@ -25,28 +25,45 @@ BLOCK = 512
 LANES = 128
 
 
-def _block(length: int) -> int:
-    for size in (BLOCK, 256, LANES):
-        if length % size == 0:
+def _block(length: int, preferred: int = BLOCK) -> int:
+    """The largest of ``preferred``, 512, 256, 128 (≤ preferred) that divides the row."""
+    for size in (preferred, 512, 256, LANES):
+        if size <= preferred and length % size == 0:
             return size
     raise ValueError(f"length {length} is not a multiple of {LANES}")
 
 
+def block_sizes(length: int, block: int = BLOCK, compute: int = 0, fused_bwd: bool = False):
+    """Splash tile sizes: q and kv blocks of ``block`` rows (fewer when the row is not a
+    multiple), the kv compute sub-block ``compute`` (0: the whole block), and the backward
+    as separate dq + dkv kernels or, ``fused_bwd``, one dkv kernel that also emits dq
+    (summed in XLA over the kv blocks: no second QKᵀ / softmax recompute)."""
+    size = _block(length, block)
+    inner = min(compute or size, size)
+    if size % inner:
+        raise ValueError(f"splash compute block {inner} does not divide the block {size}")
+    dq = None if fused_bwd else size
+    return splash.BlockSizes(
+        block_q=size,
+        block_kv=size,
+        block_kv_compute=inner,
+        block_q_dkv=size,
+        block_kv_dkv=size,
+        block_kv_dkv_compute=inner,
+        block_q_dq=dq,
+        block_kv_dq=dq,
+        use_fused_bwd_kernel=fused_bwd,
+    )
+
+
 @functools.lru_cache(maxsize=32)
-def _kernel(length: int, group: int, interpret: bool, mesh: str = ""):
+def _kernel(
+    length: int, group: int, interpret: bool, mesh: str = "", block: int = BLOCK,
+    compute: int = 0, fused_bwd: bool = False,
+):  # fmt: skip
     """mesh: the abstract mesh at trace time (its repr), part of the cache key: the
     kernel's mask tables are built under it and cannot be reused under another one."""
-    block = _block(length)
-    sizes = splash.BlockSizes(
-        block_q=block,
-        block_kv=block,
-        block_kv_compute=block,
-        block_q_dkv=block,
-        block_kv_dkv=block,
-        block_kv_dkv_compute=block,
-        block_q_dq=block,
-        block_kv_dq=block,
-    )
+    sizes = block_sizes(length, block, compute, fused_bwd)
     mask = masks.MultiHeadMask([masks.CausalMask((length, length)) for _ in range(group)])
     # Built eagerly (its mask tables are concrete arrays) so the cached kernel can be reused
     # across traces. "attn_context": the name remat policies (``minimal``) save.
@@ -56,7 +73,12 @@ def _kernel(length: int, group: int, interpret: bool, mesh: str = ""):
         )
 
 
-def splash_attention(q, k, v, segment_ids, scale: float | None = None):
+def splash_attention(
+    q, k, v, segment_ids, scale: float | None = None, *, block: int = BLOCK, compute: int = 0,
+    fused_bwd: bool = False,
+):  # fmt: skip
+    """``block``, ``compute``, ``fused_bwd``: the tile sizes and backward form
+    (:func:`block_sizes`); ``compute.attention_splash_*``."""
     batch, length, heads, dim = q.shape
     kv_heads = k.shape[2]
     group = heads // kv_heads
@@ -67,8 +89,9 @@ def splash_attention(q, k, v, segment_ids, scale: float | None = None):
         q, k, v, segment_ids = (jnp.pad(x, width(x)) for x in (q, k, v, segment_ids))
     total = length + pad
     kernel = _kernel(
-        total, group, jax.default_backend() != "tpu", repr(jax.sharding.get_abstract_mesh())
-    )
+        total, group, jax.default_backend() != "tpu", repr(jax.sharding.get_abstract_mesh()),
+        block, compute, fused_bwd,
+    )  # fmt: skip
     # [B, KV, G, T, D] queries (head h = kv·G + g, the GQA grouping of jax.nn attention)
     qh = (q * jnp.asarray(scale, q.dtype)).reshape(batch, total, kv_heads, group, dim)
     qh = jnp.transpose(qh, (0, 2, 3, 1, 4))

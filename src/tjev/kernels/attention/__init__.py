@@ -29,11 +29,15 @@ def attention(
     impl: AttentionImpl = "xla",
     block: int = 512,
     remat: bool = True,
+    splash_block: int = 512,
+    splash_compute: int = 0,
+    splash_fused_bwd: bool = False,
 ) -> jax.Array:
     """q [B,T,H,D], k/v [B,T,KV,D], segment_ids [B,T] (0 = padding) → [B,T,H,D].
 
     Token t attends key s iff s ≤ t and both share a segment id. ``block`` and ``remat``
-    apply to the XLA path (splash never materialises [T, T])."""
+    apply to the XLA path (splash never materialises [T, T]); ``splash_*`` to splash
+    (splash_tpu.block_sizes)."""
     match impl:
         case "xla":
             return blocked_attention(q, k, v, segment_ids, block=block, remat=remat)
@@ -42,7 +46,13 @@ def attention(
 
             from .splash_tpu import splash_attention
 
-            return batch_parallel(splash_attention, q, k, v, segment_ids)
+            def run(q: jax.Array, k: jax.Array, v: jax.Array, seg: jax.Array) -> jax.Array:
+                return splash_attention(
+                    q, k, v, seg, block=splash_block, compute=splash_compute,
+                    fused_bwd=splash_fused_bwd,
+                )  # fmt: skip
+
+            return batch_parallel(run, q, k, v, segment_ids)
     raise ValueError(f"attention impl must be one of {IMPLEMENTATIONS}, not {impl!r}")
 
 

@@ -11,9 +11,15 @@ import pytest
 jax.config.update("jax_default_matmul_precision", "highest")
 
 
+@pytest.hookimpl(wrapper=True)
 def pytest_runtest_makereport(item, call):
     # Tests never skip silently: a skip is a failure. Hardware- or weight-dependent tests are
-    # deselected by marker (pyproject addopts), never skipped at run time.
-    if call.excinfo is not None and call.excinfo.errisinstance(pytest.skip.Exception):
-        call.excinfo = None
-        raise AssertionError(f"{item.nodeid} was skipped; skips are not allowed")
+    # deselected by marker (pyproject addopts), never skipped at run time. The report is
+    # turned into a failure (raising here would be a pytest INTERNALERROR: exit 3, the
+    # session aborted); an xfail (also reported as skipped) stays one.
+    report = yield
+    if report.skipped and not hasattr(report, "wasxfail"):
+        reason = report.longrepr[2] if isinstance(report.longrepr, tuple) else report.longrepr
+        report.outcome = "failed"
+        report.longrepr = f"{item.nodeid} was skipped ({reason}); skips are not allowed"
+    return report
