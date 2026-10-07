@@ -1,0 +1,215 @@
+scripts/build_mix_v7.sh
+  s_d1d39e59a20c39::t_b819be39f7d9fe 1-77
+src/tjev/cli/data.py
+  s_d1d39e59a20c39::t_3e819f11837012 15-39,48-54,60-98,101,110,113-121,126-367
+src/tjev/data/assets/jev_fr_pilot.jsonl
+  s_d1d39e59a20c39::t_c62a2e26ce2129 1-275
+src/tjev/data/balance.py
+  s_d1d39e59a20c39::t_5c9dd01398f9ac 1-490
+src/tjev/data/clean_v75.py
+  s_d1d39e59a20c39::t_c3e2f8c037e4d4 1-247
+src/tjev/data/decontam.py
+  s_d1d39e59a20c39::t_b9f12c2a06cab4 1-318
+src/tjev/data/hygiene.py
+  s_d1d39e59a20c39::t_c4247af8192175 1-352
+src/tjev/data/item.py
+  s_d1d39e59a20c39::t_c21a10bc7c3b54 10-12,29-32,53-59,128-130,134-136,146-148,173-178
+src/tjev/data/jevbench.py
+  s_d1d39e59a20c39::t_9998698ca34468 7-9,125-146
+src/tjev/data/lang.py
+  s_d1d39e59a20c39::t_b89fe191b95530 1-112
+src/tjev/data/licences.py
+  s_d1d39e59a20c39::t_3010e698e9cffd 1-181
+src/tjev/data/mix.py
+  s_d1d39e59a20c39::t_f4e1348b0ff343 1-2,20-24,29,33,37,44-49,51-60,67-70,74-76,78-80,82-113,118-120,127-131,173-176,194-195,277-280,285,298-300,336,351-354,361-362,373,376-384,387-398,400-406,409,418-420,422-423,425-429,433,450-454,461-463,467-468,472-479,481-585,589-704,713-719,725-727,736,739-740,745,753-770,772,798-809,811-812,814-1802
+src/tjev/data/near.py
+  s_d1d39e59a20c39::t_88322883373151 1-247
+src/tjev/data/pack.py
+  s_d1d39e59a20c39::t_9fd96b2aa253d9 32-34,56-59,79-83,127-131,141,146-147,149,151,161,165-169,195,214-215,228-232,241,252,262,264-290,305-307,309-311,313-314,324-325,335-338,347-371,397
+src/tjev/data/pipeline.py
+  s_d1d39e59a20c39::t_4b48ebc5b9b1e5 94-96,99-101,119-121
+src/tjev/data/render.py
+  s_d1d39e59a20c39::t_7ee49d1ef19813 9-12,15-22,27,30,40-41,54-58,95-112,126-132,143-151,164-167,180-183,185-205
+src/tjev/data/sources/__init__.py
+  s_d1d39e59a20c39::t_bd929c08047c18 8,11-15,18-22,29-33,35-37,39-54,57-65,71,73,75-76
+src/tjev/data/sources/base.py
+  s_d1d39e59a20c39::t_083913ca0802d2 40-48
+src/tjev/data/sources/contenders.py
+  s_d1d39e59a20c39::t_776fae835128a1 17,36,40-79,98-99,154-156,160-209,382,385,388,392-406,431,549-571,598-602
+src/tjev/data/sources/gen_v7/__init__.py
+  s_d1d39e59a20c39::t_efda8447033fc4 1-185
+src/tjev/data/sources/gen_v7/contrastive.py
+  s_d1d39e59a20c39::t_ab2219ffa77d38 1-1221
+src/tjev/data/sources/gen_v7/core.py
+  s_d1d39e59a20c39::t_2059357a99d0da 1-227
+src/tjev/data/sources/gen_v7/distractor.py
+  s_d1d39e59a20c39::t_09d094b318d2e9 1-232
+src/tjev/data/sources/gen_v7/diversity.py
+  s_d1d39e59a20c39::t_552b3337fee14d 1-73
+src/tjev/data/sources/gen_v7/fr_mt.py
+  s_d1d39e59a20c39::t_b11c229346c493 1-1056
+src/tjev/data/sources/gen_v7/posterior.py
+  s_d1d39e59a20c39::t_4d8c5e7ef65a71 1-458
+src/tjev/data/sources/gen_v7/realtext.py
+  s_d1d39e59a20c39::t_666bb1935f2f5d 1-1215
+src/tjev/data/sources/generators.py
+  s_d1d39e59a20c39::t_45a74b3cbb6b69 15-17,69-72,74-88,111-118,122-316,318-326,328-333,337-344,352-462,470-471,479-601,605,635-640,648-651,653-657,660-664,667-679,682-693,695-776,780,817,830-892,904,907,909-910,918-960,977-986,988-991,1022-1023,1110-1324,1809-1812,1842,1864-1887,1906,1927,1931-1939,1941,1947-2072,2254-2430,2497,2513,2706-2742,2761,2763,2914-2952,2955,2972,2976,2993-2998,3012-3019,3021-3023,3029
+src/tjev/data/sources/jev_v7.py
+  s_d1d39e59a20c39::t_54caefb38b1a7f 1-822
+src/tjev/data/sources/judge.py
+  s_d1d39e59a20c39::t_a04e624dd9c281 1-1507
+src/tjev/data/sources/public.py
+  s_d1d39e59a20c39::t_3947ab9dcf2bec 14,91-203,208,294-310,312,317-319,451-452,499-554,579,743-745,750,755,759-772,790,799-812,848-875
+src/tjev/data/sources/targeted.py
+  s_d1d39e59a20c39::t_5d373acc4b76e3 1-1187
+src/tjev/data/sources/targeted_v7.py
+  s_d1d39e59a20c39::t_5f8792d6bcfc12 1-1188
+src/tjev/data/sources/text_analysis.py
+  s_d1d39e59a20c39::t_ad6ddeb7aa1544 12,126-128,130-136,140,242,347-348
+src/tjev/data/sources/tools_v7.py
+  s_d1d39e59a20c39::t_855a9a22c3e86b 1-852
+tests/data/fixtures/gen_v7/cold.jsonl
+  s_d1d39e59a20c39::t_3e7e234760367b 1-9
+tests/data/fixtures/gen_v7/kali.jsonl
+  s_d1d39e59a20c39::t_b988a8fa12dcc9 1-14
+tests/data/fixtures/gen_v7/sharc/train.jsonl
+  s_d1d39e59a20c39::t_b1439e40cf6cb0 1-6
+tests/data/fixtures/gen_v7/sharc/validation.jsonl
+  s_d1d39e59a20c39::t_8cd737a1908475 1-6
+tests/data/fixtures/gen_v7/tau/LICENSE
+  s_d1d39e59a20c39::t_167ae27a3c749a 1-21
+tests/data/fixtures/gen_v7/tau/airline.md
+  s_d1d39e59a20c39::t_0b969c308439e7 1-70
+tests/data/fixtures/gen_v7/tau/retail.md
+  s_d1d39e59a20c39::t_e50a73ff80d8fb 1-81
+tests/data/test_balance.py
+  s_d1d39e59a20c39::t_0e51e1603acb40 1-241
+tests/data/test_clean_v75.py
+  s_d1d39e59a20c39::t_b5135d738ed6b7 1-88
+tests/data/test_contenders.py
+  s_d1d39e59a20c39::t_701d167a05cb03 39,277-334
+tests/data/test_data_report.py
+  s_d1d39e59a20c39::t_3daf4953988d9d 1-153
+tests/data/test_fr_mt.py
+  s_d1d39e59a20c39::t_b0a678ba1d05e5 1-255
+tests/data/test_gen_v7.py
+  s_d1d39e59a20c39::t_a692df9fd5ba7c 1-469
+tests/data/test_gen_v7_realtext.py
+  s_d1d39e59a20c39::t_4cb1f0589cdcbd 1-255
+tests/data/test_generators.py
+  s_d1d39e59a20c39::t_7130ca8698f541 12,14,16-17,43-45,47-57,59,64-65,98,108,141-142,149-165,181-475
+tests/data/test_hygiene.py
+  s_d1d39e59a20c39::t_d267a456443686 1-224
+tests/data/test_items.py
+  s_d1d39e59a20c39::t_4e285ed3f0d17e 146-211
+tests/data/test_mix.py
+  s_d1d39e59a20c39::t_b77b10d95d2172 16,90-140
+tests/data/test_orders.py
+  s_d1d39e59a20c39::t_7c44afe0b0c550 1-93
+tests/data/test_packing.py
+  s_d1d39e59a20c39::t_05bf225c855ef8 1-156
+tests/data/test_pipeline.py
+  s_d1d39e59a20c39::t_7d78a375c110ea 58-60,125-126,165-197
+tests/data/test_sources.py
+  s_d1d39e59a20c39::t_eb39d86085acba 123-152
+tests/data/test_targeted.py
+  s_d1d39e59a20c39::t_42422403374c3e 1-410
+tests/data/test_v75_mix.py
+  s_d1d39e59a20c39::t_ab993bf7bdc998 1-183
+tests/data/test_v7_jev.py
+  s_d1d39e59a20c39::t_6dca9acca68369 1-451
+tests/data/test_v7_judge.py
+  s_d1d39e59a20c39::t_eba9939dfa4948 1-381
+tests/data/test_v7_mix.py
+  s_d1d39e59a20c39::t_0ddc168a502c61 1-402
+tests/data/test_v7_targeted.py
+  s_d1d39e59a20c39::t_73edd47f84909f 1-311
+tests/data/test_v7_tools.py
+  s_d1d39e59a20c39::t_c895cae6533a24 1-251
+.gitignore
+  s_d1d39e59a20c39::t_ed256d9e6fa5a3 14-16
+NOTICE
+  s_d1d39e59a20c39::t_985e5f1a93152a 30-61
+docs/data.md
+  s_d1d39e59a20c39::t_74f73659228349 3-9,53,55,64-66,68,70-78,80-257,259-266,268,270-275,277-348,350-379,384-390,443-956,974-1078,1089-1093,1117-1719,1726,1730-1741
+docs/fr-data.md
+  s_d1d39e59a20c39::t_fab22d5e797f2f 1-568
+docs/fr-samples.md
+  s_d1d39e59a20c39::t_22bd6e6f57c0bc 1-440
+docs/research/text_analysis.md
+  s_d1d39e59a20c39::t_803e2186639471 3-4,17-20,89-94,121-122
+reports/data/mix-v3/report.json
+  s_d1d39e59a20c39::t_f003707a6b85d3 1-9847
+reports/data/mix-v3/report.md
+  s_d1d39e59a20c39::t_7c00ba29da997f 1-325
+reports/data/mix-v4/report.json
+  s_d1d39e59a20c39::t_53fde24ac2cc47 1-9364
+reports/data/mix-v4/report.md
+  s_d1d39e59a20c39::t_0eba6e1c138ec0 1-319
+reports/data/mix-v4b/report.json
+  s_d1d39e59a20c39::t_e0116d234fd490 1-9339
+reports/data/mix-v4b/report.md
+  s_d1d39e59a20c39::t_1e52568d53001d 1-317
+reports/data/mix-v4r/report.json
+  s_d1d39e59a20c39::t_5d4a4b62c5c538 1-9346
+reports/data/mix-v4r/report.md
+  s_d1d39e59a20c39::t_72e61ff84fc53a 1-318
+reports/data/mix-v5/build.log
+  s_d1d39e59a20c39::t_9fe47c9bfc8926 1-348
+reports/data/mix-v5/derive.log
+  s_d1d39e59a20c39::t_408dcf07885417 1-232
+reports/data/mix-v5/report.json
+  s_d1d39e59a20c39::t_c0977d0271aeb9 1-10230
+reports/data/mix-v5/report.md
+  s_d1d39e59a20c39::t_5be3e365bcc02f 1-337
+reports/data/mix-v5b/build.log
+  s_d1d39e59a20c39::t_1c4eeba092969e 1-351
+reports/data/mix-v5b/report.json
+  s_d1d39e59a20c39::t_251f94b4468f6d 1-10230
+reports/data/mix-v5b/report.md
+  s_d1d39e59a20c39::t_65393297920dcc 1-337
+reports/data/mix-v6/build.log
+  s_d1d39e59a20c39::t_3a8f922ac32c42 1-393
+reports/data/mix-v6/compare.txt
+  s_d1d39e59a20c39::t_c62ddee30d999e 1-101
+reports/data/mix-v6/report.json
+  s_d1d39e59a20c39::t_ed6575675c6a3d 1-11889
+reports/data/mix-v6/report.md
+  s_d1d39e59a20c39::t_e93e53facb2f52 1-375
+scripts/build_mix_v75.sh
+  s_d1d39e59a20c39::t_0737f9c9bb8499 1-98
+scripts/data_report.py
+  s_d1d39e59a20c39::t_f33fe9c10a026d 1-1732
+scripts/fr_mt_gpu.sh
+  s_d1d39e59a20c39::t_f5792d0fc035c0 1-86
+scripts/fr_mt_mix.py
+  s_d1d39e59a20c39::t_74cb5cf9543918 1-137
+scripts/fr_mt_sample.py
+  s_d1d39e59a20c39::t_8a4abfd08b5750 1-251
+scripts/fr_samples.py
+  s_d1d39e59a20c39::t_f4407f8e10c661 1-103
+scripts/gen7_report.py
+  s_d1d39e59a20c39::t_0133bcac69b590 1-110
+scripts/jev_fr_pilot.py
+  s_d1d39e59a20c39::t_a8379eddb7f8e5 1-277
+scripts/packing_report.py
+  s_d1d39e59a20c39::t_9c694d68b29998 1-235
+scripts/v7_smoke.py
+  s_d1d39e59a20c39::t_85497e02bb703e 1-83
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ef481e86aeee71023b26b0de999765e7217221b8",
+  "prompts": {},
+  "sessions": {
+    "s_d1d39e59a20c39": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d316479f-0782-47eb-a003-087da5c19333",
+        "model": "unknown"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
