@@ -1,0 +1,85 @@
+cloud/colab.sh
+  s_d1d39e59a20c39::t_60cc0efe5c02b8 13-16,19-20,24-27,29-44,49,51-63,68,71,74,76-77,84-96,99-112,117-120,122-126,128,130,145
+cloud/colab_cpu.sh
+  s_d1d39e59a20c39::t_bb4b63a401abae 2,4,6-12,14-63,65-67
+cloud/session_run.py
+  s_d1d39e59a20c39::t_44c1ff25664fa6 1-2,4,6-9,12-13,16-18,36-43,62-63,78-92,114-117,143-188,214-215,220,224-225,227,230-231,234-235,238-241,243-246,250-252,262-265,267
+cloud/tpu_bootstrap.sh
+  s_d1d39e59a20c39::t_0b1a629c95b471 2-3,6,8,18-20,24
+cloud/tpu_campaign.sh
+  s_d1d39e59a20c39::t_6a65c4cc083021 2-3,8,12,18-41,44-46,66,91,105-637,639-647,651,653,655-656,662,694
+cloud/tpu_env.sh
+  s_d1d39e59a20c39::t_d1310ac323fa38 9-11,34-35
+docs/profiling.md
+  s_d1d39e59a20c39::t_0a7859b1b56fcd 1-351
+docs/tpu.md
+  s_d1d39e59a20c39::t_97eb2d6ae0fb7e 11,14-22,31,46,56,62-69,103-105,109,114-118,122,126,130-133,139,142-149,153,162-179
+scripts/aot_arms.py
+  s_d1d39e59a20c39::t_b10ff02f6079a2 1-141
+scripts/aot_tpu.py
+  s_d1d39e59a20c39::t_67a01c3f35e6a9 1-236
+scripts/journey_report.py
+  s_d1d39e59a20c39::t_192ec830b121b8 1-404
+src/tjev/campaign/analyse.py
+  s_d1d39e59a20c39::t_98ff2bfb5f6497 1-163
+src/tjev/campaign/bench.py
+  s_d1d39e59a20c39::t_fee9050ad2f6c5 11-20,28,30-31,34,68,88-110,124-125,136-145,163-208,215,217,231,238-240,242,244-257,266-291,295-296,298-305,310-525,530,532-561,563-582,586-598,605-617,619-624,627-637,645,647,649-655,662,673-704
+src/tjev/campaign/experiments.py
+  s_d1d39e59a20c39::t_0f6fa6264dc7ec 1-204
+src/tjev/campaign/hlo_labels.py
+  s_d1d39e59a20c39::t_8ad96eda4f6011 1-314
+src/tjev/campaign/ir_stats.py
+  s_d1d39e59a20c39::t_b030768e5fc268 1-246
+src/tjev/campaign/journey.py
+  s_d1d39e59a20c39::t_721314dc7a0d6f 1-1033
+src/tjev/campaign/parity.py
+  s_d1d39e59a20c39::t_548b5d84cb184d 1-531
+src/tjev/campaign/plan.py
+  s_d1d39e59a20c39::t_020af2a081758e 6-9,16-17,34-35,37-38,57,63,73-74,77-91,99-135,145-175,197-202,208-215,220-274,276-284,308,313-338,352-360,362,368,370-371,376-408,412-425,428-429,446,453-458,462-465,468,470-473,481-483,485-500,502-504,506-509,511-688,692-715,740-741,768-774,779,874-875,882,896-922,972,978-979,981,985,989,995-996,1003-1004,1006-1007,1013,1016,1020,1023,1025,1065-1066,1071-1080,1082-1100,1123-1130,1148
+src/tjev/campaign/profile_report.py
+  s_d1d39e59a20c39::t_c4cd0119156433 1-165
+src/tjev/campaign/queue.py
+  s_d1d39e59a20c39::t_69b590fe9ed807 7-8,21-24,31,54,70,73-76,81,155,170-172,191-192
+src/tjev/campaign/residuals.py
+  s_d1d39e59a20c39::t_f6d41951b22108 1-169
+src/tjev/campaign/xprof_summary.py
+  s_d1d39e59a20c39::t_b33297eaeed179 1-271
+src/tjev/campaign/xprof_tools.py
+  s_d1d39e59a20c39::t_aae1b7f179ebe1 1-911
+src/tjev/cli/campaign.py
+  s_d1d39e59a20c39::t_7b7a17dc093be6 30-36,42-45,49-63,80-87,95-96,114-118,121-122,126-127,152-156,167-168,188-195
+tests/campaign/test_bench.py
+  s_d1d39e59a20c39::t_0e146452cca312 1-64
+tests/campaign/test_ir_stats.py
+  s_d1d39e59a20c39::t_c43c57038697d9 1-107
+tests/campaign/test_journey.py
+  s_d1d39e59a20c39::t_a3c053159a8cf1 1-514
+tests/campaign/test_parity.py
+  s_d1d39e59a20c39::t_cb8bc2285c9ad7 1-59
+tests/campaign/test_plan.py
+  s_d1d39e59a20c39::t_2e198603f81e30 77-81,144-161,236-237,243-611
+tests/campaign/test_profile_labels.py
+  s_d1d39e59a20c39::t_fadb77068a6d46 1-181
+tests/campaign/test_queue.py
+  s_d1d39e59a20c39::t_8d6abfa64d77c3 52-65
+tests/campaign/test_session.py
+  s_d1d39e59a20c39::t_efe0203f3906aa 1,65,68,70-137
+tests/campaign/test_xprof_tools.py
+  s_d1d39e59a20c39::t_117d16bf250316 1-308
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cccadbaffcbc4299d528ca445af994a792e27470",
+  "prompts": {},
+  "sessions": {
+    "s_d1d39e59a20c39": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d316479f-0782-47eb-a003-087da5c19333",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
