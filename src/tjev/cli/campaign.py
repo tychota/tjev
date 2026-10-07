@@ -27,23 +27,40 @@ ArmSeeds = Annotated[int, typer.Option(help="seeds of every arm and of the Muon 
 SweepSteps = Annotated[int, typer.Option(help="steps of a sweep run")]
 Arms = Annotated[str, typer.Option(help="comma list of sweep arms (default: all)")]
 Muon = Annotated[bool, typer.Option(help="sweep a Muon (Polar Express) rate bracket")]
+Proxy = Annotated[str, typer.Option(help="the sweep's proxy size (0.8B, 2B)")]
+Centre = Annotated[float, typer.Option(help="the AdamW grid rate the arms pair with")]
+Stage = Annotated[str, typer.Option(help="sweep stage: lr | arms | all | reg (4B regularisers)")]
+Horizon = Annotated[int, typer.Option(help="final horizon in steps (0: the fitted one)")]
+Lean = Annotated[
+    bool, typer.Option(help="sweep economy: no quick eval, eval every 100, no post, health kill")
+]
 PASSTHROUGH = {"allow_extra_args": True, "ignore_unknown_options": True}
 
 
 def _campaign(runs: Path, mix: str = "MIX", models: str = "MODELS", *, hardware: str = "v6e",
               sizes: str = "4B,2B,0.8B", kernels: bool = True, seeds: int = 1,
-              arm_seeds: int = 1, sweep_steps: int = 600, arms: str = "", muon: bool = True):  # fmt: skip
-    from tjev.campaign.plan import ARMS, HARDWARE, campaign_from_env
+              arm_seeds: int = 1, sweep_steps: int = 600, arms: str = "", muon: bool = True,
+              proxy: str = "2B", centre: float | None = None, stage: str = "all",
+              lean: bool = False, horizon: int = 0, max_bucket: int = 4096):  # fmt: skip
+    from tjev.campaign.plan import ARMS, CENTRE, HARDWARE, REG_ARMS, SIZES, campaign_from_env
 
     if hardware not in HARDWARE:
         raise typer.BadParameter(f"hardware must be one of {sorted(HARDWARE)}")
-    chosen = tuple(comma_list(arms)) or tuple(ARMS)
-    if unknown := set(chosen) - set(ARMS):
-        raise typer.BadParameter(f"unknown arms {sorted(unknown)} (arms: {', '.join(ARMS)})")
-    return campaign_from_env(runs, mix, models, hardware=hardware, kernels=kernels,
-                             final_sizes=tuple(comma_list(sizes)), seeds=seeds,
-                             arm_seeds=arm_seeds, sweep_steps=sweep_steps, arms=chosen,
-                             muon=muon)  # fmt: skip
+    known = (*REG_ARMS, "nocentre") if stage == "reg" else ARMS  # nocentre: the arms only
+    chosen = tuple(comma_list(arms)) or tuple(a for a in ARMS if stage != "reg")
+    if unknown := set(chosen) - set(known):
+        raise typer.BadParameter(f"unknown arms {sorted(unknown)} (arms: {', '.join(known)})")
+    if proxy not in SIZES:
+        raise typer.BadParameter(f"proxy must be one of {sorted(SIZES)}")
+    try:
+        return campaign_from_env(runs, mix, models, hardware=hardware, kernels=kernels,
+                                 final_sizes=tuple(comma_list(sizes)), seeds=seeds,
+                                 arm_seeds=arm_seeds, sweep_steps=sweep_steps, arms=chosen,
+                                 muon=muon, proxy=proxy, centre=centre or CENTRE,
+                                 stage=stage, lean=lean, horizon=horizon,
+                                 max_bucket=max_bucket)  # fmt: skip
+    except ValueError as e:
+        raise typer.BadParameter(str(e)) from e
 
 
 @app.command()
@@ -60,6 +77,14 @@ def plan(
     sweep_steps: SweepSteps = 600,
     arms: Arms = "",
     muon: Muon = True,
+    proxy: Proxy = "2B",
+    centre: Centre = 0.0,
+    stage: Stage = "all",
+    lean: Lean = False,
+    horizon: Horizon = 0,
+    max_bucket: Annotated[
+        int, typer.Option(help="largest bucket: 8192 / 16384 add the long buckets (v6e1)")
+    ] = 4096,
     out: Annotated[Path | None, typer.Option(help="write the queue here")] = None,
 ) -> None:
     """The queue of one phase (planned from the finished runs of the phases before)."""
@@ -67,7 +92,8 @@ def plan(
 
     c = _campaign(runs, mix, models, hardware=hardware, sizes=sizes, kernels=kernels,
                   seeds=seeds, arm_seeds=arm_seeds, sweep_steps=sweep_steps, arms=arms,
-                  muon=muon)  # fmt: skip
+                  muon=muon, proxy=proxy, centre=centre, stage=stage, lean=lean,
+                  horizon=horizon, max_bucket=max_bucket)  # fmt: skip
     text = "\n".join(make_plan(phase, c)) + "\n"
     if out:
         out.write_text(text)
@@ -85,13 +111,20 @@ def fit(
     sweep_steps: SweepSteps = 600,
     arms: Arms = "",
     muon: Muon = True,
+    proxy: Proxy = "2B",
+    centre: Centre = 0.0,
+    stage: Stage = "all",
+    lean: Lean = False,
+    horizon: Horizon = 0,
     out: Path | None = None,
 ) -> None:
-    """Decisions and per-size recipes from the finished runs."""
+    """Decisions and per-size recipes from the finished runs (the planner's knobs as for
+    ``plan``, so one BUDGET string drives plan, fit and cost)."""
     from tjev.campaign.plan import fit as fit_runs
 
     c = _campaign(runs, hardware=hardware, sizes=sizes, seeds=seeds, arm_seeds=arm_seeds,
-                  sweep_steps=sweep_steps, arms=arms, muon=muon)  # fmt: skip
+                  sweep_steps=sweep_steps, arms=arms, muon=muon, proxy=proxy,
+                  centre=centre, stage=stage, lean=lean, horizon=horizon)  # fmt: skip
     report = fit_runs(c)
     if out:
         out.write_text(json.dumps(report, indent=2, default=float) + "\n")
@@ -116,6 +149,11 @@ def cost(
     sweep_steps: SweepSteps = 600,
     arms: Arms = "",
     muon: Muon = True,
+    proxy: Proxy = "2B",
+    centre: Centre = 0.0,
+    stage: Stage = "all",
+    lean: Lean = False,
+    horizon: Horizon = 0,
     chips: Annotated[int, typer.Option(help="chips of the VM")] = 8,
     rate: Annotated[float | None, typer.Option(help="USD per chip-hour")] = None,
     bench: Annotated[Path | None, typer.Option(help="`tjev campaign bench` JSON")] = None,
@@ -126,7 +164,8 @@ def cost(
     from tjev.campaign.plan import cost as phase_cost
 
     c = _campaign(runs, hardware=hardware, sizes=sizes, seeds=seeds, arm_seeds=arm_seeds,
-                  sweep_steps=sweep_steps, arms=arms, muon=muon)  # fmt: skip
+                  sweep_steps=sweep_steps, arms=arms, muon=muon, proxy=proxy, centre=centre,
+                  stage=stage, lean=lean, horizon=horizon)  # fmt: skip
     measured = json.loads(bench.read_text()) if bench else None
     table = phase_cost(c, bench=measured, vm_chips=chips, rate=rate)
     typer.echo(f"{'phase':10s} {'jobs':>5s} {'chip h':>8s} {'wall h':>7s} {'USD':>8s}   "
@@ -142,6 +181,14 @@ def cost(
 def queue(ctx: typer.Context) -> None:
     """Run a queue on this host (arguments: `tjev campaign queue --help`)."""
     from tjev.campaign.queue import main
+
+    raise typer.Exit(main(ctx.args))
+
+
+@app.command(context_settings=PASSTHROUGH)
+def parity(ctx: typer.Context) -> None:
+    """Kernels vs the XLA reference on real weights and data (`tjev campaign parity --help`)."""
+    from tjev.campaign.parity import main
 
     raise typer.Exit(main(ctx.args))
 

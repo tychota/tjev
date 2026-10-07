@@ -6,7 +6,9 @@
 # (probe_libtpu_flags) and keeps only the accepted ones in reports/libtpu.flags, which this
 # file exports as LIBTPU_INIT_ARGS (it then takes precedence over the preset).
 ROOT=${TJEV_ROOT:-$HOME/tjev-work}
-export JAX_PLATFORMS=tpu
+# cpu too: jax.debug.callback (the per-layer taps) needs a CPU device for the host side;
+# the TPU stays the default backend
+export JAX_PLATFORMS=tpu,cpu
 export JAX_COMPILATION_CACHE_DIR=$HOME/.cache/tjev/jax-compile  # shared by every run on the host
 export TPU_STDERR_LOG_LEVEL=1 TPU_MIN_LOG_LEVEL=1 TF_CPP_MIN_LOG_LEVEL=1  # libtpu: warnings up
 if [[ -s $ROOT/reports/libtpu.flags ]]; then
@@ -29,7 +31,8 @@ fi
 
 probe_libtpu_flags() {  # keep each candidate libtpu accepts; writes reports/libtpu.flags
   local ok=() flag candidates
-  read -ra candidates <<<"$(python -c "from tjev.config import load_config; print(' '.join(load_config('tpu-v6e').compute.libtpu_flags))")"
+  local hw=${HARDWARE:-v6e}  # v6e1 (the planner's one-chip Colab entry) uses the v6e preset
+  read -ra candidates <<<"$(python -c "from tjev.config import load_config; print(' '.join(load_config('tpu-${hw%1}').compute.libtpu_flags))")"
   local test='import jax, jax.numpy as jnp; print(float(jax.jit(lambda x: (x @ x).sum())(jnp.ones((512, 512)))))'
   for flag in "${candidates[@]}"; do
     if LIBTPU_INIT_ARGS="${ok[*]} $flag" timeout 300 python -c "$test" > /dev/null 2>&1; then

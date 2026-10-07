@@ -8,12 +8,18 @@ Training runs on Cloud TPU v6e (Trillium) or v5e, with the Pallas kernels
 - **Final.** It trains every size at its fitted recipe.
 - **Post-training.** It post-trains and exports the best final run of each size.
 
-Every step is resumable, so the campaign can run as a chain of time-limited sessions on
-Kaggle's free v5e-8.
+Every step is resumable, so the campaign runs as a chain of time-limited Colab sessions.
 
 > **Status.** The kernels, the planner and the runners are tested on CPU (interpret mode,
-> TPU lowering, the queue on one CPU "chip"). Nothing has run on a real TPU yet, so phase
-> `s0` checks the kernels on the hardware before any training.
+> TPU lowering, the queue on one CPU "chip") and have run on Colab v6e-1: the measured
+> correctness, throughput and sweep results are in [results.md](results.md), the
+> per-size defaults they fixed in `plan.HARDWARE["v6e1"]`. Phase `s0` still checks the
+> kernels on the hardware before any training and falls back to the XLA paths if they fail.
+
+> **Colab v6e-1 budget.** With ~80 compute units (~19.6 TPU-hours) the default campaign
+> (~34 h) does not fit. [sweep-plan.md](sweep-plan.md) has the reduced, staged sweep (0.8B
+> proxy, 300 steps, `--hardware v6e1 --lean`, ~9.1 h), the run-health kill rules, the W&B
+> layout (`tjev-sweep`) and the final-training budget per size.
 
 ## Hardware
 
@@ -22,7 +28,7 @@ Kaggle's free v5e-8.
 | Per chip | 32 GB HBM, 1.6 TB/s, 918 TFLOP/s bf16, 256×256 MXU | 16 GB HBM, 0.82 TB/s, 197 TFLOP/s bf16, 128×128 MXUs |
 | Critical intensity | ~575 FLOP/B | ~240 FLOP/B |
 | Preset | `tpu-v6e`: microbatch 8192 tokens per chip | `tpu-v5e`: 4096 per chip; 4B `mesh.fsdp=2`, 9B `fsdp=8` |
-| Where | GCP (flex-start ≈ $1.35 / chip-hour), Colab v6e-1 | Kaggle v5e-8 (free, ~20 h / week, 9 h sessions), Colab v5e-1 |
+| Where | Colab v6e-1 (≈ 4.6 compute units / h) | Colab v5e-1 (free tier) |
 
 - **Data parallelism.** Only LoRA gradients are all-reduced (<1% of a step), so the frozen
   base stays replicated while it fits.
@@ -37,7 +43,7 @@ the phases before it (`tjev campaign fit`).
 | Phase | Jobs | What it settles |
 |---|---|---|
 | `s0` | — | libtpu flags probed one by one; the Pallas kernel tests on the TPU (on failure every job falls back to the XLA paths); kernel and train-step bench per size; zero-shot controls |
-| `sweep` | 16 | The 2B proxy at 600 steps: AdamW at 2.5, 3.54, 5 and 7.07e-5 (seed 0; 3.54e-5 also seed 1); Muon (Polar Express) at 2.5, 3.54 and 5e-5; paired arms at 3.54e-5 (below) |
+| `sweep` | 21 | The 2B proxy at 600 steps: AdamW at 2.5, 3.54, 5 and 7.07e-5 (seed 0; 3.54e-5 also seed 1); Muon (Polar Express) at 2.5, 3.54 and 5e-5; paired arms at 3.54e-5 (below) |
 | `transfer` | 12 | The proxy's horizon at its fitted rate and at 0.64× it (each a 2400-step run with WSD cooldown branches at 600 and 1200): the best horizon and the horizon exponent γ; 0.8B and 4B at the predicted rate × {½, 1, 2} |
 | `final` | 9 | 4B, 2B, 0.8B at their recipe: one long run, and cooldown branches at ¼ and ½ of its horizon; `tjev campaign select` picks the best of the three per size |
 
@@ -47,13 +53,20 @@ The sweep arms, all at the centre rate and paired with the AdamW run of the same
 |---|---|---|
 | `zclip`, `noclip` | z-score clipping, no clipping | the clipping |
 | `b32k`, `b16k` | half / quarter batch at lr × 0.85 per halving, for 2× / 4× the steps | the batch (compared at matching tokens: the same segments) |
-| `r64`, `r64-samelr` | rank 64 at lr/√2 and at the same lr | rank 64 for 0.8B / 2B, and whether the rate moves with the rank |
+| `r16`, `r64`, `r128` (+ `-samelr`) | ranks 16 / 64 / 128 at the 1/√r rate (lr × √2, /√2, /2) and at the same lr | the rank of 0.8B / 2B (4B / 9B keep ≥ 64), and whether the rate moves with the rank |
 | `b2-0.99` | Adam β2 0.99 | β2 |
 | `fp32-storage` | fp32 weights and activations (one-pass bf16 matmuls) | nothing: reported only (a true fp32 control needs 6-pass matmuls, ~4–6× the cost) |
 
 Budget knobs, the same for `plan`, `fit` and `cost` (`BUDGET="…"` for the runners):
 `--seeds` (AdamW grid seeds), `--arm-seeds` (seeds of the arms and the Muon grid),
-`--sweep-steps`, `--arms zclip,b32k,…`, `--no-muon`.
+`--sweep-steps`, `--arms zclip,b32k,…`, `--no-muon`, `--proxy 0.8B|2B`, `--centre RATE`
+(the grid rate the arms pair with), `--horizon STEPS` (the final horizon). `plan` and
+`cost` also take `--stage lr|arms|all` (the rate brackets, the paired arms) and `--lean`
+(no quick eval, an eval every 100 steps, no post-training, health kills; see
+[sweep-plan.md](sweep-plan.md)). Further arms: `gdn-bf16` (report only), the LoRA inits
+`pissa`, `eva` and `lora-ga` (`lora.init`), the gate arms and the CogCalib / teacher losses
+of [sweep-plan.md](sweep-plan.md). Runs stopped by their health rules (`health.json`
+status `killed`) are left out of the fit.
 
 How the fit decides:
 
@@ -81,90 +94,63 @@ The queue (`tjev campaign queue`):
 - **Failures.** A failed or stalled run (no metrics for 30 min) restarts from its last
   checkpoint.
 - **After each run.** It runs `tjev post` (quick for sweeps).
-- **Mirror.** `--bucket gs://…` mirrors the runs every 10 minutes (spot VMs).
 - **Session limits.** At a session deadline every run checkpoints and the queue exits 3; the
   next session resumes it.
 
 ## Cost
 
 `tjev campaign cost` prices each phase from the measured tokens/s of `tjev campaign bench`
-(or MFU priors before any bench). It counts training tokens, compile time, evals and
-post-training. Before any run, with the priors:
+(`HARDWARE[…]["tokens"]`, or MFU priors where nothing was benched). It counts training
+tokens, compile time, evals and post-training. The default campaign, priced before any run
+with the priors (the v6e1 Colab budget is in [sweep-plan.md](sweep-plan.md)):
 
 | Hardware | Chip-hours | Wall time (8-chip VM) | Cost |
 |---|---|---|---|
-| v6e-8, flex-start | 23.7 | ~3.0 h | ~$32 |
-| v5e-8, Kaggle | 55.4 | ~6.9 h (one 9 h session) | free |
+| v6e-8 (GCP list price, the cost model's rate) | 23.7 | ~3.0 h | ~$32 |
 
 Without Muon and with only the clipping and batch arms (`--arms zclip,noclip,b32k
 --no-muon`), the v6e cost drops to ~$26.
 
-The MFU priors are 18–19% for 2B / 4B on v6e with the current kernels. Their per-op
-roofline and the fused-backward roadmap are in [kernels.md](kernels.md). A bench on the real
-hardware replaces them.
+The MFU priors were 18–19% for 2B / 4B on v6e with the first kernels (their per-op
+roofline is in [kernels.md](kernels.md#performance-model-and-roadmap)). On v6e-1 the bench
+measured 52,650 / 36,250 / 14,120 / 9,220 padded tokens/s at 0.8B / 2B / 4B / 9B with the
+planner's configuration (28% MFU at 9B; [results.md](results.md#tpu-throughput-v6e-1-measured)),
+and those numbers price `--hardware v6e1`.
 
 ## Running it
 
-All runners are driven from the machine that holds the data (Linux, macOS or WSL), with the
+The runner is driven from the machine that holds the data (Linux, macOS or WSL), with the
 data under `TJEV_ROOT` (default `~/tjev-work`):
 
 ```
-$TJEV_ROOT/data/mix-v3/           tjev data build (mix.yaml, calibration.jsonl, …)
+$TJEV_ROOT/data/<mix>/            tjev data build (mix.yaml, calibration.jsonl, …; MIX=mix-v7.5)
 $TJEV_ROOT/data/jevbench/         tjev data jevbench (public.jsonl)
 ```
 
-The host downloads the models from Hugging Face and creates the held-out selection set
-itself (`cloud/tpu_bootstrap.sh`). Outputs come back under `runs/` (metrics, evals, post
-reports, the selected checkpoint of each run), plus `reports/` and `logs/`.
-
-### Kaggle (free v5e-8)
-
-```bash
-bash cloud/kaggle.sh all s0 sweep transfer final
-```
-
-The Kaggle CLI must be set up (`~/.kaggle/kaggle.json`), on a phone-verified account.
-
-1. The code and data are pushed as private datasets.
-2. The script chains headless script kernels, one per 9-hour session. Each session restores
-   the previous one's output and runs until 0.4 h before its limit.
-3. Each session saves only the checkpoints a resume or a pending cooldown branch still
-   needs (`cloud/session_run.py`).
-
-W&B logs offline unless `WANDB_INLINE=1`. A pushed kernel can silently get a CPU image
-(kaggle-cli #1197); the session then stops at once, and the TPU has to be picked on the
-kernel page.
+or, with `HF_DATASET=USER/REPO`, in a private HF dataset repo with the same layout. The host
+downloads the models from Hugging Face and creates the held-out selection set itself
+(`cloud/tpu_bootstrap.sh`). Outputs come back under `runs/` (metrics, evals, post reports,
+the selected checkpoint of each run), plus `reports/` and `logs/`.
 
 ### Colab
 
 ```bash
 TPU=v6e1 bash cloud/colab.sh all s0 sweep transfer final     # or TPU=v5e1 (free tier)
+PROBE_ONLY=analyse bash cloud/colab.sh session 1 probe       # one session, one probe
 ```
 
-Driven headless by `google-colab-cli`, with the same session chaining (sessions end at
-~12 h).
-
-### GCP
-
-```bash
-bash cloud/tpu.sh all s0 sweep transfer final    # up push setup run wait pull, then always down
-```
-
-Settings are environment variables (`TYPE=v6e-8`, `ZONE`, `MODE=flex|spot|on-demand`,
-`MAX_HOURS`, `BUCKET`, …; see the script header).
-
-- **Queued resources.** VMs come from queued resources. Flex-start is never preempted and
-  is deleted by GCP at `MAX_HOURS`.
-- **Cleanup.** `all` deletes the VM whatever happens.
-- **Manual steps.** `up`, `push`, `setup`, `run`, `status`, `wait`, `pull` and `down`
-  exist separately.
-- **W&B key.** It is read from `WANDB_API_KEY` or `~/.netrc` and uploaded as a file, never
-  put on a command line.
+Driven headless by `google-colab-cli`: each session (`SESSION_HOURS`, 11) restores the
+previous one's output, runs until 0.4 h before its limit and saves only the checkpoints a
+resume or a pending cooldown branch still needs (`cloud/session_run.py`). `all` chains up to
+`MAX_SESSIONS` sessions. Settings: `MIX`, `MODELS`, `SIZES`, `BUDGET`, `CAMPAIGN`,
+`WANDB_ENTITY`, `HF_DATASET`, and every `PROBE_*` variable of the shell, passed to the host.
+`PROBE_SWEEP_BACKUP=1` uploads the finished sweep runs' checkpoints to the private HF repo
+`PROBE_HF_REPO` before the save drops them; `PROBE_FETCH_CKPTS="RUN@STEP …"` fetches branch
+points back from it.
 
 ### On the host
 
-`cloud/tpu_campaign.sh PHASES…` runs the phases on any TPU host. It is also the entry point
-of the three runners.
+`cloud/tpu_campaign.sh PHASES…` runs the phases on any TPU host; the Colab runner calls it.
 
 - **Queues.** It plans each phase's queue once (`queues/PHASE.queue`).
 - **Resume.** It skips finished phases and resumes paused ones.
@@ -173,6 +159,24 @@ of the three runners.
   `tjev post` and `tjev export`.
 - **Environment.** `cloud/tpu_env.sh` sets the JAX / libtpu environment: the compile
   cache, W&B, and the libtpu flags that libtpu accepted on this host.
+- **Probes.** `bash cloud/tpu_campaign.sh probe` runs one probe under `reports/probe/`,
+  chosen by `PROBE_ONLY` (default `validate,bench`); every variable has a default and the
+  script header lists them:
+
+  | Mode | What | Variables |
+  |---|---|---|
+  | `validate` | the TPU kernel tests, then the fp32 and bf16 ground truth against the official model with per-layer traces ([results.md](results.md#tpu-correctness-v6e-1-measured)) | `PROBE_TESTS` |
+  | `bench` | tokens/s per variant and size with the two xprof captures ([profiling.md](profiling.md)) | `PROBE_SIZES`, `PROBE_VARIANTS`, `PROBE_DEBUG` |
+  | `analyse` | every profile of the final train step per size | `PROBE_ANALYSE_SIZES` |
+  | `smoke` | a final run's exact job, shortened: throughput, HBM, one checkpoint and eval | `PROBE_SMOKE_SIZE`, `PROBE_SMOKE_STEPS`, `PROBE_SMOKE_EXTRA` |
+  | `resume` | a run and its SIGTERMed + resumed twin, step for step | `PROBE_RESUME_SIZE` |
+  | `journey` | every GDN-core iteration on real training ([kernel-journey.md](kernel-journey.md)) | `PROBE_JOURNEY_SIZES` |
+  | `calib` | per-item calibration dumps of kept checkpoints ([calibration.md](calibration.md)) | `PROBE_CALIB_RUNS`, `PROBE_CALIB_EXTRA_VALIDATION` |
+  | `official` | the official JevBench harness against tjev's server ([official-eval.md](official-eval.md)) | `PROBE_OFFICIAL_TARGETS`, `PROBE_OFFICIAL_DI_SUITE` |
+  | `finish` | a final run's full post-training and export from its HF backup | `PROBE_FINISH_RUN`, `PROBE_FINISH_SIZE` |
+
+  `PROBE_HF_REPO` (default `tychot/tjev-4b`) is the private HF repo the probes read
+  checkpoints from and write backups, dumps and large captures to.
 - **libtpu flags.** They live in the TPU presets (`compute.libtpu_flags`: MaxText's v6e
   dense-model set), so a plain `tjev train tpu-v6e …` gets them. Phase `s0` probes them one
   by one, and an exported `LIBTPU_INIT_ARGS` (the accepted subset) takes precedence. They

@@ -4,7 +4,8 @@
 
 QUEUE lines (written by ``tjev campaign plan``)::
 
-    <name> chips=N [post=quick|full|none] [after=RUN | after=RUN@STEP] <tjev train args ...>
+    <name> chips=N [post=quick|full|none] [after=RUN | after=RUN@STEP] [env=KEY=VALUE ...]
+           <tjev train args ...>
 
 * A job gets N chips (1, 2, 4 or 8, aligned groups) through libtpu's per-process chip
   variables (TPU_VISIBLE_CHIPS, TPU_CHIPS_PER_PROCESS_BOUNDS, ...). A preflight checks
@@ -17,15 +18,17 @@ QUEUE lines (written by ``tjev campaign plan``)::
 * A finished run leaves RUNS/<name>/queue.done (then ``post``: ``tjev post``, quick or
   full, on the same chips) and is skipped when the queue is run again.
 * ``$RUNS`` in the arguments is replaced by the runs directory.
-* SIGTERM (VM shutdown) is forwarded to the runs, which checkpoint and exit 143; a run that
-  exits 143 is interrupted, not failed. ``--bucket gs://…`` mirrors RUNS there every 10
-  minutes and at the end (spot VMs: restore it on a new VM before running again).
+* ``env=KEY=VALUE`` (repeatable) sets an environment variable for that job only (e.g. a
+  kernel-journey variant: ``env=TJEV_GDN_CONV_BARRIER=0``).
+* SIGTERM (the session's end) is forwarded to the runs, which checkpoint and exit 143; a run
+  that exits 143 is interrupted, not failed.
 """
 
 from __future__ import annotations
 
 import argparse
 import os
+import shlex
 import signal
 import subprocess
 import sys
@@ -48,6 +51,7 @@ class Job:
     args: list[str]
     post: str = "quick"
     after: str | None = None
+    env: dict[str, str] = field(default_factory=dict)
     tries: int = 0
     proc: subprocess.Popen | None = None
     group: list[int] = field(default_factory=list)
@@ -63,24 +67,23 @@ def parse_lines(lines: list[str], runs: Path) -> list[Job]:
         if not line or line.startswith("#"):
             continue
         name, *rest = line.split()
-        opts, args = {}, []
+        opts, args, env = {}, [], {}
         for token in rest:
             key = token.split("=", 1)[0]
-            if key in ("chips", "post", "after") and "=" in token:
+            if key == "env" and token.count("=") >= 2:
+                var, value = token.split("=", 2)[1:]
+                env[var] = value.replace("$RUNS", str(runs))
+            elif key in ("chips", "post", "after") and "=" in token:
                 opts[key] = token.split("=", 1)[1]
             else:
                 args.append(token.replace("$RUNS", str(runs)))
         jobs.append(Job(name, int(opts.get("chips", 1)), args, opts.get("post", "quick"),
-                        opts.get("after")))  # fmt: skip
+                        opts.get("after"), env))  # fmt: skip
     return jobs
 
 
 def parse(path: Path, runs: Path) -> list[Job]:
     return parse_lines(path.read_text().splitlines(), runs)
-
-
-def sync(runs: Path, bucket: str) -> None:
-    subprocess.run(["gcloud", "storage", "rsync", "-r", "-q", str(runs), bucket], check=False)
 
 
 def chip_env(group: list[int], total: int, bounds: dict[int, str]) -> dict[str, str]:
@@ -149,7 +152,7 @@ def _size(args: list[str]) -> str:
 def start(job: Job, runs: Path, post: PostInputs, total: int, bounds) -> None:
     run_dir = runs / job.name
     run_dir.mkdir(parents=True, exist_ok=True)
-    env = os.environ | chip_env(job.group, total, bounds or {})
+    env = os.environ | chip_env(job.group, total, bounds or {}) | job.env
     log = (run_dir / ("stdout.log" if job.phase == "train" else "post.log")).open("a")
     if job.phase == "train":
         cmd = [sys.executable, "-m", "tjev", "train", *job.args,
@@ -164,6 +167,9 @@ def start(job: Job, runs: Path, post: PostInputs, total: int, bounds) -> None:
             cmd += ["--zeroshot", str(control)]
         if job.post == "quick":
             cmd.append("--quick")
+        # more `tjev post` options for every post job of the campaign (PROBE_POST_ARGS, e.g.
+        # "--orders 2 --extra-validation validation-v7.jsonl": bare names read from --mix)
+        cmd += shlex.split(env.get("PROBE_POST_ARGS", ""))
     print(f"[queue] {time.strftime('%H:%M:%S')} start {job.phase} {job.name} chips={job.group}")
     job.proc = subprocess.Popen(cmd, env=env, stdout=log, stderr=subprocess.STDOUT)
     log.close()  # the child keeps its own descriptor
@@ -180,11 +186,10 @@ def main(argv=None) -> int:
     parser.add_argument("--chips", type=int, default=8)
     parser.add_argument("--retries", type=int, default=2)
     parser.add_argument("--stall", type=float, default=30.0, help="minutes without metrics")
-    parser.add_argument("--bucket", help="gs://… mirror of the runs directory")
     parser.add_argument(
         "--deadline-hours", type=float, default=0.0,
-        help="session limit (Kaggle 9 h, Colab): at it, every run checkpoints and the queue "
-             "exits 3 (paused); re-running the queue in the next session resumes them",
+        help="the Colab session limit: at it, every run checkpoints and the queue exits 3 "
+             "(paused); re-running the queue in the next session resumes them",
     )  # fmt: skip
     args = parser.parse_args(argv)
     runs, total = args.runs, args.chips
@@ -211,7 +216,6 @@ def main(argv=None) -> int:
 
     if threading.current_thread() is threading.main_thread():
         signal.signal(signal.SIGTERM, on_term)
-    last_sync = time.time()
     deadline = time.time() + args.deadline_hours * 3600 if args.deadline_hours else None
     paused = False
 
@@ -220,9 +224,6 @@ def main(argv=None) -> int:
         job.group, job.proc = [], None
 
     while any(j.phase in ("train", "post") for j in jobs.values()):
-        if args.bucket and time.time() - last_sync > 600:
-            threading.Thread(target=sync, args=(runs, args.bucket), daemon=True).start()
-            last_sync = time.time()
         if deadline and not stopping.is_set() and time.time() > deadline:
             print("[queue] session deadline: checkpointing every run and pausing")
             paused = True
@@ -287,8 +288,6 @@ def main(argv=None) -> int:
             job.group = group
             start(job, runs, post, total, bounds)
         time.sleep(10)
-    if args.bucket:
-        sync(runs, args.bucket)
     failed = [j.name for j in jobs.values() if j.phase == "failed"]
     print(f"[queue] {'paused' if paused else 'finished'}; failed: {failed or 'none'}")
     if paused:

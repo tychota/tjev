@@ -49,3 +49,17 @@ def test_queue_pauses_at_the_deadline_and_resumes(tmp_path):
     assert not (runs / "job" / "queue.done").exists()
     assert queue.main(args) == 0  # the next session finishes it
     assert (runs / "job" / "queue.done").exists()
+
+
+def test_post_jobs_take_probe_post_args(tmp_path, monkeypatch):
+    """PROBE_POST_ARGS (the campaign's env) is appended to every `tjev post` command."""
+    seen = []
+    monkeypatch.setattr(queue.subprocess, "Popen", lambda cmd, **kw: seen.append(cmd))
+    monkeypatch.setenv("PROBE_POST_ARGS", "--orders 2 --extra-validation validation-v7.jsonl")
+    job = queue.Job("run", 1, ["tpu-v6e", "qwen35-4b"], post="full", phase="post", group=[0])
+    queue.start(job, tmp_path, queue.PostInputs("mix", "public.jsonl"), 1, None)
+    assert seen[0][-4:] == ["--orders", "2", "--extra-validation", "validation-v7.jsonl"]
+    assert "--quick" not in seen[0]
+    monkeypatch.delenv("PROBE_POST_ARGS")
+    queue.start(job, tmp_path, queue.PostInputs("mix", "public.jsonl"), 1, None)
+    assert seen[1][-2:] == ["--jevbench", "public.jsonl"]

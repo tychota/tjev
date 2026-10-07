@@ -1,4 +1,4 @@
-"""Time-limited sessions (Kaggle, Colab): what cloud/session_run.py saves and unpacks."""
+"""Time-limited Colab sessions: what cloud/session_run.py saves and unpacks."""
 
 import importlib.util
 import json
@@ -62,8 +62,76 @@ def test_unpack_accepts_a_tarball_or_an_extracted_tree(tmp_path):
     (tmp_path / "data.tgz").rename(tmp_path / "ds" / "data.tgz")
     session_run.unpack(tmp_path / "ds", tmp_path / "a", "data/mix-v3/mix.yaml")
     assert (tmp_path / "a" / "data" / "mix-v3" / "mix.yaml").exists()
-    extracted = tmp_path / "kaggle-input" / "some-dir"
+    extracted = tmp_path / "extracted-input" / "some-dir"
     (extracted / "data" / "mix-v3").mkdir(parents=True)
     (extracted / "data" / "mix-v3" / "mix.yaml").write_text("y")
-    session_run.unpack(tmp_path / "kaggle-input", tmp_path / "b", "data/mix-v3/mix.yaml")
+    session_run.unpack(tmp_path / "extracted-input", tmp_path / "b", "data/mix-v3/mix.yaml")
     assert (tmp_path / "b" / "data" / "mix-v3" / "mix.yaml").read_text() == "y"
+
+
+def test_hf_data_unpacks_from_the_snapshot_dir(tmp_path, monkeypatch):
+    import huggingface_hub
+
+    def fake_snapshot(repo, repo_type, local_dir, token):  # the HF repo holds data/ at its root
+        assert (repo, repo_type, token) == ("me/tjev-data", "dataset", "t0k")
+        (Path(local_dir) / "data" / "mix-v3").mkdir(parents=True)
+        (Path(local_dir) / "data" / "mix-v3" / "mix.yaml").write_text("x")
+        (Path(local_dir) / ".cache" / "huggingface").mkdir(parents=True)
+        return str(local_dir)
+
+    monkeypatch.setattr(huggingface_hub, "snapshot_download", fake_snapshot)
+    snap = session_run.fetch_hf("me/tjev-data", tmp_path / "hf-data", "t0k")
+    session_run.unpack(snap, tmp_path / "root", "data/mix-v3/mix.yaml")
+    assert (tmp_path / "root" / "data" / "mix-v3" / "mix.yaml").read_text() == "x"
+
+
+def test_sweep_backup_uploads_every_kept_checkpoint_of_finished_sweep_runs(tmp_path, monkeypatch):
+    import huggingface_hub
+
+    runs = tmp_path / "runs"
+    _run(runs, "sweep-reg-4b-rank16-s0", [1300, 1450, 1500], done=True, selected=1300)
+    _run(runs, "sweep-reg-4b-rank16-lr0.7-s0", [600], done=False, selected=600)  # paused
+    _run(runs, "final-4b", [1500], done=True, selected=1500)  # not a sweep run
+    calls = []
+
+    class Api:
+        def __init__(self, token=None):
+            pass
+
+        def model_info(self, repo):
+            return type("Info", (), {"private": True})()
+
+        def upload_folder(self, **kw):
+            calls.append(kw)
+
+    monkeypatch.setattr(huggingface_hub, "HfApi", Api)
+    session_run.backup_sweep_runs(runs, "me/backup", None)
+    assert [c["path_in_repo"] for c in calls] == ["sweep-reg-4b-rank16-s0"]
+    # every checkpoint retention left; the optimizer state of the last one only
+    assert calls[0]["ignore_patterns"][-2:] == [
+        "checkpoints/1300/opt/**",
+        "checkpoints/1450/opt/**",
+    ]
+    assert "1300, 1450, 1500" in calls[0]["commit_message"]
+
+
+def test_sweep_backup_refuses_a_public_repo_and_never_raises(tmp_path, monkeypatch):
+    import huggingface_hub
+
+    runs = tmp_path / "runs"
+    _run(runs, "sweep-reg-4b-rank16-s0", [1500], done=True, selected=1500)
+    uploads = []
+
+    class Api:
+        def __init__(self, token=None):
+            pass
+
+        def model_info(self, repo):
+            return type("Info", (), {"private": False})()
+
+        def upload_folder(self, **kw):
+            uploads.append(kw)
+
+    monkeypatch.setattr(huggingface_hub, "HfApi", Api)
+    session_run.backup_sweep_runs(runs, "me/public", None)
+    assert uploads == []
