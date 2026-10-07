@@ -1,0 +1,101 @@
+docs/kernel-journey.md
+  s_d1d39e59a20c39::t_709bef5fefd52d 1-233
+docs/kernels.md
+  s_d1d39e59a20c39::t_806f1f6658bf7a 4-12,23,38-42,45-77,79-83,163-172,187-192,267-554,571-578,613,615-629,643,671-685,701-703,710-716,746-760,762,764-768,780-815
+pyproject.toml
+  s_d1d39e59a20c39::t_9996476187a65d 48-50,66,149
+scripts/check_parity.py
+  s_d1d39e59a20c39::t_e0e2b0570334d3 5-6,9-13,22-23,60-66,77-91,104,106,110,112,114-143,145-146
+scripts/gdn_precision_model.py
+  s_d1d39e59a20c39::t_225bc5b0fa6413 1-121
+scripts/gdn_precision_study.py
+  s_d1d39e59a20c39::t_c8b7a7d75aebd2 1-194
+scripts/ground_truth.py
+  s_d1d39e59a20c39::t_b4a1d04ff17bc2 1-519
+scripts/lora_numerics.py
+  s_d1d39e59a20c39::t_4f942905c6b746 1-156
+scripts/remat_memory.py
+  s_d1d39e59a20c39::t_7b2973b6e7e30b 1-91
+src/tjev/cli/common.py
+  s_d1d39e59a20c39::t_294fd51f891c93 6,10-13,21-95
+src/tjev/config/__init__.py
+  s_d1d39e59a20c39::t_02450aecbd466d 9,22
+src/tjev/config/configs/hardware/tpu-v5e.yaml
+  s_d1d39e59a20c39::t_a22c7658778a33 1
+src/tjev/config/schema.py
+  s_d1d39e59a20c39::t_40bbba3b3747b7 12,16,47-67,73-77,79-88,96-99,101-105,109-113,117-125,128-166,175-193,232-297,305-306,308-311,314-318,328-329,331-353,358-360,363-389,429
+src/tjev/kernels/attention/__init__.py
+  s_d1d39e59a20c39::t_7ff8faa5edc570 32-34,39-40,49-55
+src/tjev/kernels/attention/splash_tpu.py
+  s_d1d39e59a20c39::t_bd496ed596e8cc 28-31,36-58,60-63,66,76-81,92-94
+src/tjev/kernels/gated_delta_rule/__init__.py
+  s_d1d39e59a20c39::t_afe72bae2deb15 10-15,27,31-45,59-61,63-74,78-80,92-94,97-108,112-151,154,159-160
+src/tjev/kernels/gated_delta_rule/pallas_tpu.py
+  s_d1d39e59a20c39::t_e8595e6f7fc36e 42-44,51,56,60-67,85-89,124-131,136-141,173,177-178,181,193,196,198-201,205,210-218,286-291,302,345,355,359,361-363,369-370,372,431-433,435-436,441,445,449,456,474-488,499,505-508,511-513,515-516,526-527,530
+src/tjev/kernels/gated_delta_rule/pallas_tpu_mega.py
+  s_d1d39e59a20c39::t_a228152cfe5c3b 1-642
+src/tjev/kernels/gated_delta_rule/pallas_tpu_v2.py
+  s_d1d39e59a20c39::t_bf52b64634bdb4 1-582
+src/tjev/kernels/gated_delta_rule/xla.py
+  s_d1d39e59a20c39::t_7a8e31d1f4a1f4 23-39,43-53,103-140,187-188,232-233,237-238,240,253-255,259-260
+src/tjev/kernels/sharding.py
+  s_d1d39e59a20c39::t_798b83114f5e88 25-39
+src/tjev/model/attention.py
+  s_d1d39e59a20c39::t_e0ca885a81b150 34-36,38,57-60
+src/tjev/model/gdn.py
+  s_d1d39e59a20c39::t_f30ef51fc2da1e 10,20,50-51,56-68,74-81,93-95,99-128,130,133-139,145-146,148-151,154-157,159-163
+src/tjev/model/lora.py
+  s_d1d39e59a20c39::t_a1c2178b9866d0 1-24,28-30,38-71,81-90,99-103,105-119,123,135-150,153-177,179-182,185-188,202-207,209-214,216-219,226-371,373-374,376-381,387,391-392,394-398
+src/tjev/model/lora_init.py
+  s_d1d39e59a20c39::t_3697afc4e34f10 1-438
+src/tjev/model/norms.py
+  s_d1d39e59a20c39::t_c8aa7155b952d6 37,41-62
+src/tjev/model/params.py
+  s_d1d39e59a20c39::t_6bc91ef5891230 22-26
+src/tjev/model/qwen35.py
+  s_d1d39e59a20c39::t_0df6d17c4ac374 17-19,24,31,34,47-52,56,58-62,66-83,111-120,123-154,156-158,162-165,168-169,175-176,186,189-192,196-203,206-219,223-228,230-233,235-236,238-240,242-257,260-261,264-274,281-284,296-298,318-323,336-341,345,349
+tests/conftest.py
+  s_d1d39e59a20c39::t_c14bdbb4dc4c99 14,17-25
+tests/kernels/test_gated_delta_rule.py
+  s_d1d39e59a20c39::t_d5909d3e652544 10,102-112,117-118,122,170-183
+tests/kernels/test_gdn_long.py
+  s_d1d39e59a20c39::t_b9a9f63ad8a65d 1-248
+tests/kernels/test_gdn_mega.py
+  s_d1d39e59a20c39::t_889f9cda5e2631 1-323
+tests/kernels/test_mosaic_numerics.py
+  s_d1d39e59a20c39::t_53da5fa1705284 1-129
+tests/kernels/test_pallas_tpu.py
+  s_d1d39e59a20c39::t_496f87cff30613 17,73-75,77-81,91-113,117,132-283,304-335,342-348,355,362-420,424-426,429-432,435,451-453,457,479-481,483-496,501-505
+tests/model/test_lora.py
+  s_d1d39e59a20c39::t_929f716fc49610 46-102
+tests/model/test_lora_gates.py
+  s_d1d39e59a20c39::t_be3f3ca16cfb31 1-90
+tests/model/test_lora_init.py
+  s_d1d39e59a20c39::t_9e32ab2ede6333 1-371
+tests/model/test_parity.py
+  s_d1d39e59a20c39::t_1a67df5ac252f6 42-49,62-63,69,145,156-164,174-177
+tests/model/test_remat.py
+  s_d1d39e59a20c39::t_28711901a8f188 15,25-27,39-50,52-53,61,69,71,74-75,78,83-133,143-188
+tests/model/test_scopes.py
+  s_d1d39e59a20c39::t_96bf5e2d3827d4 1-116
+tests/model/test_xla_flags.py
+  s_d1d39e59a20c39::t_90f0218cab3241 1-225
+uv.lock
+  s_d1d39e59a20c39::t_a9fb39b5de2c66 150-151,180-216,288-300,328-420,446-454,527-538,560-584,656-800,813-817,842-912,1022-1033,1089-1132,1195-1227,1263,1282-1288,1305-1313,1490-1498,1700-1728,1827-1838,1898-1927,1997-2005,2142-2154,2384-2392,2430-2435,2451,2465,2481,2483,2492,2532-2538,2558-2564,2781-2818
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1c625930268fa1449c42c044b532544e3007abed",
+  "prompts": {},
+  "sessions": {
+    "s_d1d39e59a20c39": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d316479f-0782-47eb-a003-087da5c19333",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
