@@ -65,3 +65,16 @@ def test_spec_invariants():
         build(ComputeSpec, {"gdn_impl": "pallas_tpu", "gdn_chunk": 48})
     assert LoRASpec(rank=64, alpha=32).scale == 4.0
     assert LoRASpec(rank=64, alpha=32, rslora=False).scale == 0.5
+
+
+def test_from_dict_loads_a_config_saved_before_the_fused_lora_kernel_was_removed():
+    """Runs trained before the fused LoRA kernel's removal saved its tile keys: such a run
+    (its post, export, serving, JevBench on its checkpoints) must still load."""
+    raw = load_config().to_dict()
+    raw["compute"] |= {"lora_fused_block_m": 2048, "lora_fused_block_n": 2048,
+                       "lora_fused_block_k": 512, "lora_fused_bwd_block_k": 1024,
+                       "lora_fused_bwd_block_n": 512}  # fmt: skip
+    assert from_dict(raw).to_dict() == load_config().to_dict()
+    raw["compute"]["not_a_key"] = 1  # anything else unknown is still an error
+    with pytest.raises(KeyError, match="not_a_key"):
+        from_dict(raw)

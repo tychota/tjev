@@ -123,8 +123,22 @@ def load_config(*files: str, overrides: tuple[str, ...] | list[str] = ()) -> Run
     return build(RunConfig, raw)
 
 
+# Keys a saved config may still carry from removed features, dropped on load (they never
+# changed what a run trained under the defaults it ran with): the fused LoRA kernel's tiles
+# (removed with the kernel; every run before then saved them)
+REMOVED_KEYS = {
+    "compute": ("lora_fused_block_m", "lora_fused_block_n", "lora_fused_block_k",
+                "lora_fused_bwd_block_k", "lora_fused_bwd_block_n"),
+}  # fmt: skip
+
+
 def from_dict(raw: dict) -> RunConfig:
-    """A config saved by a run (``RunConfig.to_dict``)."""
+    """A config saved by a run (``RunConfig.to_dict``), including one saved before a
+    feature was removed (REMOVED_KEYS)."""
+    raw = dict(raw)
+    for section, keys in REMOVED_KEYS.items():
+        if isinstance(raw.get(section), dict):
+            raw[section] = {k: v for k, v in raw[section].items() if k not in keys}
     return build(RunConfig, raw)
 
 
