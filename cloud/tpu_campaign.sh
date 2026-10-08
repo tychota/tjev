@@ -33,12 +33,14 @@
 #   journey   every GDN-core iteration on real training (docs/kernel-journey.md):
 #             PROBE_JOURNEY_SIZES ("0.8B,4B")
 #   calib     per-item calibration dumps of kept checkpoints (docs/calibration.md):
-#             PROBE_CALIB_RUNS ("final-4b-h3000:1200 …")  PROBE_CALIB_EXTRA_VALIDATION (held-out
+#             PROBE_CALIB_RUNS ("final-4b-h3000:1200 …"; RUN:STEP:ema scores the EMA weights;
+#             RUN may be <campaign>/<run>, the backup's path)  PROBE_CALIB_EXTRA_VALIDATION (held-out
 #             files also evaluated, e.g. "validation-v7.jsonl calibration-v7.jsonl")
 #   official  the official JevBench harness against tjev's server: PROBE_OFFICIAL_TARGETS
 #             (run dirs and/or base:SIZE; "base:4B")  PROBE_OFFICIAL_DI_SUITE (a Decision Index suite)
 #   finish    a final run's full post-training and export from its HF backup:
-#             PROBE_FINISH_RUN (final-4b-h3000)  PROBE_FINISH_SIZE (4B)
+#             PROBE_FINISH_RUN (final-4b-h3000; <campaign>/<run> for the campaign-prefixed
+#             backups)  PROBE_FINISH_SIZE (4B)
 set -uo pipefail
 cd "$(dirname "$0")/.."
 : "${TJEV_ROOT:=$HOME/tjev-work}" "${TJEV_VENV:=$HOME/tjev-venv}" "${MIX:=mix-v7.5}"
@@ -222,9 +224,10 @@ probe_journey() {  # every GDN iteration on real training; $1 the report dir (do
   for size in ${sizes//,/ }; do
     n=$steps
     # not the plan() wrapper: its trailing --sizes "$SIZES" overrides this size (tjev-journey2
-    # queued the 0.8B line as 4B); the line is then picked by its run name, not its position
+    # queued the 0.8B line as 4B); the line is then picked by its run name, not its position.
+    # The generic recipe (fit's rank): the journey's runs stay comparable with the earlier ones
     tjev campaign plan final --runs "$RUNS" --hardware "$HARDWARE" "${BUDGET_ARGS[@]}" \
-      --mix "$MIXDIR" --models "$MODELS" "$KERNELS" --horizon 3000 \
+      --mix "$MIXDIR" --models "$MODELS" "$KERNELS" --horizon 3000 --final-recipe generic \
       --sizes "$size" > "$out/final-$size.plan" \
       && "${journey[@]}" final-line --plan "$out/final-$size.plan" --size "$size" \
         --horizon 3000 > "$out/final-$size.line"
@@ -266,50 +269,39 @@ probe_journey() {  # every GDN iteration on real training; $1 the report dir (do
 }
 
 probe_calib() {  # per-item calibration dumps (docs/calibration.md): $1 the report dir. For each
-  # PROBE_CALIB_RUNS entry run:step (default the 4B finals' kept checkpoints), that checkpoint
-  # from the private HF backup (PROBE_HF_REPO), `tjev post --orders 2` with the step as the
-  # selection, and post/ (with post/predictions/) uploaded back as <run>/post-calib-<step>/.
+  # PROBE_CALIB_RUNS entry RUN:STEP (default the 4B finals' kept checkpoints), or RUN:STEP:ema
+  # for the EMA of the adapters at that step (its optimizer state must be backed up: the
+  # selected and the last step are), that checkpoint from the private HF backup
+  # (PROBE_HF_REPO; RUN is its path there: <campaign>/<run>, or <run> for the older backups),
+  # `tjev post --orders 2` with the step (and weights) as the selection, and post/ (with
+  # post/predictions/) uploaded back as <RUN>/post-calib-<step>[-ema]/ (tjev.campaign.calib).
   # PROBE_CALIB_EXTRA_VALIDATION: space-separated held-out files also evaluated (`tjev post
   # --extra-validation`; names resolve in the mix dir, e.g. "validation-v7.jsonl calibration-v7.jsonl")
-  local out=$1 rc=0 repo=$PROBE_HF_REPO entry run step dir zs size
+  local out=$1 rc=0 repo=$PROBE_HF_REPO entry dir upload name zs size fetched
   mkdir -p "$out"
   for entry in ${PROBE_CALIB_RUNS:-final-4b-h3000:1200 final-4b-h3000:3000 final-4b-h1500:1450}; do
-    run=${entry%%:*} step=${entry##*:} dir=$RUNS/$run@$step
-    say "calib $run step $step from hf:$repo"
-    python - "$repo" "$run" "$step" "$dir" <<'PY' || { say "calib fetch FAILED"; rc=1; continue; }
-import json, shutil, sys
-from pathlib import Path
-from huggingface_hub import HfApi, hf_hub_download, snapshot_download
-repo, run, step, dest = sys.argv[1], sys.argv[2], int(sys.argv[3]), Path(sys.argv[4])
-assert HfApi().model_info(repo).private, "the backup repo must be private"
-tmp = Path(snapshot_download(repo, allow_patterns=[f"{run}/*.json", f"{run}/*.jsonl", f"{run}/*.txt",
-           f"{run}/eval/*", f"{run}/checkpoints/{step}/**"], local_dir=str(dest.parent / "hf-calib")))
-shutil.rmtree(dest, ignore_errors=True)
-shutil.copytree(tmp / run, dest)
-sel = json.loads((dest / "selection.json").read_text())
-(dest / "selection.orig.json").write_text(json.dumps(sel))
-assert (dest / "checkpoints" / str(step)).is_dir(), f"no checkpoint {step} on hf"
-sel["step"] = step  # post reads its checkpoint from the selection
-(dest / "selection.json").write_text(json.dumps(sel))
-(dest / "queue.done").touch()
-PY
+    say "calib $entry from hf:$repo"
+    fetched=$(python -m tjev.campaign.calib fetch "$repo" "$entry" "$RUNS") \
+      || { say "calib fetch FAILED"; rc=1; continue; }
+    read -r dir upload <<<"$(tail -n 1 <<<"$fetched")"
+    name=${dir##*/}
     local extra=() f
     for f in ${PROBE_CALIB_EXTRA_VALIDATION:-}; do extra+=(--extra-validation "$f"); done
     # the zero-shot control of the run's size (s0 / finish wrote it) when the session has it
     size=$(python -c "import json,re,sys; print(re.search(r'Qwen3\.5-([0-9.]+B)', json.load(open(sys.argv[1]))['config']['model']['path']).group(1))" "$dir/config.json" 2> /dev/null || true)
     zs=$REPORTS/zeroshot-$size.json
     [[ -n $size && -s $zs ]] && extra+=(--zeroshot "$zs")
-    tjev post "$dir" --mix "$MIXDIR" --jevbench "$JEVBENCH" --orders 2 "${extra[@]}" > "$out/post-$run-$step.log" 2>&1 \
-      || { say "calib post FAILED"; tail -n 20 "$out/post-$run-$step.log"; rc=1; continue; }
+    tjev post "$dir" --mix "$MIXDIR" --jevbench "$JEVBENCH" --orders 2 "${extra[@]}" > "$out/post-$name.log" 2>&1 \
+      || { say "calib post FAILED"; tail -n 20 "$out/post-$name.log"; rc=1; continue; }
     du -sh "$dir/post/predictions" 2>/dev/null | cut -f1 | sed "s/^/[calib] predictions /"
-    python - "$repo" "$run" "$step" "$dir" <<'PY' || { say "calib upload FAILED"; rc=1; }
+    python - "$repo" "$dir" "$upload" <<'PY' || { say "calib upload FAILED"; rc=1; }
 import sys
 from huggingface_hub import HfApi
-repo, run, step, d = sys.argv[1:]
-HfApi().upload_folder(repo_id=repo, folder_path=f"{d}/post", path_in_repo=f"{run}/post-calib-{step}",
-                      commit_message=f"{run}: calibration dump at step {step}")
+repo, d, upload = sys.argv[1:]
+HfApi().upload_folder(repo_id=repo, folder_path=f"{d}/post", path_in_repo=upload,
+                      commit_message=f"{upload}: calibration dump")
 PY
-    mkdir -p "$out/$run@$step" && cp -r "$dir/post" "$out/$run@$step/"  # small: in the session save
+    mkdir -p "$out/$name" && cp -r "$dir/post" "$out/$name/"  # small: in the session save
     rm -rf "$dir/checkpoints"
   done
   rm -rf "$RUNS/hf-calib"
@@ -484,23 +476,26 @@ probe() {  # kernel iteration, rerun every time: reports/probe/ (and tjev-experi
   if [[ $mode == finish ]]; then  # a final run's full post-training and export, from
     # its HF backup (PROBE_HF_REPO: the run's metadata and selected checkpoint), then the
     # export and post reports uploaded back next to it
-    local run=${PROBE_FINISH_RUN:-final-4b-h3000} size=${PROBE_FINISH_SIZE:-4B}
-    local repo=$PROBE_HF_REPO
-    say "finish $run ($size) from hf:$repo"
-    python - "$repo" "$run" "$RUNS" <<'PY' || return 1
+    # PROBE_FINISH_RUN: the run's path on the backup (<campaign>/<run>, or <run> for the older
+    # backups); locally RUNS/<run>
+    local hfrun=${PROBE_FINISH_RUN:-final-4b-h3000} size=${PROBE_FINISH_SIZE:-4B}
+    local repo=$PROBE_HF_REPO run=${hfrun##*/}
+    say "finish $hfrun ($size) from hf:$repo"
+    python - "$repo" "$hfrun" "$RUNS" <<'PY' || return 1
 import json, shutil, sys
 from pathlib import Path
 from huggingface_hub import HfApi, hf_hub_download, snapshot_download
-repo, run, runs = sys.argv[1], sys.argv[2], Path(sys.argv[3])
+repo, hfrun, runs = sys.argv[1], sys.argv[2], Path(sys.argv[3])
+run = hfrun.rsplit("/", 1)[-1]
 api = HfApi()
 assert api.model_info(repo).private, "the backup repo must be private"
-sel = json.loads(Path(hf_hub_download(repo, f"{run}/selection.json")).read_text())
-tmp = Path(snapshot_download(repo, allow_patterns=[f"{run}/*.json", f"{run}/*.jsonl", f"{run}/*.txt",
-           f"{run}/*.log", f"{run}/eval/*", f"{run}/checkpoints/{sel['step']}/**"],
+sel = json.loads(Path(hf_hub_download(repo, f"{hfrun}/selection.json")).read_text())
+tmp = Path(snapshot_download(repo, allow_patterns=[f"{hfrun}/*.json", f"{hfrun}/*.jsonl", f"{hfrun}/*.txt",
+           f"{hfrun}/*.log", f"{hfrun}/eval/*", f"{hfrun}/checkpoints/{sel['step']}/**"],
            local_dir=str(runs.parent / "hf-finish")))
 dest = runs / run
 dest.mkdir(parents=True, exist_ok=True)
-for f in (tmp / run).iterdir():
+for f in (tmp / hfrun).iterdir():
     target = dest / f.name
     if target.exists():
         shutil.rmtree(target) if target.is_dir() else target.unlink()
@@ -520,22 +515,23 @@ PY
     tjev export "$RUNS/$run" "$RUNS/$run/export" --jevbench "$JEVBENCH" \
       > "$RUNS/$run/export.log" 2>&1 || { say "export FAILED"; tail -n 20 "$RUNS/$run/export.log"; return 1; }
     say "upload export + post to hf:$repo"
-    python - "$repo" "$run" "$RUNS" <<'PY' || return 1
+    python - "$repo" "$hfrun" "$RUNS" <<'PY' || return 1
 import sys
 from pathlib import Path
 from huggingface_hub import HfApi
-repo, run, runs = sys.argv[1], sys.argv[2], Path(sys.argv[3])
+repo, hfrun, runs = sys.argv[1], sys.argv[2], Path(sys.argv[3])
+run = hfrun.rsplit("/", 1)[-1]
 api = HfApi()
 assert api.model_info(repo).private
 for sub in ("export", "post"):
     if (runs / run / sub).is_dir():
-        api.upload_folder(repo_id=repo, folder_path=str(runs / run / sub), path_in_repo=f"{run}/{sub}",
-                          commit_message=f"{run}: {sub}")
+        api.upload_folder(repo_id=repo, folder_path=str(runs / run / sub), path_in_repo=f"{hfrun}/{sub}",
+                          commit_message=f"{hfrun}: {sub}")
 for f in ("post-full.log", "export.log"):
     if (runs / run / f).exists():
-        api.upload_file(path_or_fileobj=str(runs / run / f), path_in_repo=f"{run}/{f}", repo_id=repo)
+        api.upload_file(path_or_fileobj=str(runs / run / f), path_in_repo=f"{hfrun}/{f}", repo_id=repo)
 listing = {s.rfilename: s.size for s in api.model_info(repo, files_metadata=True).siblings
-           if s.rfilename.startswith(f"{run}/export/")}
+           if s.rfilename.startswith(f"{hfrun}/export/")}
 print(len(listing), "export files on hf;", round(sum(v or 0 for v in listing.values()) / 1e9, 2), "GB")
 PY
     # the merged snapshot is on HF now: keep the session's save (the download) small

@@ -64,8 +64,9 @@ python scripts/journey_report.py s1/reports/probe/journey/journey.json \
 ## What runs
 
 1. **The queue.** For each size, the `final-<size>-h<horizon>` line of
-   `tjev campaign plan final --sizes SIZE` is the long final run (the planner's recipe:
-   rate, rank, frozen gates, the mix, `--hardware`). `python -m tjev.campaign.journey
+   `tjev campaign plan final --sizes SIZE --final-recipe generic` is the long final run
+   (fit's recipe: rate, rank, frozen gates, the mix, `--hardware`; the generic recipe keeps
+   the journey's runs comparable with the earlier ones). `python -m tjev.campaign.journey
    final-line` picks it by its run name, never by its position, and `queue` refuses a line
    of another size (its name or `model.path`). tjev-journey2 took the first line of a plan
    whose `--sizes` the `plan()` wrapper had overridden with `$SIZES`: its five "4B" runs

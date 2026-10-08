@@ -50,6 +50,7 @@ from tjev.sharding import (
     batch_sharding,
     configure_runtime,
     install_mesh,
+    libtpu_settings,
     make_mesh,
     place_frozen,
     place_replicated,
@@ -411,7 +412,10 @@ def eval_scalars(report: dict) -> dict:
 
 
 def train(cfg: RunConfig) -> dict:
-    configure_runtime(cfg.compute)
+    # the libtpu flags the run trains with (the session's probed flags, the preset's, or
+    # none) and the scoped VMEM limit they set: in stdout, config.json and the W&B config
+    libtpu = libtpu_settings(configure_runtime(cfg.compute))
+    print(json.dumps({"event": "libtpu", **libtpu}), flush=True)
     run_dir = Path(cfg.output) / cfg.name
     run_dir.mkdir(parents=True, exist_ok=True)
     mesh = make_mesh(cfg.mesh)
@@ -432,7 +436,7 @@ def train(cfg: RunConfig) -> dict:
         saved = json.loads(config_path.read_text(encoding="utf-8"))
         if saved["identity"] != identity:
             raise ValueError(f"{run_dir} belongs to a different run (identity mismatch)")
-    write_json(config_path, {"config": cfg.to_dict(), "identity": identity})
+    write_json(config_path, {"config": cfg.to_dict(), "identity": identity, "libtpu": libtpu})
     write_json(run_dir / "vocab.json", vocab.names)
     write_json(run_dir / "mixture.json", mixture.describe())
 
@@ -545,7 +549,7 @@ def train(cfg: RunConfig) -> dict:
         "jax": jax.__version__,
         "code": code_version(),
         "tpu_visible_chips": os.environ.get("TPU_VISIBLE_CHIPS", ""),
-        "libtpu_init_args": os.environ.get("LIBTPU_INIT_ARGS", ""),
+        **libtpu,
     }
     log = cfg.log
     logger = MetricLogger(
@@ -561,6 +565,9 @@ def train(cfg: RunConfig) -> dict:
         tags=log.wandb_tags,
         mode=log.wandb_mode,
     )
+    # numbers only in the summary (0: libtpu's / Mosaic's default); the flags in config.json
+    logger.summary({"libtpu": {k: libtpu[k] or 0 for k in ("scoped_vmem_limit_kib",
+                                                            "kernel_vmem_limit_bytes")}})  # fmt: skip
     monitor = HealthMonitor(warmup=cfg.optim.warmup_steps, clip_mode=cfg.optim.clip_mode,
                             optimizer=cfg.optim.name)  # fmt: skip
     window = MetricWindow(logger, cfg, n_dev, flops_mod.peak_flops(device_kind), lr_at, monitor)

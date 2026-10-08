@@ -4,6 +4,7 @@ measures the horizon exponent, uses measured sizes; costs."""
 
 import json
 import math
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -76,12 +77,15 @@ def test_every_planned_job_is_a_valid_run_config(tmp_path, hardware):
                 assert job.chips == 2
     # sweep: 4 AdamW rates + the centre on a 2nd seed + 3 Muon rates + 13 arms (+ the 3 LoRA
     # inits); transfer: 2 rates × (2400 + 2 branches) + 2 sizes × 3
-    # rates; final: 3 sizes × 3
+    # rates; final (the decided recipe): 3 sizes × (long run + its h/2 branch)
     arms = 14 + len(planner.INIT_ARMS)  # + lora-merged; + pissa, eva, lora-ga
-    assert counts == {"sweep": 8 + arms, "transfer": 12, "final": 9}
+    assert counts == {"sweep": 8 + arms, "transfer": 12, "final": 6}
     final = parse_lines(planner.plan("final", c), c.runs)
-    assert sum(1 for j in final if j.after) == 6
+    assert sum(1 for j in final if j.after) == 3
     assert all("@" in j.after for j in final if j.after)
+    # the generic recipe (--final-recipe generic): 3 sizes × (long run + h/4 and h/2 branches)
+    generic = parse_lines(planner.plan("final", replace(c, final_recipe="generic")), c.runs)
+    assert len(generic) == 9 and sum(1 for j in generic if j.after) == 6
 
 
 def test_budget_knobs(tmp_path):
@@ -234,7 +238,7 @@ def test_select_and_cost(tmp_path):
     assert planner.select(c.runs)["2B"]["name"] == "final-2b-h300"
     table = planner.cost(c, vm_chips=8, rate=1.0)
     arms = 14 + len(planner.INIT_ARMS)  # + lora-merged; + pissa, eva, lora-ga
-    assert table["total"]["jobs"] == 8 + arms + 12 + 9
+    assert table["total"]["jobs"] == 8 + arms + 12 + 6
     assert table["total"]["usd"] == pytest.approx(table["total"]["chip_hours"], rel=1e-9)
     bench = {
         "tokens_per_second_per_chip": dict.fromkeys(planner.SIZES, 1000000000.0)
@@ -353,7 +357,7 @@ def test_lean_sweep_drops_quick_evals_and_post_and_kills_unhealthy_runs(tmp_path
 
 
 def test_horizon_override_sets_the_final_runs_and_their_rate(tmp_path):
-    c = _campaign(tmp_path, horizon=600, sweep_steps=300, proxy="0.8B")
+    c = _campaign(tmp_path, horizon=600, sweep_steps=300, proxy="0.8B", final_recipe="generic")
     recipe = planner.fit(c)["recipe"]
     assert recipe["4B"]["horizon"] == 600
     assert recipe["4B"]["lr"] == pytest.approx(
@@ -447,7 +451,8 @@ def _config(job):
 def test_the_long_final_run_protects_its_branch_points_and_checkpoints_its_cooldown(tmp_path):
     """An h750 branch once failed: its branch point (step 600 of h3000) had been pruned by
     keep_checkpoints before the sequential queue reached the branch."""
-    c = _campaign(tmp_path, horizon=3000, sweep_steps=300, final_sizes=("4B",))
+    c = _campaign(tmp_path, horizon=3000, sweep_steps=300, final_sizes=("4B",),
+                  final_recipe="generic")  # fmt: skip
     jobs = parse_lines(planner.plan("final", c), c.runs)
     long = next(j for j in jobs if j.name == "final-4b-h3000")
     cfg = _config(long)
@@ -484,6 +489,85 @@ def test_reg_stage_at_a_final_horizon_branches_rank16_and_keeps_the_late_traject
     assert rep.optim.lr == long.optim.lr == branch.optim.lr
     # final-length reg runs are proper runs: calibrated and benchmarked (post=full)
     assert [j.post for j in jobs] == ["full"] * 3
+
+
+@pytest.mark.parametrize("horizon", [2500, 5000])
+def test_final_plans_the_decided_recipe_for_every_size(tmp_path, horizon):
+    """plan final: per size the long run and its 1-epoch cooldown branch to horizon/2, rank 16
+    at the rank-rule rate of fit's recipe at the horizon (as the reg rank arms), CogCalib,
+    the EMA, post=full, the final-length cadence; the branch never health-killed."""
+    sizes = ("4B", "2B", "0.8B", "9B")
+    c = _campaign(tmp_path, hardware="v6e1", final_sizes=sizes, horizon=horizon,
+                  wandb={"campaign": "c1"})  # fmt: skip
+    jobs = parse_lines(planner.plan("final", c), c.runs)
+    half, point = horizon // 2, int(0.8 * (horizon // 2))
+    assert [j.name for j in jobs] == [
+        n for s in sizes for n in (f"final-{s.lower()}-h{horizon}", f"final-{s.lower()}-h{half}")
+    ]
+    report = planner.fit(c)
+    factor = report["decisions"]["rank_lr_factor_per_doubling"]
+    for long, branch in zip(jobs[::2], jobs[1::2], strict=True):
+        lc, bc = _config(long), _config(branch)
+        size = lc.model.path.rsplit("-", 1)[1]
+        r = report["recipe"][size]
+        assert r["horizon"] == horizon
+        lr = r["lr"] * factor ** math.log2(16 / r["rank"])
+        for cfg in (lc, bc):
+            assert cfg.lora.rank == 16 and cfg.optim.lr == pytest.approx(lr, rel=5e-3)
+            assert cfg.loss.cogcalib_weight == 0.1 and cfg.loss.cogcalib_quantile == 0.3
+            assert cfg.optim.ema_decay == 0.999 and not cfg.train.select_ema
+            assert not set(cfg.lora.targets) & {"in_proj_a", "in_proj_b"}  # the frozen gates
+            assert cfg.train.packing == "best_fit" and cfg.compute.gdn_norm == "flat"
+            assert (cfg.train.checkpoint_every, cfg.train.checkpoint_tail_every) == (250, 100)
+            assert (cfg.train.keep_every, cfg.train.keep_from) == (250, half)
+            assert cfg.train.quick_eval_every == 0
+            assert f"Qwen3.5-{size}" in cfg.model.path
+        assert lc.train.steps == horizon and list(lc.train.keep_steps) == [point]
+        assert lc.train.health_kill and not bc.train.health_kill
+        assert bc.train.steps == half and bc.train.branch_from.endswith(f"{long.name}@{point}")
+        assert branch.after == f"{long.name}@{point}"
+        assert long.post == branch.post == "full" and long.chips == 1
+        assert "log.wandb_group=c1/final" in " ".join(long.args)
+    # the rank rule from fit's ranks: 4B / 9B from 64 (lr × 2), 2B / 0.8B from 32 (lr × √2)
+    rates = {_config(j).model.path.rsplit("-", 1)[1]: _config(j).optim.lr for j in jobs[::2]}
+    assert rates["4B"] == pytest.approx(2 * report["recipe"]["4B"]["lr"], rel=5e-3)
+    assert rates["2B"] == pytest.approx(2**0.5 * report["recipe"]["2B"]["lr"], rel=5e-3)
+    if horizon == 5000:  # the reg stage's final-length 4B run at the same horizon: same rate
+        reg = _campaign(tmp_path, hardware="v6e1", stage="reg", final_sizes=("4B",),
+                        horizon=5000, arms=("rank16-cogcalib", "nocentre"))  # fmt: skip
+        assert _config(parse_lines(planner.plan("sweep", reg), reg.runs)[0]).optim.lr == rates["4B"]
+
+
+def test_final_on_a_sibling_mix_and_the_generic_recipe(tmp_path):
+    (tmp_path / "mix-rep1").mkdir()
+    (tmp_path / "mix-rep1" / "mix.yaml").write_text("data:\n  validation: v.jsonl\n")
+    c = _campaign(tmp_path, hardware="v6e1", final_sizes=("4B",), horizon=2500, final_mix="rep1")
+    jobs = parse_lines(planner.plan("final", c), c.runs)
+    assert [j.name for j in jobs] == ["final-4b-h2500-rep1", "final-4b-h1250-rep1"]
+    assert jobs[1].after == "final-4b-h2500-rep1@1000"
+    for j in jobs:  # the sibling's train files, the campaign's held-out
+        assert f"{c.mix}-rep1/mix.yaml" in j.args
+        assert _config(j).data.heldout.startswith(c.mix + "/")
+    generic = replace(c, final_mix="", final_recipe="generic")
+    names = [x.split()[0] for x in planner.plan("final", generic)]
+    assert names == ["final-4b-h2500", "final-4b-h625", "final-4b-h1250"]
+    assert _config(parse_lines(planner.plan("final", generic), c.runs)[0]).lora.rank == 64
+    with pytest.raises(ValueError, match="final_recipe"):
+        _campaign(tmp_path, final_recipe="best")
+
+
+def test_final_length_reg_runs_track_the_ema(tmp_path):
+    """Past REG_STEPS every reg run tracks the EMA (raw and EMA scored at each full eval); at
+    REG_STEPS only the centre does."""
+    c = _campaign(tmp_path, hardware="v6e1", stage="reg", final_sizes=("4B",), horizon=5000,
+                  arms=("rank16-cogcalib", "wd0.1"))  # fmt: skip
+    lines = planner.plan("sweep", c)
+    assert all(line.split().count("optim.ema_decay=0.999") == 1 for line in lines)
+    assert all(_config(j).optim.ema_decay == 0.999 for j in parse_lines(lines, c.runs))
+    short = replace(c, horizon=0)
+    cfgs = {j.name: _config(j) for j in parse_lines(planner.plan("sweep", short), c.runs)}
+    assert cfgs["sweep-reg-4b-centre-s0"].optim.ema_decay == 0.999
+    assert cfgs["sweep-reg-4b-wd0.1-s0"].optim.ema_decay == 0.0
 
 
 def test_reg_stage_at_a_final_horizon_branches_rank16_cogcalib_too(tmp_path):

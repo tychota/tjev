@@ -31,6 +31,10 @@ Proxy = Annotated[str, typer.Option(help="the sweep's proxy size (0.8B, 2B)")]
 Centre = Annotated[float, typer.Option(help="the AdamW grid rate the arms pair with")]
 Stage = Annotated[str, typer.Option(help="sweep stage: lr | arms | all | reg (4B regularisers)")]
 Horizon = Annotated[int, typer.Option(help="final horizon in steps (0: the fitted one)")]
+FinalRecipe = Annotated[
+    str, typer.Option(help="final phase: decided (rank 16, CogCalib, EMA, h/2 branch) | generic")
+]
+FinalMix = Annotated[str, typer.Option(help="final runs on the sibling mix <mix>-NAME (e.g. rep1)")]
 Lean = Annotated[
     bool, typer.Option(help="sweep economy: no quick eval, eval every 100, no post, health kill")
 ]
@@ -41,7 +45,8 @@ def _campaign(runs: Path, mix: str = "MIX", models: str = "MODELS", *, hardware:
               sizes: str = "4B,2B,0.8B", kernels: bool = True, seeds: int = 1,
               arm_seeds: int = 1, sweep_steps: int = 600, arms: str = "", muon: bool = True,
               proxy: str = "2B", centre: float | None = None, stage: str = "all",
-              lean: bool = False, horizon: int = 0, max_bucket: int = 4096):  # fmt: skip
+              lean: bool = False, horizon: int = 0, max_bucket: int = 4096,
+              final_recipe: str = "decided", final_mix: str = ""):  # fmt: skip
     from tjev.campaign.plan import ARMS, CENTRE, HARDWARE, REG_ARMS, SIZES, campaign_from_env
 
     if hardware not in HARDWARE:
@@ -58,7 +63,8 @@ def _campaign(runs: Path, mix: str = "MIX", models: str = "MODELS", *, hardware:
                                  arm_seeds=arm_seeds, sweep_steps=sweep_steps, arms=chosen,
                                  muon=muon, proxy=proxy, centre=centre or CENTRE,
                                  stage=stage, lean=lean, horizon=horizon,
-                                 max_bucket=max_bucket)  # fmt: skip
+                                 max_bucket=max_bucket, final_recipe=final_recipe,
+                                 final_mix=final_mix)  # fmt: skip
     except ValueError as e:
         raise typer.BadParameter(str(e)) from e
 
@@ -85,6 +91,8 @@ def plan(
     max_bucket: Annotated[
         int, typer.Option(help="largest bucket: 8192 / 16384 add the long buckets (v6e1)")
     ] = 4096,
+    final_recipe: FinalRecipe = "decided",
+    final_mix: FinalMix = "",
     out: Annotated[Path | None, typer.Option(help="write the queue here")] = None,
 ) -> None:
     """The queue of one phase (planned from the finished runs of the phases before)."""
@@ -93,7 +101,8 @@ def plan(
     c = _campaign(runs, mix, models, hardware=hardware, sizes=sizes, kernels=kernels,
                   seeds=seeds, arm_seeds=arm_seeds, sweep_steps=sweep_steps, arms=arms,
                   muon=muon, proxy=proxy, centre=centre, stage=stage, lean=lean,
-                  horizon=horizon, max_bucket=max_bucket)  # fmt: skip
+                  horizon=horizon, max_bucket=max_bucket, final_recipe=final_recipe,
+                  final_mix=final_mix)  # fmt: skip
     text = "\n".join(make_plan(phase, c)) + "\n"
     if out:
         out.write_text(text)
@@ -116,6 +125,8 @@ def fit(
     stage: Stage = "all",
     lean: Lean = False,
     horizon: Horizon = 0,
+    final_recipe: FinalRecipe = "decided",
+    final_mix: FinalMix = "",
     out: Path | None = None,
 ) -> None:
     """Decisions and per-size recipes from the finished runs (the planner's knobs as for
@@ -124,7 +135,8 @@ def fit(
 
     c = _campaign(runs, hardware=hardware, sizes=sizes, seeds=seeds, arm_seeds=arm_seeds,
                   sweep_steps=sweep_steps, arms=arms, muon=muon, proxy=proxy,
-                  centre=centre, stage=stage, lean=lean, horizon=horizon)  # fmt: skip
+                  centre=centre, stage=stage, lean=lean, horizon=horizon,
+                  final_recipe=final_recipe, final_mix=final_mix)  # fmt: skip
     report = fit_runs(c)
     if out:
         out.write_text(json.dumps(report, indent=2, default=float) + "\n")
@@ -154,6 +166,8 @@ def cost(
     stage: Stage = "all",
     lean: Lean = False,
     horizon: Horizon = 0,
+    final_recipe: FinalRecipe = "decided",
+    final_mix: FinalMix = "",
     chips: Annotated[int, typer.Option(help="chips of the VM")] = 8,
     rate: Annotated[float | None, typer.Option(help="USD per chip-hour")] = None,
     bench: Annotated[Path | None, typer.Option(help="`tjev campaign bench` JSON")] = None,
@@ -165,7 +179,8 @@ def cost(
 
     c = _campaign(runs, hardware=hardware, sizes=sizes, seeds=seeds, arm_seeds=arm_seeds,
                   sweep_steps=sweep_steps, arms=arms, muon=muon, proxy=proxy, centre=centre,
-                  stage=stage, lean=lean, horizon=horizon)  # fmt: skip
+                  stage=stage, lean=lean, horizon=horizon, final_recipe=final_recipe,
+                  final_mix=final_mix)  # fmt: skip
     measured = json.loads(bench.read_text()) if bench else None
     table = phase_cost(c, bench=measured, vm_chips=chips, rate=rate)
     typer.echo(f"{'phase':10s} {'jobs':>5s} {'chip h':>8s} {'wall h':>7s} {'USD':>8s}   "

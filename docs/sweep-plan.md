@@ -323,7 +323,8 @@ JevBench on more than the selected and last steps), health kill on, no post-trai
 (`sweep-reg-<size>-centre-s0`: seed 0, the same batches, the paired online loss;
 `--arms …,nocentre` skips the centre when it already ran). The centres also track the EMA
 of their adapters (`optim.ema_decay=0.999`): the EMA does not change the training, so each
-centre's raw and EMA evals are the EMA pair, for the price of a second eval.
+centre's raw and EMA evals are the EMA pair, for the price of a second eval. Past 1500
+steps (the final-length tests below) every arm tracks it too.
 
 **Final-length tests** (`--horizon` past 1500): the run is a proper final, with
 `post=full` at the end (calibration, JevBench, the per-item dumps), checkpoints every 250

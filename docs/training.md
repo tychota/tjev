@@ -406,7 +406,7 @@ older run is unchanged (tested). Each is logged under `hp.*` in W&B.
 | `loss.cogcalib_weight` w, `cogcalib_threshold` t / `cogcalib_quantile` q, `cogcalib_ema` | CogCalib's gated confidence penalty: + w·𝟙[nll ≤ t]·(−H(p)) on each slot ([below](#calibration-losses)); logged as `learning/cogcalib_frac`, `cogcalib_term`, `cogcalib_threshold` |
 | `loss.teacher_mix` λ, `loss.teacher_gate` g | gated teacher soft targets: (1 − λ)·t + λ·teacher on the rows whose teacher puts ≥ g on a non-gold letter ([below](#calibration-losses)); logged as `learning/teacher_frac` |
 | `optim.ema_decay` d | an fp32 EMA of the adapters in the optimizer state, d_t = min(d, (1 + t)/(10 + t)); checkpointed with it, and every full eval scores it too (`eval_ema/*`, `eval_calibrated_ema/*`, `eval/step-N-ema.json`) |
-| `train.select_ema` | selects on the EMA's score; `selection.json` then says `"weights": "ema"`, and `tjev eval` / `calibrate` / `post` / `export` load the EMA adapters (bound to their own calibration identity) |
+| `train.select_ema` | selects on the EMA's score; `selection.json` then says `"weights": "ema"`, and `tjev eval` / `calibrate` / `post` / `export` load the EMA adapters (bound to their own calibration identity). Off (the default): the selection is on the raw adapters' score, and the EMA's scores are logged only |
 | `lora.dropout` p | inverted dropout on the adapter's input, y = xW + s·drop(x)·AB, in training steps only (a key per step from the seed, one per microbatch and decoder layer; the remat recompute replays the masks). Merged LoRA cannot drop the adapter input alone: with p > 0 the model builds the (equal) unmerged layers, ~9% slower at 4B |
 | `optim.weight_decay` | decoupled AdamW decay, on the LoRA factors only (a `gate_full` kernel is the base weight: decaying it would pull it to 0, not to the base). Under Muon it applies to the matrix parameters |
 
@@ -519,10 +519,13 @@ for the curves only.
 | `train.checkpoint_tail_every`, `full_eval_tail_every`, `quick_eval_tail_every` | 0 | the same, denser, in the tail (0: the main cadence) |
 
 Every full-eval step is also a checkpoint, and the last step and a STOP step always get the
-full eval. The planner's long final runs checkpoint every H/10 and every 100 steps in their
-cooldown (`tjev.campaign.plan.tail_every`); its final-length reg runs (`--horizon` past
-1500 steps) every 250 steps, every 100 in the cooldown, and get `post=full` (calibration,
-JevBench and the per-item dumps) at the end ([sweep-plan.md](sweep-plan.md#stage-4-the-regularisers-the-reg-stage-4b-and-2b)).
+full eval. The planner's final runs (`tjev campaign plan final`, the decided recipe:
+rank 16, CogCalib, the EMA, [tpu.md](tpu.md#phases)) and its final-length reg runs
+(`--horizon` past 1500 steps) checkpoint every 250 steps, every 100 in the cooldown
+(`tjev.campaign.plan.long_cadence`), track the EMA, and get `post=full` (calibration,
+JevBench and the per-item dumps) at the end ([sweep-plan.md](sweep-plan.md#stage-4-the-regularisers-the-reg-stage-4b-and-2b));
+the generic final runs (`--final-recipe generic`) checkpoint every H/10 and every 100
+steps in their cooldown (`tjev.campaign.plan.tail_every`).
 
 ## Checkpoints, resume and branches
 
@@ -534,9 +537,11 @@ JevBench and the per-item dumps) at the end ([sweep-plan.md](sweep-plan.md#stage
   train.keep_from=S`, every K-th step from S on (the final-length reg runs keep every 250
   steps from half the run, for JevBench on the late trajectory; K a multiple of
   `checkpoint_every`). A resume-only save (time-based, signal, deadline) is deleted once a
-  newer save exists. The sweep backup (`PROBE_SWEEP_BACKUP`, [tpu.md](tpu.md)) uploads
-  every kept checkpoint, the optimizer state of the last only; `tjev post` / JevBench can
-  score a checkpoint without its optimizer state.
+  newer save exists. The backup (`PROBE_SWEEP_BACKUP`, [tpu.md](tpu.md)) uploads every
+  kept checkpoint of the finished sweep and final runs, under `<campaign>/<run>`, with the
+  optimizer state of the last and the selected step only; `tjev post` / JevBench can score
+  a checkpoint's adapters without its optimizer state, its EMA needs it (`PROBE_CALIB_RUNS`
+  entry `RUN:STEP:ema`).
 - **When.** Every checkpoint or full-eval step, and, for resuming only, every
   `checkpoint_secs` seconds (900 s by default, for preemptible or time-limited hosts).
 - **Stopping at any step.** SIGTERM, SIGINT and `TJEV_DEADLINE` (unix seconds, checked every

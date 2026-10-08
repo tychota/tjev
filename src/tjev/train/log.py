@@ -41,6 +41,7 @@ class MetricLogger:
     ):
         self.directory = Path(directory)
         self.directory.mkdir(parents=True, exist_ok=True)
+        self._summary: dict[str, float] = {}
         path = self.directory / "metrics.jsonl"
         if path.exists():  # also a restart before the first checkpoint (resume_step 0)
             kept = [
@@ -103,10 +104,12 @@ class MetricLogger:
             self.wandb.log(flat, step=step)
 
     def summary(self, values: dict) -> None:
-        """Run-level values (the selected checkpoint): W&B summary and summary.json."""
+        """Run-level values (the selected checkpoint, the libtpu VMEM limit): W&B summary and
+        summary.json, each call updating the process's earlier ones (as W&B's summary does)."""
         flat: dict[str, float] = {}
         _flatten("", values, flat)
-        (self.directory / "summary.json").write_text(json.dumps(flat, indent=2) + "\n")
+        self._summary |= flat
+        (self.directory / "summary.json").write_text(json.dumps(self._summary, indent=2) + "\n")
         if self.wandb is not None:
             self.wandb.summary.update(flat)
 

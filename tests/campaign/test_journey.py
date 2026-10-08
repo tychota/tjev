@@ -27,6 +27,7 @@ def _final_line(tmp_path, size="0.8B") -> str:
         final_sizes=(size,),
         horizon=3000,
         wandb={"project": "tjev-sweep", "campaign": "c1"},
+        final_recipe="generic",  # the journey's line (probe_journey: --final-recipe generic)
     )
     return planner.plan("final", c)[0]
 
@@ -87,7 +88,8 @@ def _cli_plan(tmp_path, sizes: str) -> list[str]:
     (tmp_path / "runs").mkdir(exist_ok=True)
     result = CliRunner().invoke(app, [
         "plan", "final", "--runs", str(tmp_path / "runs"), "--mix", str(mix),
-        "--models", "/models", "--hardware", "v6e1", "--sizes", sizes, "--horizon", "3000"])  # fmt: skip
+        "--models", "/models", "--hardware", "v6e1", "--sizes", sizes, "--horizon", "3000",
+        "--final-recipe", "generic"])  # fmt: skip
     assert result.exit_code == 0, result.output
     return result.output.splitlines()
 

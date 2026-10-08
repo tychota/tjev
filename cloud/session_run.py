@@ -9,12 +9,12 @@ Run on the session host by cloud/colab.sh (``python session_run.py JOB.json``). 
     instead be ``hf:USER/REPO``, a private HF dataset repo (read with ``hf_token``);
  3. cloud/tpu_bootstrap.sh (uv Python 3.12 venv, jax[tpu], the HF snapshots);
  4. restore the previous session's outputs (runs with their checkpoints, reports, queues,
-    logs) from ``restore`` dirs; PROBE_FETCH_CKPTS ("RUN@STEP …") fetches branch points
-    from the private HF backup (PROBE_HF_REPO);
+    logs) from ``restore`` dirs; PROBE_FETCH_CKPTS ("RUN@STEP …", RUN the backup path
+    <campaign>/<run> or <run>) fetches branch points from the private HF backup (PROBE_HF_REPO);
  5. cloud/tpu_campaign.sh PHASES with DEADLINE_HOURS = the session limit minus setup
     and a save margin: at the deadline every run checkpoints and the campaign pauses;
- 6. with PROBE_SWEEP_BACKUP=1 (or set to the repo's name), the finished sweep runs'
-    checkpoints to the HF backup (PROBE_HF_REPO);
+ 6. with PROBE_SWEEP_BACKUP=1 (or set to the repo's name), the finished sweep and final
+    runs' checkpoints to the HF backup (PROBE_HF_REPO), under <campaign>/<run>;
  7. copy the outputs to ``save``, keeping only the checkpoints a resume or a pending
     cooldown branch can still use.
 """
@@ -141,12 +141,25 @@ def pending_branch_points(runs: Path, queues: Path) -> dict[str, set[str]]:
     return out
 
 
-def backup_sweep_runs(runs: Path, repo: str, token: str | None) -> None:
-    """Finished sweep runs to a private HF model repo before save() drops their checkpoints
-    (too large for the next session's restore): every checkpoint left after retention (the
-    selected, the latest, train.keep_steps / keep_every), the optimizer state of the last one
-    only, with the run's json / jsonl / txt and eval/, the layout tpu_campaign.sh's
-    probe_calib reads (PROBE_CALIB_RUNS=<run>:<step> runs JevBench on them). Never fatal."""
+BACKED_UP = ("sweep-", "final-")  # the run kinds PROBE_SWEEP_BACKUP uploads
+
+
+def backup_path(run: str, campaign: str = "") -> str:
+    """A run's path on the HF backup: ``<campaign>/<run>`` (runs of the same name from two
+    campaigns, e.g. the reg arms rerun on another mix, overwrote each other's checkpoints
+    under the bare ``<run>``), or ``<run>`` without a campaign."""
+    return f"{campaign.strip('/')}/{run}" if campaign.strip("/") else run
+
+
+def backup_sweep_runs(runs: Path, repo: str, token: str | None, campaign: str = "") -> None:
+    """Finished sweep and final runs to a private HF model repo before save() drops their
+    checkpoints (too large for the next session's restore): every checkpoint left after
+    retention (the selected, the latest, train.keep_steps / keep_every), the optimizer state
+    of the last one and of the selected one (the EMA adapters, optim.ema_decay, live in it:
+    probe_calib's RUN:STEP:ema and a selection on the EMA need it), with the run's json /
+    jsonl / txt and eval/, under ``<campaign>/<run>`` (backup_path): the layout tpu_campaign.sh's
+    probe_calib reads (PROBE_CALIB_RUNS=<campaign>/<run>:<step>[:ema] runs JevBench on them).
+    Never fatal."""
     try:
         from huggingface_hub import HfApi
 
@@ -155,36 +168,46 @@ def backup_sweep_runs(runs: Path, repo: str, token: str | None) -> None:
         for run in sorted(runs.iterdir()):
             ckpt = run / "checkpoints"
             if not (
-                run.name.startswith("sweep-") and (run / "queue.done").exists() and ckpt.is_dir()
+                run.name.startswith(BACKED_UP) and (run / "queue.done").exists() and ckpt.is_dir()
             ):
                 continue
             steps = sorted(int(p.name) for p in ckpt.iterdir() if p.name.isdigit())
             if not steps:
                 continue
             keep = [str(s) for s in steps]
+            sel = run / "selection.json"
+            selected = str(json.loads(sel.read_text()).get("step", "")) if sel.exists() else ""
+            with_opt = list(dict.fromkeys([keep[-1], *([selected] if selected in keep else [])]))
+            path = backup_path(run.name, campaign)
             api.upload_folder(
-                repo_id=repo, folder_path=str(run), path_in_repo=run.name,
+                repo_id=repo, folder_path=str(run), path_in_repo=path,
                 ignore_patterns=["tb/**", "wandb/**", "profile/**",
-                                 *(f"checkpoints/{s}/opt/**" for s in keep[:-1])],
-                commit_message=f"{run.name}: checkpoints {', '.join(keep)}",
+                                 *(f"checkpoints/{s}/opt/**" for s in keep if s not in with_opt)],
+                commit_message=f"{path}: checkpoints {', '.join(keep)}",
             )  # fmt: skip
-            log(f"backed up {run.name} checkpoints {keep} (optimizer: {keep[-1]}) to hf:{repo}")
+            log(f"backed up {run.name} checkpoints {keep} (optimizer: {', '.join(with_opt)}) "
+                f"to hf:{repo}/{path}")  # fmt: skip
     except Exception as e:  # the session's save matters more than the backup
         log(f"sweep backup to hf:{repo} FAILED: {type(e).__name__}: {e}")
 
 
 def fetch_checkpoints(items: list[str], repo: str, runs: Path, token: str | None) -> None:
     """RUN@STEP checkpoints (with their optimizer state: a cooldown branch's source) from the
-    private HF backup into RUNS/RUN/checkpoints/STEP, with the run's json files."""
+    private HF backup into RUNS/<run>/checkpoints/STEP, with the run's json files. RUN is the
+    run's backup path: ``<campaign>/<run>`` (backup_path) or a bare ``<run>``."""
     from huggingface_hub import snapshot_download
 
     for item in items:
-        run, _, step = item.partition("@")
-        snapshot_download(repo, local_dir=runs, token=token or None,
-                          allow_patterns=[f"{run}/*.json", f"{run}/*.jsonl", f"{run}/*.txt",
-                                          f"{run}/checkpoints/{step}/**"])  # fmt: skip
-        ok = (runs / run / "checkpoints" / step / "opt").is_dir()
-        log(f"fetched {run} checkpoint {step} from hf:{repo} (optimizer state: {ok})")
+        path, _, step = item.partition("@")
+        name = path.rsplit("/", 1)[-1]
+        stage = runs.parent / "hf-fetch"
+        snapshot_download(repo, local_dir=stage, token=token or None,
+                          allow_patterns=[f"{path}/*.json", f"{path}/*.jsonl", f"{path}/*.txt",
+                                          f"{path}/checkpoints/{step}/**"])  # fmt: skip
+        shutil.copytree(stage / path, runs / name, dirs_exist_ok=True)
+        shutil.rmtree(stage, ignore_errors=True)
+        ok = (runs / name / "checkpoints" / step / "opt").is_dir()
+        log(f"fetched {path} checkpoint {step} from hf:{repo} (optimizer state: {ok})")
 
 
 def save(root: Path, dest: Path) -> None:
@@ -264,7 +287,7 @@ def main() -> int:
     backup = env.get("PROBE_SWEEP_BACKUP", "")
     if backup not in ("", "0") and (root / "runs").is_dir():
         repo = backup if "/" in backup else env.get("PROBE_HF_REPO", "tychot/tjev-4b")
-        backup_sweep_runs(root / "runs", repo, job.get("hf_token"))
+        backup_sweep_runs(root / "runs", repo, job.get("hf_token"), env["TJEV_WANDB_CAMPAIGN"])
     save(root, Path(job["save"]))
     return 0  # the session's output is kept whatever happened; status is in logs/campaign.*
 

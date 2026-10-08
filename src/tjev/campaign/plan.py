@@ -18,8 +18,13 @@ Three phases, each planned from the results of the ones before (docs/tpu.md):
   transfer  the proxy's horizon at its fitted rate and at LOW_LR × it (each one 2400-step
             run with WSD cooldown branches at 600 and 1200 steps: the best horizon and the
             horizon exponent γ), and the other sizes at the predicted rate × {½, 1, 2}.
-  final     every final size at its recipe: one long run and cooldown branches at ¼ and ½
-            of its horizon; ``select`` picks the best of the three per size.
+  final     every final size at the decided recipe (FINAL_RECIPE, from the reg stage): rank 16
+            at fit's rank-rule rate for the horizon, CogCalib, the EMA tracked, post=full, a
+            checkpoint every 250 steps (100 in the cooldown) kept from horizon/2, and the
+            1-epoch WSD cooldown branch to horizon/2; ``select`` picks the better of the two
+            per size. ``--final-recipe generic``: fit's recipe as is (its rank, no CogCalib,
+            post=quick, cooldown branches at ¼ and ½ of the horizon). ``--final-mix rep1``:
+            the train files of the sibling mix <mix>-rep1 (the held-out stays the campaign's).
 
 How ``fit`` decides (priors: local mix-v3 runs, docs/training.md):
   * Runs with the same seed see the same batches (segment i is a function of (seed, i)), so
@@ -326,6 +331,11 @@ class Campaign:
     # capped by its hardware's "long" settings (the mix must be built with
     # --max-prompt-tokens at least this)
     max_bucket: int = 4096
+    # the final phase: "decided" (FINAL_RECIPE: rank 16, CogCalib, EMA, the h/2 branch) or
+    # "generic" (fit's recipe: its rank, the h/4 and h/2 branches)
+    final_recipe: str = "decided"
+    # the final runs' sibling mix: "" the campaign's, else <mix>-<final_mix> (e.g. "rep1")
+    final_mix: str = ""
 
     def __post_init__(self) -> None:
         if not any(math.isclose(self.centre, lr, rel_tol=1e-3) for lr in SWEEP_GRID):
@@ -336,6 +346,10 @@ class Campaign:
             raise ValueError(f"max_bucket {self.max_bucket}: one of {LONG_BUCKETS[2:]}")
         if self.max_bucket > 4096 and "long" not in self.hw:
             raise ValueError(f"hardware {self.hardware!r} has no long-bucket settings")
+        if self.final_recipe not in ("decided", "generic"):
+            raise ValueError(f"final_recipe {self.final_recipe!r}: decided or generic")
+        if self.final_mix and not self.final_mix.replace("-", "").replace(".", "").isalnum():
+            raise ValueError(f"final_mix {self.final_mix!r}: a sibling mix suffix, e.g. rep1")
 
     @property
     def hw(self) -> dict[str, Any]:
@@ -614,14 +628,20 @@ def reg_steps(c: Campaign) -> int:
     return c.horizon or REG_STEPS
 
 
-def reg_long(c: Campaign, steps: int) -> list[str]:
-    """Past REG_STEPS (a final-length test): a checkpoint + full eval every 250 steps (every
-    100 in the cooldown), and every one kept from half the run on (the core sources' second
-    epoch), for JevBench on the late trajectory."""
-    if steps <= REG_STEPS:
-        return []
+def long_cadence(steps: int) -> list[str]:
+    """A final-length run's saves: a checkpoint + full eval every 250 steps (every 100 in the
+    cooldown), and every one kept from half the run on (the core sources' second epoch), for
+    JevBench on the late trajectory."""
     return ["train.checkpoint_every=250", "train.checkpoint_tail_every=100",
             "train.keep_every=250", f"train.keep_from={steps // 2}"]  # fmt: skip
+
+
+def reg_long(c: Campaign, steps: int) -> list[str]:
+    """Past REG_STEPS (a final-length test): :func:`long_cadence`, and the EMA of the adapters
+    tracked (raw and EMA scored at every full eval) by every arm, not only the centre."""
+    if steps <= REG_STEPS:
+        return []
+    return [*long_cadence(steps), *REG_CENTRE]
 
 
 def _mix_token(c: Campaign, o: str) -> str:
@@ -637,13 +657,17 @@ def reg_recipe(c: Campaign) -> dict[str, dict]:
     return {size: r | {"rank_factor": factor} for size, r in report["recipe"].items()}
 
 
+def rank_rate(recipe: dict, rank: int) -> float:
+    """The recipe's rate moved to ``rank`` by the rank rule (``rank_factor`` per doubling)."""
+    return recipe["lr"] * recipe["rank_factor"] ** math.log2(rank / recipe["rank"])
+
+
 def reg_rate(recipe: dict, name: str) -> float:
     """An arm's rate: the recipe's, the rank arms moved by the rank rule (and their own factor)."""
     if not name.startswith("rank"):
         return recipe["lr"] * REG_ARMS[name].lr_factor
     rank = int(name.removeprefix("rank").split("-")[0])
-    rule = recipe["rank_factor"] ** math.log2(rank / recipe["rank"])
-    return recipe["lr"] * rule * REG_ARMS[name].lr_factor
+    return rank_rate(recipe, rank) * REG_ARMS[name].lr_factor
 
 
 def _reg(c: Campaign) -> list[str]:
@@ -665,8 +689,9 @@ def _reg(c: Campaign) -> list[str]:
         for seed in range(c.arm_seeds):
             base = [*common, *REG_BASE, *reg_long(c, steps), f"train.seed={seed}"]
             if "nocentre" not in c.arms:  # --arms …,nocentre: the arms only (a centre already ran)
+                ema = [] if any(o in REG_CENTRE for o in base) else list(REG_CENTRE)
                 lines.append(job(c, f"sweep-reg-{tag}-centre-s{seed}", size,
-                                 [*base, f"optim.lr={recipe['lr']:.3g}", *REG_CENTRE],
+                                 [*base, f"optim.lr={recipe['lr']:.3g}", *ema],
                                  steps=steps, post=post))  # fmt: skip
             for name in named or arms:
                 run = f"sweep-reg-{tag}-{name}-s{seed}"
@@ -713,6 +738,50 @@ def reg_effects(records: list[dict], arm_seeds: int = 1) -> dict[str, dict]:
     return out
 
 
+# ------------------------------------------------------------------------------------------
+# The final runs at the decided recipe (the reg stage's outcome, docs/results.md): rank 16 at
+# fit's rank-rule rate for the final horizon (as reg_rate for the rank arms), CogCalib (β 0.1
+# on the slots in the lowest 30% of NLL), the EMA of the adapters tracked (raw and EMA scored
+# at every full eval; selection stays on the raw adapters unless train.select_ema), the
+# final-length cadence (long_cadence) and the 1-epoch run as a WSD cooldown branch to
+# horizon/2 off the long run's stable phase. The hardware's perf defaults (HARDWARE["v6e1"]
+# "extra": best-fit packing, …) come with every job (_common).
+
+FINAL_RANK = 16
+FINAL_RECIPE = ("loss.cogcalib_weight=0.1", "loss.cogcalib_quantile=0.3", *REG_CENTRE)
+FINAL_BASE = (*FINAL_OVERRIDES, "train.quick_eval_every=0", "train.keep_checkpoints=2",
+              "train.health_kill=true")  # fmt: skip
+
+
+def final_name(size: str, horizon: int, mix: str = "") -> str:
+    """``final-<size>-h<horizon>``, ``-<mix>`` for a sibling mix's runs."""
+    return f"final-{size.lower()}-h{horizon}" + (f"-{mix}" if mix else "")
+
+
+def final_jobs(c: Campaign, recipe: dict, factor: float) -> list[str]:
+    """Per size of ``c.final_sizes``: the long run at its horizon and its cooldown branch to
+    horizon/2 (from 0.8·horizon/2, kept by train.keep_steps; no health kill: a branch starts
+    at its parent's loss and hovers there), both post=full."""
+    lines = []
+    for size in c.final_sizes:
+        r = recipe[size] | {"rank_factor": factor}
+        steps, half = r["horizon"], r["horizon"] // 2
+        common = [o for o in r["overrides"] if not o.startswith(("optim.lr=", "lora.rank="))]
+        mix = [_mix_token(c, f"@{c.final_mix}")] if c.final_mix else []
+        over = [*common, *FINAL_BASE, *long_cadence(steps), "train.seed=0",
+                f"lora.rank={FINAL_RANK}", f"optim.lr={rank_rate(r, FINAL_RANK):.3g}",
+                *FINAL_RECIPE, *mix]  # fmt: skip
+        long = final_name(size, steps, c.final_mix)
+        point = int(0.8 * half)
+        lines.append(job(c, long, size, [*over, f"train.keep_steps=[{point}]"], steps=steps,
+                         post="full"))  # fmt: skip
+        lines.append(job(c, final_name(size, half, c.final_mix), size,
+                         [*over, f"train.branch_from=$RUNS/{long}@{point}",
+                          "train.health_kill=false"],
+                         steps=half, after=f"{long}@{point}", post="full"))  # fmt: skip
+    return lines
+
+
 def plan(phase: str, c: Campaign) -> list[str]:
     if phase == "sweep":
         return _sweep(c)
@@ -734,6 +803,8 @@ def plan(phase: str, c: Campaign) -> list[str]:
                           [*rest, f"optim.lr={lr * f:.3g}", "train.seed=0"], steps=c.sweep_steps)
                       for f in (0.5, 1.0, 2.0)]  # fmt: skip
         return lines
+    if phase == "final" and c.final_recipe == "decided":
+        return final_jobs(c, recipe, report["decisions"]["rank_lr_factor_per_doubling"])
     if phase == "final":
         return [line for size in c.final_sizes
                 for line in horizon_jobs(c, f"final-{size.lower()}", size,

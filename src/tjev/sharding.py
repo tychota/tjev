@@ -10,6 +10,7 @@ replicated (they are small).
 from __future__ import annotations
 
 import os
+import re
 from collections.abc import Sequence
 from typing import Any
 
@@ -76,7 +77,33 @@ def place_replicated(tree: Any, mesh: Mesh) -> Any:
     return jax.device_put(tree, replicated(mesh))
 
 
-def configure_runtime(compute: ComputeSpec) -> None:
-    """Process settings that must precede JAX's backend initialisation (call first)."""
-    if compute.libtpu_flags and "LIBTPU_INIT_ARGS" not in os.environ:
+def configure_runtime(compute: ComputeSpec) -> str:
+    """Process settings that must precede JAX's backend initialisation (call first). Returns
+    where the process's LIBTPU_INIT_ARGS come from: "env" (set before the process: e.g.
+    cloud/tpu_env.sh's probed subset of the preset's flags), "preset" (compute.libtpu_flags,
+    set here) or "none"."""
+    if "LIBTPU_INIT_ARGS" in os.environ:
+        return "env"
+    if compute.libtpu_flags:
         os.environ["LIBTPU_INIT_ARGS"] = " ".join(compute.libtpu_flags)
+        return "preset"
+    return "none"
+
+
+SCOPED_VMEM_FLAG = re.compile(r"--xla_tpu_scoped_vmem_limit_kib=(\d+)")
+
+
+def libtpu_settings(source: str = "") -> dict[str, Any]:
+    """The libtpu flags this process runs with (LIBTPU_INIT_ARGS, after configure_runtime)
+    and the scoped VMEM limit they imply: XLA's ``--xla_tpu_scoped_vmem_limit_kib`` (None:
+    libtpu's default) and the Pallas GDN kernels' vmem_limit_bytes, 90% of it
+    (tjev.kernels.gated_delta_rule.pallas_tpu_v2._vmem_limit; None: Mosaic's default)."""
+    args = os.environ.get("LIBTPU_INIT_ARGS", "")
+    found = SCOPED_VMEM_FLAG.search(args)
+    kib = int(found.group(1)) if found else None
+    return {
+        "libtpu_init_args": args,
+        "libtpu_source": source,
+        "scoped_vmem_limit_kib": kib,
+        "kernel_vmem_limit_bytes": int(0.9 * kib * 1024) if kib else None,
+    }

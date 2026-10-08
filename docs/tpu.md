@@ -45,7 +45,29 @@ the phases before it (`tjev campaign fit`).
 | `s0` | — | libtpu flags probed one by one; the Pallas kernel tests on the TPU (on failure every job falls back to the XLA paths); kernel and train-step bench per size; zero-shot controls |
 | `sweep` | 21 | The 2B proxy at 600 steps: AdamW at 2.5, 3.54, 5 and 7.07e-5 (seed 0; 3.54e-5 also seed 1); Muon (Polar Express) at 2.5, 3.54 and 5e-5; paired arms at 3.54e-5 (below) |
 | `transfer` | 12 | The proxy's horizon at its fitted rate and at 0.64× it (each a 2400-step run with WSD cooldown branches at 600 and 1200): the best horizon and the horizon exponent γ; 0.8B and 4B at the predicted rate × {½, 1, 2} |
-| `final` | 9 | 4B, 2B, 0.8B at their recipe: one long run, and cooldown branches at ¼ and ½ of its horizon; `tjev campaign select` picks the best of the three per size |
+| `final` | 2 per size | Every size of `--sizes` (4B, 2B, 0.8B, 9B) at the decided recipe (below): the long run to the horizon H (`final-<size>-h<H>`) and its 1-epoch WSD cooldown branch to H/2 (`final-<size>-h<H/2>`); `tjev campaign select` picks the better of the two per size |
+
+**The final recipe** (`FINAL_RECIPE` in `tjev.campaign.plan`, decided from the reg stage,
+[results.md](results.md)): fit's recipe at the horizon (`--horizon H`, else the fitted
+one) with rank 16 at its rank-rule rate (lr/√2 per rank doubling, as the reg stage's rank
+arms: 4B / 9B from rank 64 at lr × 2, 2B / 0.8B from 32 at lr × √2), CogCalib
+(`loss.cogcalib_weight=0.1 loss.cogcalib_quantile=0.3`), the EMA of the adapters tracked
+(`optim.ema_decay=0.999`: raw and EMA scored at every full eval, the selection on the raw
+adapters), the frozen gates, the hardware's perf defaults (`HARDWARE["v6e1"]`: best-fit
+packing, the flat GDN norm, …), `post=full` (calibration, JevBench, and the extra
+validation files of `PROBE_POST_ARGS`), a checkpoint and full eval every 250 steps (100 in
+the cooldown) all kept from H/2 on, health kill on the long run. The branch starts at
+0.8·H/2 (kept by `train.keep_steps`) with `train.health_kill=false`. `--final-mix rep1`
+trains on the sibling mix `<mix>-rep1` (the held-out stays the campaign's; runs
+`final-<size>-h<H>-rep1`). `--final-recipe generic` plans fit's recipe as is (its rank,
+no CogCalib or EMA, `post=quick`, branches at H/4 and H/2): the kernel journey's line.
+The branch of one horizon has the name of the long run of half that horizon: plan one
+horizon per campaign (runs directory).
+
+```bash
+tjev campaign plan final --runs runs --mix MIX --models MODELS --hardware v6e1 \
+    --sizes 4B,2B,0.8B,9B --horizon 5000 [--final-mix rep1]
+```
 
 The sweep arms, all at the centre rate and paired with the AdamW run of the same seed:
 
@@ -60,7 +82,8 @@ The sweep arms, all at the centre rate and paired with the AdamW run of the same
 Budget knobs, the same for `plan`, `fit` and `cost` (`BUDGET="…"` for the runners):
 `--seeds` (AdamW grid seeds), `--arm-seeds` (seeds of the arms and the Muon grid),
 `--sweep-steps`, `--arms zclip,b32k,…`, `--no-muon`, `--proxy 0.8B|2B`, `--centre RATE`
-(the grid rate the arms pair with), `--horizon STEPS` (the final horizon). `plan` and
+(the grid rate the arms pair with), `--horizon STEPS` (the final horizon), `--final-recipe
+decided|generic` and `--final-mix NAME` (the final phase, above). `plan` and
 `cost` also take `--stage lr|arms|all` (the rate brackets, the paired arms) and `--lean`
 (no quick eval, an eval every 100 steps, no post-training, health kills; see
 [sweep-plan.md](sweep-plan.md)). Further arms: `gdn-bf16` (report only), the LoRA inits
@@ -144,9 +167,13 @@ previous one's output, runs until 0.4 h before its limit and saves only the chec
 resume or a pending cooldown branch still needs (`cloud/session_run.py`). `all` chains up to
 `MAX_SESSIONS` sessions. Settings: `MIX`, `MODELS`, `SIZES`, `BUDGET`, `CAMPAIGN`,
 `WANDB_ENTITY`, `HF_DATASET`, and every `PROBE_*` variable of the shell, passed to the host.
-`PROBE_SWEEP_BACKUP=1` uploads the finished sweep runs' checkpoints to the private HF repo
-`PROBE_HF_REPO` before the save drops them; `PROBE_FETCH_CKPTS="RUN@STEP …"` fetches branch
-points back from it.
+`PROBE_SWEEP_BACKUP=1` uploads the finished sweep and final runs' checkpoints to the private
+HF repo `PROBE_HF_REPO` before the save drops them, under `<CAMPAIGN>/<run>` (same-named
+runs of two campaigns overwrote each other under the bare run name; older backups stay
+there): every checkpoint retention kept, with the optimizer state of the last and of the
+selected step (the EMA adapters live in it). `PROBE_FETCH_CKPTS="RUN@STEP …"` fetches branch
+points back from it, and `PROBE_CALIB_RUNS` / `PROBE_FINISH_RUN` read it; RUN is the
+backup path, `<CAMPAIGN>/<run>` (or a bare `<run>` for the older backups).
 
 ### On the host
 
@@ -171,7 +198,7 @@ points back from it.
   | `smoke` | a final run's exact job, shortened: throughput, HBM, one checkpoint and eval | `PROBE_SMOKE_SIZE`, `PROBE_SMOKE_STEPS`, `PROBE_SMOKE_EXTRA` |
   | `resume` | a run and its SIGTERMed + resumed twin, step for step | `PROBE_RESUME_SIZE` |
   | `journey` | every GDN-core iteration on real training ([kernel-journey.md](kernel-journey.md)) | `PROBE_JOURNEY_SIZES` |
-  | `calib` | per-item calibration dumps of kept checkpoints ([calibration.md](calibration.md)) | `PROBE_CALIB_RUNS`, `PROBE_CALIB_EXTRA_VALIDATION` |
+  | `calib` | per-item calibration dumps of kept checkpoints ([calibration.md](calibration.md)); an entry `RUN:STEP:ema` scores that step's EMA adapters (its optimizer state must be backed up: the selected and the last step are) | `PROBE_CALIB_RUNS`, `PROBE_CALIB_EXTRA_VALIDATION` |
   | `official` | the official JevBench harness against tjev's server ([official-eval.md](official-eval.md)) | `PROBE_OFFICIAL_TARGETS`, `PROBE_OFFICIAL_DI_SUITE` |
   | `finish` | a final run's full post-training and export from its HF backup | `PROBE_FINISH_RUN`, `PROBE_FINISH_SIZE` |
 
@@ -180,4 +207,11 @@ points back from it.
 - **libtpu flags.** They live in the TPU presets (`compute.libtpu_flags`: MaxText's v6e
   dense-model set), so a plain `tjev train tpu-v6e …` gets them. Phase `s0` probes them one
   by one, and an exported `LIBTPU_INIT_ARGS` (the accepted subset) takes precedence. They
-  change speed, never results, so they are not part of a run's identity.
+  change speed, never results, so they are not part of a run's identity. Every training
+  run logs the flags it runs with at its start: a `{"event": "libtpu"}` line in
+  `stdout.log` with `libtpu_init_args`, `libtpu_source` (`env`: exported before the run,
+  e.g. s0's probed subset; `preset`: the preset's, set by the run; `none`),
+  `scoped_vmem_limit_kib` (`--xla_tpu_scoped_vmem_limit_kib`, null: libtpu's default) and
+  `kernel_vmem_limit_bytes` (the GDN kernels' 90% of it), the same under `libtpu` in
+  `config.json` and `system` in the W&B config, and the two limits in `summary.json`
+  (`libtpu/*`, 0: the default).

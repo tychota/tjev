@@ -532,6 +532,23 @@ def test_ema_is_evaluated_checkpointed_and_selectable(setup):
         for e, r in zip(ema, raw.values(), strict=True)
     )
     assert Run(run, step=sel["step"]).weights == "raw"  # an explicit step: the raw adapters
+    # probe_calib's RUN:STEP:ema / RUN:STEP entries (tjev.campaign.calib): the run's checkpoint
+    # as the selection, scored on its EMA (from the optimizer state) or on its adapters
+    from tjev.campaign import calib
+
+    for entry, weights in (("c1/ema:4:ema", "ema"), ("c1/ema:4", "raw")):
+        parsed = calib.parse_entry(entry)
+        dest = calib.prepare(run, setup / "calib" / parsed.local, parsed)
+        scored = Run(dest)
+        assert scored.weights == weights and scored.step == 4
+        want = jax.tree.leaves(Run(run, step=4).lora) if weights == "raw" else None
+        if want is not None:
+            for a, b in zip(jax.tree.leaves(scored.lora), want, strict=True):
+                np.testing.assert_array_equal(np.asarray(a), np.asarray(b))
+        else:
+            assert any(not np.allclose(np.asarray(e), np.asarray(r)) for e, r in
+                       zip(jax.tree.leaves(scored.lora), lora_at(setup, "ema", 4).values(),
+                           strict=True))  # fmt: skip
 
 
 def test_regularised_run_trains(setup):
@@ -548,9 +565,11 @@ def test_regularised_run_trains(setup):
     assert all("learning/kl_base" in r for r in learning)
 
 
-def test_benchmark_run_without_checkpoints_or_evals(setup, capsys):
+def test_benchmark_run_without_checkpoints_or_evals(setup, capsys, monkeypatch):
     """checkpoint_every=0 (a kernel-journey run): no checkpoint, no full eval, the bucket and
-    the padded throughput in every row, one compile event per new batch shape."""
+    the padded throughput in every row, one compile event per new batch shape; the libtpu
+    flags it ran with and their scoped VMEM limit in stdout, config.json and summary.json."""
+    monkeypatch.setenv("LIBTPU_INIT_ARGS", "--xla_tpu_scoped_vmem_limit_kib=65536 --x=1")
     out = train(tiny_config(setup, "bench", 4, **{"train.checkpoint_every": 0,
                                                   "train.log_every": 1}))  # fmt: skip
     assert out["steps"] == 4
@@ -567,10 +586,18 @@ def test_benchmark_run_without_checkpoints_or_evals(setup, capsys):
         )
         assert 0 < real <= padded
         assert real / padded == pytest.approx(1 - r["data/pad_fraction"], rel=1e-6)
-    compiled = [json.loads(x) for x in capsys.readouterr().out.splitlines()
-                if x.startswith('{"event": "compiled"')]  # fmt: skip
+    events = [json.loads(x) for x in capsys.readouterr().out.splitlines()
+              if x.startswith('{"event": ')]  # fmt: skip
+    compiled = [e for e in events if e["event"] == "compiled"]
     assert [c["step"] for c in compiled] == [1]
     assert compiled[0]["shape"][-1] == 1024 and compiled[0]["seconds"] > 0
+    want = {"libtpu_init_args": "--xla_tpu_scoped_vmem_limit_kib=65536 --x=1",
+            "libtpu_source": "env", "scoped_vmem_limit_kib": 65536,
+            "kernel_vmem_limit_bytes": int(0.9 * 65536 * 1024)}  # fmt: skip
+    assert [{k: e[k] for k in want} for e in events if e.get("event") == "libtpu"] == [want]
+    assert json.loads((run / "config.json").read_text())["libtpu"] == want
+    summary = json.loads((run / "summary.json").read_text())
+    assert summary["libtpu/scoped_vmem_limit_kib"] == 65536 and "health/status" in summary
 
 
 def test_precompile_buckets_leaves_training_unchanged(setup):

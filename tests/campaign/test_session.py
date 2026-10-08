@@ -91,7 +91,8 @@ def test_sweep_backup_uploads_every_kept_checkpoint_of_finished_sweep_runs(tmp_p
     runs = tmp_path / "runs"
     _run(runs, "sweep-reg-4b-rank16-s0", [1300, 1450, 1500], done=True, selected=1300)
     _run(runs, "sweep-reg-4b-rank16-lr0.7-s0", [600], done=False, selected=600)  # paused
-    _run(runs, "final-4b", [1500], done=True, selected=1500)  # not a sweep run
+    _run(runs, "final-4b-h5000", [2500, 2750, 5000], done=True, selected=2750)
+    _run(runs, "transfer-2b-hi-h2400", [2400], done=True, selected=2400)  # not backed up
     calls = []
 
     class Api:
@@ -105,14 +106,39 @@ def test_sweep_backup_uploads_every_kept_checkpoint_of_finished_sweep_runs(tmp_p
             calls.append(kw)
 
     monkeypatch.setattr(huggingface_hub, "HfApi", Api)
+    session_run.backup_sweep_runs(runs, "me/backup", None, "tjev-v75b")
+    # the final runs too, each under its campaign (same-named runs of two campaigns clashed)
+    assert [c["path_in_repo"] for c in calls] == ["tjev-v75b/final-4b-h5000",
+                                                  "tjev-v75b/sweep-reg-4b-rank16-s0"]  # fmt: skip
+    final, sweep = calls
+    # every checkpoint retention left; the optimizer state of the last and the selected one
+    # (the EMA lives in it): never ignored
+    assert sweep["ignore_patterns"][3:] == ["checkpoints/1450/opt/**"]
+    assert final["ignore_patterns"][3:] == ["checkpoints/2500/opt/**"]
+    assert "1300, 1450, 1500" in sweep["commit_message"]
+    # no campaign: the bare run name (the older layout)
+    calls.clear()
     session_run.backup_sweep_runs(runs, "me/backup", None)
-    assert [c["path_in_repo"] for c in calls] == ["sweep-reg-4b-rank16-s0"]
-    # every checkpoint retention left; the optimizer state of the last one only
-    assert calls[0]["ignore_patterns"][-2:] == [
-        "checkpoints/1300/opt/**",
-        "checkpoints/1450/opt/**",
-    ]
-    assert "1300, 1450, 1500" in calls[0]["commit_message"]
+    assert [c["path_in_repo"] for c in calls] == ["final-4b-h5000", "sweep-reg-4b-rank16-s0"]
+
+
+def test_fetch_checkpoints_reads_a_campaign_prefixed_backup(tmp_path, monkeypatch):
+    import huggingface_hub
+
+    def fake_snapshot(repo, local_dir, token, allow_patterns):
+        assert allow_patterns[-1] == "c1/final-4b-h5000/checkpoints/2000/**"
+        ckpt = Path(local_dir) / "c1" / "final-4b-h5000" / "checkpoints" / "2000" / "opt"
+        ckpt.mkdir(parents=True)
+        (Path(local_dir) / "c1" / "final-4b-h5000" / "config.json").write_text("{}")
+        return str(local_dir)
+
+    monkeypatch.setattr(huggingface_hub, "snapshot_download", fake_snapshot)
+    runs = tmp_path / "tjev-work" / "runs"
+    runs.mkdir(parents=True)
+    session_run.fetch_checkpoints(["c1/final-4b-h5000@2000"], "me/backup", runs, None)
+    assert (runs / "final-4b-h5000" / "checkpoints" / "2000" / "opt").is_dir()
+    assert (runs / "final-4b-h5000" / "config.json").exists()
+    assert not (tmp_path / "tjev-work" / "hf-fetch").exists()
 
 
 def test_sweep_backup_refuses_a_public_repo_and_never_raises(tmp_path, monkeypatch):
