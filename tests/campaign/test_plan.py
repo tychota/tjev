@@ -641,9 +641,10 @@ def test_reg_stage_pairs_every_arm_with_its_own_sizes_centre(tmp_path):
     assert [x.split()[0] for x in planner.plan("sweep", some)] == [
         "sweep-reg-4b-centre-s0", "sweep-reg-4b-ls0.05-s0",
         "sweep-reg-2b-centre-s0", "sweep-reg-2b-ls0.05-s0"]  # fmt: skip
-    # the budget: 60-70 CU on a v6e-1
+    # the budget: 55-70 CU on a v6e-1 (60.9 at the bench's 4B 14,120 / 2B 36,250 tokens/s,
+    # 59.4 at the final line's measured 14,700 / 36,800)
     table = planner.cost(c, ("sweep",), vm_chips=1)["sweep"]
-    assert 60 <= table["usd"] <= 70
+    assert 55 <= table["usd"] <= 70
     four = planner.cost(only, ("sweep",), vm_chips=1)["sweep"]["usd"]
     assert 27 <= four <= 33
 

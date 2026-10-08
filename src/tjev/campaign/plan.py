@@ -85,8 +85,12 @@ V6E1_ALL = ["train.packing=best_fit", "compute.gdn_norm=flat"]
 # tune-jax picks (tjev-tune1, docs on perf/tune), step time checked on v6e1 (tjev-tune-verify:
 # +5-9% tok/s at 0.8B / 2B / 4B, HBM unchanged) and kernel parity (interpret mode, fwd + grads
 # against the reference, rel err <= 2e-5); 9B was not tuned. The splash tiles only: the GDN pick
-# (gdn_heads_per_step 32 at 4B) overflows the 32 MiB scoped VMEM of mega2's forward with the
-# flat norm (39.2 MiB; tjev-v75b s1, 2026-10-06), which tune-verify's arms did not have
+# (gdn_heads_per_step 32 at 4B) failed to compile mega2's forward with the flat norm, 39.2 MiB
+# against a 32 MiB scoped VMEM limit (tjev-v75b s1-failed-vmem, 2026-10-06), which
+# tune-verify's arms did not have. Open: the preset asks for --xla_tpu_scoped_vmem_limit_kib
+# =98304 (96 MiB), so either the session's LIBTPU_INIT_ARGS did not carry the flag or the
+# kernel's own vmem_limit_bytes applied; the libtpu log line of the next final run
+# (sharding.libtpu_settings: stdout, config.json, W&B, summary.json) settles which
 V6E1_TUNED = {
     s: ["compute.attention_splash_block=1024", "compute.attention_fused_bwd=true"]
     for s in ("0.8B", "2B", "4B")
@@ -125,8 +129,12 @@ HARDWARE: dict[str, dict[str, Any]] = {
                       *V6E1_ALL, *V6E1_TUNED.get(s, [])]
                   for s in ("0.8B", "2B", "4B", "9B")},
         "mfu": {"0.8B": 0.12, "2B": 0.22, "4B": 0.22, "9B": 0.28},
-        # measured (tjev-bench4, the configuration above, 16k / 8k-token steps)
-        "tokens": {"0.8B": 52650.0, "2B": 36250.0, "4B": 14120.0, "9B": 9220.0},
+        # measured real tokens/s of the final line as one configuration (65,536-token steps,
+        # rank 16): 4B from the smoke of main (main-smoke s1, steps 20-30: 14.6-15.1k, MFU
+        # 0.23-0.24, HBM peak 10.4 GB) and tjev-v75b s1 (4.31 s/step, 14.68k); 2B from
+        # tjev-cc2b (1.727 s/step, 36.8k). 0.8B and 9B: tjev-bench4's bench of the
+        # configuration above (16k / 8k-token steps), not yet timed as a final line
+        "tokens": {"0.8B": 52650.0, "2B": 36800.0, "4B": 14700.0, "9B": 9220.0},
         # the long buckets (Campaign.max_bucket > 4096): per size the largest bucket that
         # fits a chip by step_hbm_gb, its microbatch and overrides; unmeasured on the TPU
         # (docs/training.md, "Long buckets": run `tjev compile-check` before training).

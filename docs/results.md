@@ -183,6 +183,13 @@ real texts packed in one row (3 × 1365 tokens), with per-layer and per-op trace
   top-1 99.4–99.8%, gradient cosine 0.991–0.996. The v2 fused kernel is the closest of the
   bf16 paths. For scale, the official model in bf16 against itself in fp32 is 0.20 / 1.9e-3 /
   cosine 0.992 (tiny model).
+- **The same checks on main, after the cleanup** (`PROBE_ONLY=validate`, `main-smoke-vb`
+  s1, 0.8B on the TPU, jax 0.11.2): fp32 loss rel 1.49e-5, max |Δlogit| 3.48e-5, KL max
+  4.3e-6, top-1 1.0, worst gradient rel L2 7.3e-4 at cosine ≥ 0.9999998 (115 parameters).
+  bf16, against the official fp32: XLA chunked 1.3e-5 / 0.35 / 0.996, splash + v2 8.6e-5 /
+  0.33 / 1.0, splash + mega2 2.3e-5 / 0.48 / 0.998 (loss rel / max |Δlogit| / top-1), the
+  official model's own bf16 noise 9.0e-5 / 0.43 / 0.996. TPU kernel tests: 38
+  (`test_pallas_tpu`) + 18 (`test_gdn_mega`) passed.
 - **A test artefact to avoid.** Parity with random LoRA `B ~ N(0, 0.01)` makes the adapters
   ~50% of each projection. The model becomes unstable: bf16 rounding grows ~1.2× per layer
   until correct paths decorrelate (62% in the loss). Parity now uses 2e-4 (~1%).
@@ -235,6 +242,14 @@ real texts packed in one row (3 × 1365 tokens), with per-layer and per-op trace
   It rounds W + s·AB to bf16, so a small adapter is quantised at W's scale: the sweep
   measures its quality as a paired arm before any adoption.
 - **The sweep runs on mega2, chunk 128, blocked inverse** (`--hardware v6e1`).
+- **The planner's `v6e1` line timed as one configuration** (the smoke of main at 289f26b,
+  `PROBE_ONLY=smoke`, `main-smoke` s1: the 4B final line, rank 64 then, 65,536-token steps,
+  mega2 chunk 128 blocked, merged LoRA, flat norm, best-fit packing, splash 1024 with the
+  fused backward, `core_states` remat): steps 20–30 at 14.6–15.1k real tokens/s per chip
+  (padded 14.9–15.3k), MFU 0.23–0.24, HBM peak 10.4 GB, 3 compiled shapes (the three
+  buckets), step 4.29–4.39 s. The 4B final-length run tjev-v75b s1 ran the same line at
+  4.31 s/step (14.68k). The planner's 4B line is now 14,700 tokens/s (2B 36,800 from
+  tjev-cc2b).
 
 ## 4B finals and their calibration (v6e-1, measured)
 
@@ -328,8 +343,5 @@ against 54.9 / 85.8 for v6) but is in-distribution for it.
 - The on-TPU gradient check of the GDN kernels at T = 8192 (the CPU interpret-mode check
   above is flat in T).
 - A trained 9B run.
-- The planner's `v6e1` line (mega2, merged LoRA, flat norm, best-fit packing, splash 1024
-  with the fused backward) timed as one configuration: each gain was measured against its
-  own baseline, and the +5–9% of the splash tiles on a setup with the fused LoRA kernel.
 - The `-rep1` mix (running), CogCalib off against 0.1 on mix-v7.5, the teacher loss, a second
   seed of any final-length 4B arm.
