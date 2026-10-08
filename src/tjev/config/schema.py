@@ -345,6 +345,9 @@ class TrainSpec:
     # keep_every should be a multiple of checkpoint_every (a kept step is a planned save)
     keep_every: int = 0
     keep_from: int = 0
+    # every checkpoint of the tail (the cooldown) is kept too: a cooldown branch's decay, or
+    # the long run's, evaluated step by step after the run
+    keep_tail: bool = False
     # The selection score: "score" the mean of the calibrated validation (odd slots) and
     # held-out NLLs; "lang_mean" / "lang_max" the mean / max over languages of the
     # calibrated NLL per language (validation odd slots and held-out together)

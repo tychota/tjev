@@ -327,9 +327,10 @@ centre's raw and EMA evals are the EMA pair, for the price of a second eval. Pas
 steps (the final-length tests below) every arm tracks it too.
 
 **Final-length tests** (`--horizon` past 1500): the run is a proper final, with
-`post=full` at the end (calibration, JevBench, the per-item dumps), checkpoints every 250
-steps and every 100 in the cooldown, and every one kept from half the run on
-(`train.keep_every=250 train.keep_from=H/2`, the core sources' second epoch). The
+`post=full` at the end (calibration, JevBench, the per-item dumps), checkpoints and full
+evals every 200 steps and every 50 in the cooldown (quick evals every 25), every one kept
+from half the run on (`train.keep_every=200 train.keep_from=H/2`, the core sources' second
+epoch) and through the cooldown (`train.keep_tail`). The
 `rank16` and `rank16-cogcalib` arms also get a 1-epoch WSD cooldown branch to H/2 off
 their own stable phase (branch point 0.8·H/2). A branch starts at its parent's loss and
 hovers there, so branches run with `train.health_kill=false` (`loss_above_start` killed

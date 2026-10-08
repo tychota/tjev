@@ -81,7 +81,7 @@ NOT_IDENTITY = {
               "branch_from", "health_metrics", "health_report", "health_kill",
               "precompile_buckets", "tail_fraction", "checkpoint_tail_every",
               "full_eval_every", "full_eval_tail_every", "quick_eval_tail_every",
-              "keep_steps", "keep_every", "keep_from", "select_on", "select_ema"),
+              "keep_steps", "keep_every", "keep_from", "keep_tail", "select_on", "select_ema"),
     "compute": ("libtpu_flags",),
     "data": ("workers", "worker_buffer", "validation", "validation_per_source", "heldout",
              "quick_validation_per_source"),
@@ -289,6 +289,7 @@ class Cadence:
         self.quick = (t.quick_eval_every, t.quick_eval_tail_every)
         self.keep_steps = frozenset(t.keep_steps)
         self.keep_every, self.keep_from = t.keep_every, t.keep_from
+        self.keep_tail = t.keep_tail
 
     def _every(self, step: int, cadence: tuple[int, int]) -> bool:
         main, tail = cadence
@@ -305,10 +306,15 @@ class Cadence:
         )  # fmt: skip
 
     def kept(self, step: int) -> bool:
-        """A step never pruned: train.keep_steps, and every keep_every-th from keep_from."""
-        return step in self.keep_steps or (
-            self.keep_every > 0 and step >= self.keep_from and step % self.keep_every == 0
-        )
+        """A step never pruned: train.keep_steps, every keep_every-th from keep_from, and with
+        keep_tail every planned checkpoint of the tail (the cooldown)."""
+        if step in self.keep_steps:
+            return True
+        if self.keep_every > 0 and step >= self.keep_from and step % self.keep_every == 0:
+            return True
+        if not (self.keep_tail and self.enabled and step > self.tail_start):
+            return False
+        return step == self.steps or self._every(step, self.ckpt) or self._every(step, self.full)
 
     def quick_eval(self, step: int) -> bool:
         return self._every(step, self.quick) and not self.full_eval(step)

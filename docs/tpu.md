@@ -55,9 +55,22 @@ arms: 4B / 9B from rank 64 at lr × 2, 2B / 0.8B from 32 at lr × √2), CogCali
 (`optim.ema_decay=0.999`: raw and EMA scored at every full eval, the selection on the raw
 adapters), the frozen gates, the hardware's perf defaults (`HARDWARE["v6e1"]`: best-fit
 packing, the flat GDN norm, …), `post=full` (calibration, JevBench, and the extra
-validation files of `PROBE_POST_ARGS`), a checkpoint and full eval every 250 steps (100 in
-the cooldown) all kept from H/2 on, health kill on the long run. The branch starts at
-0.8·H/2 (kept by `train.keep_steps`) with `train.health_kill=false`. `--final-mix rep1`
+validation files of `PROBE_POST_ARGS`), a checkpoint and full eval every 200 steps (50 in
+the cooldown, a quick eval every 25) all kept from H/2 on and through the cooldown
+(`train.keep_tail`: the branch keeps its whole decay), health kill on the long run. The
+branch starts at 0.8·H/2 (kept by `train.keep_steps`) with `train.health_kill=false`. The
+cadence costs a 4B 5,000-step run 40 full evals (20 + 20) against 26 before, about 15–20
+min at 1–1.5 min each (the quick evals' cost is measured by the first final run), and
+keeps 28 checkpoints of ~13 MB (8 from H/2, 20 in the cooldown) plus the optimizer state
+(222 MB) of the selected and the last step.
+
+Both candidates of a size, the long run and its branch, are kept with their full `post/`
+outputs: the selection does not pick between them automatically. On mix-v7.5 the held-out
+selection score favoured the two-pass run (.370 against .390, lower better) while JevBench
+public favoured the 1-epoch branch (75.3 against 70.2), inside JevBench's own 64–72 swing
+between neighbouring checkpoints ([results.md](results.md#the-reg-stage-and-the-final-length-4b-runs-v6e-1-measured)).
+The `--final-mix rep1` final (every source at most ~1 epoch, fresh rows in place of the
+second epoch: "one larger epoch") is the pair that decides. `--final-mix rep1`
 trains on the sibling mix `<mix>-rep1` (the held-out stays the campaign's; runs
 `final-<size>-h<H>-rep1`, `…-b<H/2>-rep1`). `--final-recipe generic` plans fit's recipe
 as is (its rank, no CogCalib or EMA, `post=quick`, branches at H/4 and H/2 named

@@ -20,7 +20,8 @@ Three phases, each planned from the results of the ones before (docs/tpu.md):
             horizon exponent γ), and the other sizes at the predicted rate × {½, 1, 2}.
   final     every final size at the decided recipe (FINAL_RECIPE, from the reg stage): rank 16
             at fit's rank-rule rate for the horizon, CogCalib, the EMA tracked, post=full, a
-            checkpoint every 250 steps (100 in the cooldown) kept from horizon/2, and the
+            checkpoint and full eval every 200 steps (50 in the cooldown, a quick eval every
+            25), kept from horizon/2 and through the cooldown (long_cadence), and the
             1-epoch WSD cooldown branch to horizon/2 (``final-<size>-h<H>-b<H/2>``);
             ``select`` picks the better of the two per size. ``--final-recipe generic``: fit's recipe as is (its rank, no CogCalib,
             post=quick, cooldown branches at ¼ and ½ of the horizon). ``--final-mix rep1``:
@@ -629,11 +630,14 @@ def reg_steps(c: Campaign) -> int:
 
 
 def long_cadence(steps: int) -> list[str]:
-    """A final-length run's saves: a checkpoint + full eval every 250 steps (every 100 in the
-    cooldown), and every one kept from half the run on (the core sources' second epoch), for
-    JevBench on the late trajectory."""
-    return ["train.checkpoint_every=250", "train.checkpoint_tail_every=100",
-            "train.keep_every=250", f"train.keep_from={steps // 2}"]  # fmt: skip
+    """A final-length run's saves: a checkpoint + full eval every 200 steps (every 50 in the
+    cooldown, where selection is decided) and a quick eval every 25; every checkpoint kept
+    from half the run on (the core sources' second epoch) and every one of the cooldown
+    (``keep_tail``: a branch's whole decay too, whatever its ``keep_from``), for JevBench on
+    the late trajectory. A 4B 5,000-step run: 40 full evals (20 + 20) against 26 before."""
+    return ["train.checkpoint_every=200", "train.checkpoint_tail_every=50",
+            "train.quick_eval_every=25", "train.keep_every=200",
+            f"train.keep_from={steps // 2}", "train.keep_tail=true"]  # fmt: skip
 
 
 def reg_long(c: Campaign, steps: int) -> list[str]:
@@ -749,7 +753,7 @@ def reg_effects(records: list[dict], arm_seeds: int = 1) -> dict[str, dict]:
 
 FINAL_RANK = 16
 FINAL_RECIPE = ("loss.cogcalib_weight=0.1", "loss.cogcalib_quantile=0.3", *REG_CENTRE)
-FINAL_BASE = (*FINAL_OVERRIDES, "train.quick_eval_every=0", "train.keep_checkpoints=2",
+FINAL_BASE = (*FINAL_OVERRIDES, "train.keep_checkpoints=2",
               "train.health_kill=true")  # fmt: skip
 
 

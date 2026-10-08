@@ -31,7 +31,7 @@ The main sections:
 | `mesh` | `data` (−1: every device), `fsdp` (shards the frozen base) |
 | `optim` | `name` (adamw / muon), `lr`, `warmup_steps`, `decay_fraction`, `final_lr_fraction`, `decay_shape`, `clip_mode` (global / zscore / none), `weight_decay`, `ema_decay`, … |
 | `loss` | the regularisers ([below](#regularisers)): `label_smoothing`, `smooth_sources`, `kl_base_weight`, `kl_sources`, `hard_targets`, `cogcalib_*`, `teacher_mix`, `teacher_gate` |
-| `train` | `steps`, `seed`, `tokens_per_step`, `seq_buckets`, `microbatch_tokens`, `packing_bins`, `packing` (bucket / best_fit, [data.md](data.md#packing-trainpacking)), eval / checkpoint cadence and retention (`keep_checkpoints`, `keep_steps`, `keep_every`, `keep_from`), `select_on`, `select_ema`, `branch_from`, `health_kill`, `precompile_buckets`, `profile_start` |
+| `train` | `steps`, `seed`, `tokens_per_step`, `seq_buckets`, `microbatch_tokens`, `packing_bins`, `packing` (bucket / best_fit, [data.md](data.md#packing-trainpacking)), eval / checkpoint cadence and retention (`keep_checkpoints`, `keep_steps`, `keep_every`, `keep_from`, `keep_tail`), `select_on`, `select_ema`, `branch_from`, `health_kill`, `precompile_buckets`, `profile_start` |
 | `data` | `train`, `validation`, `heldout`, per-source caps, `mixture`, Grain `workers` |
 | `log` | TensorBoard, W&B (project, entity, group, tags, offline mode) |
 
@@ -521,8 +521,9 @@ for the curves only.
 Every full-eval step is also a checkpoint, and the last step and a STOP step always get the
 full eval. The planner's final runs (`tjev campaign plan final`, the decided recipe:
 rank 16, CogCalib, the EMA, [tpu.md](tpu.md#phases)) and its final-length reg runs
-(`--horizon` past 1500 steps) checkpoint every 250 steps, every 100 in the cooldown
-(`tjev.campaign.plan.long_cadence`), track the EMA, and get `post=full` (calibration,
+(`--horizon` past 1500 steps) checkpoint and full-eval every 200 steps, every 50 in the
+cooldown, with a quick eval every 25 (`tjev.campaign.plan.long_cadence`), track the EMA,
+and get `post=full` (calibration,
 JevBench and the per-item dumps) at the end ([sweep-plan.md](sweep-plan.md#stage-4-the-regularisers-the-reg-stage-4b-and-2b));
 the generic final runs (`--final-recipe generic`) checkpoint every H/10 and every 100
 steps in their cooldown (`tjev.campaign.plan.tail_every`).
@@ -534,9 +535,11 @@ steps in their cooldown (`tjev.campaign.plan.tail_every`).
 - **Retention.** The latest `keep_checkpoints` planned steps are kept, plus the selected step,
   `train.keep_steps` (the planner sets the branch points of the cooldown branches it
   plans: a sequential queue starts them after the long run) and, with `train.keep_every=K
-  train.keep_from=S`, every K-th step from S on (the final-length reg runs keep every 250
-  steps from half the run, for JevBench on the late trajectory; K a multiple of
-  `checkpoint_every`). A resume-only save (time-based, signal, deadline) is deleted once a
+  train.keep_from=S`, every K-th step from S on (the final runs keep every 200 steps from
+  half the run, for JevBench on the late trajectory; K a multiple of `checkpoint_every`)
+  and, with `train.keep_tail=true`, every planned checkpoint of the cooldown (a cooldown
+  branch's whole decay, whatever `keep_from`). A resume-only save (time-based, signal,
+  deadline) is deleted once a
   newer save exists. The backup (`PROBE_SWEEP_BACKUP`, [tpu.md](tpu.md)) uploads every
   kept checkpoint of the finished sweep and final runs, under `<campaign>/<run>`, with the
   optimizer state of the last and the selected step only; `tjev post` / JevBench can score

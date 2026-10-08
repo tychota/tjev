@@ -386,6 +386,25 @@ def test_cadence_keep_every_from_a_step():
     assert all(c.checkpoint(s) for s in (300, 600, 800, 1000))
 
 
+def test_cadence_keep_tail_keeps_every_cooldown_checkpoint():
+    """keep_tail: every planned checkpoint of the tail (the cooldown) is kept, whatever
+    keep_from says: a cooldown branch (its tail is its whole run) keeps its decay."""
+    from tjev.train.loop import Cadence
+
+    c = Cadence(load_config(overrides=["train.steps=1000", "train.checkpoint_every=200",
+                                       "train.checkpoint_tail_every=50", "train.keep_every=200",
+                                       "train.keep_from=500", "train.keep_tail=true"]))  # fmt: skip
+    assert [s for s in range(1, 1001) if c.kept(s)] == [600, 800, 850, 900, 950, 1000]
+    assert not c.resume_only(850) and c.resume_only(777)
+    branch = Cadence(load_config(overrides=["train.steps=500", "train.checkpoint_every=200",
+                                            "train.checkpoint_tail_every=50", "train.keep_from=2500",
+                                            "train.keep_every=200", "train.keep_tail=true",
+                                            "train.branch_from=/x/long@400"]))  # fmt: skip
+    assert [s for s in range(1, 501) if branch.kept(s)] == [450, 500]
+    off = Cadence(load_config(overrides=["train.steps=1000", "train.checkpoint_tail_every=50"]))
+    assert [s for s in range(801, 1001) if off.kept(s)] == []
+
+
 def test_cadence_tail_and_full_eval_cadences():
     from tjev.train.loop import Cadence
 
@@ -423,7 +442,7 @@ def test_default_identity_is_unchanged_by_the_new_fields():
     del raw["loss"], raw["lora"]["dropout"], raw["optim"]["ema_decay"]
     for key in ("tail_fraction", "checkpoint_tail_every", "full_eval_every",
                 "full_eval_tail_every", "quick_eval_tail_every", "keep_steps", "keep_every",
-                "keep_from", "select_on", "select_ema"):  # fmt: skip
+                "keep_from", "keep_tail", "select_on", "select_ema"):  # fmt: skip
         del raw["train"][key]
     old_not_identity = {
         "train": ("steps", "log_every", "quick_eval_every", "checkpoint_every",

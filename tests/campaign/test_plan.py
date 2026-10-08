@@ -477,9 +477,10 @@ def test_reg_stage_at_a_final_horizon_branches_rank16_and_keeps_the_late_traject
                                       "sweep-reg-4b-rank16-rep1-s0"]  # fmt: skip
     long, branch, rep = (_config(j) for j in jobs)
     assert long.train.steps == 5000 and 2000 in long.train.keep_steps
+    assert long.train.keep_tail and long.train.quick_eval_every == 25
     assert (long.train.checkpoint_every, long.train.keep_every, long.train.keep_from) == (
-        250,
-        250,
+        200,
+        200,
         2500,
     )
     assert branch.train.steps == 2500 and branch.train.branch_from.endswith("rank16-s0@2000")
@@ -520,9 +521,9 @@ def test_final_plans_the_decided_recipe_for_every_size(tmp_path, horizon):
             assert cfg.optim.ema_decay == 0.999 and not cfg.train.select_ema
             assert not set(cfg.lora.targets) & {"in_proj_a", "in_proj_b"}  # the frozen gates
             assert cfg.train.packing == "best_fit" and cfg.compute.gdn_norm == "flat"
-            assert (cfg.train.checkpoint_every, cfg.train.checkpoint_tail_every) == (250, 100)
-            assert (cfg.train.keep_every, cfg.train.keep_from) == (250, half)
-            assert cfg.train.quick_eval_every == 0
+            assert (cfg.train.checkpoint_every, cfg.train.checkpoint_tail_every) == (200, 50)
+            assert (cfg.train.keep_every, cfg.train.keep_from) == (200, half)
+            assert cfg.train.quick_eval_every == 25 and cfg.train.keep_tail
             assert f"Qwen3.5-{size}" in cfg.model.path
         assert lc.train.steps == horizon and list(lc.train.keep_steps) == [point]
         assert lc.train.health_kill and not bc.train.health_kill
