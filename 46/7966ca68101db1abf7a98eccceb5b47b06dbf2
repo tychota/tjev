@@ -1,0 +1,25 @@
+docs/results.md
+  s_d1d39e59a20c39::t_d7fe2a2ac32c55 186-192,245-252
+src/tjev/campaign/plan.py
+  s_d1d39e59a20c39::t_ea2ce90f85dd0e 88-93,132-137
+docs/kernels.md
+  s_d1d39e59a20c39::t_c6c3a2ccb7957a 603-616
+tests/campaign/test_plan.py
+  s_d1d39e59a20c39::t_83790b7b47ea46 644-645,647
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "467966ca68101db1abf7a98eccceb5b47b06dbf2",
+  "prompts": {},
+  "sessions": {
+    "s_d1d39e59a20c39": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d316479f-0782-47eb-a003-087da5c19333",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
