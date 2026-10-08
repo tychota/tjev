@@ -1,0 +1,25 @@
+cloud/tpu_campaign.sh
+  s_d1d39e59a20c39::t_bcf62236091c0f 671-672,675-676
+tests/campaign/test_plan.py
+  s_d1d39e59a20c39::t_bcf62236091c0f 505-507,548
+docs/tpu.md
+  s_d1d39e59a20c39::t_bcf62236091c0f 48,62-65
+src/tjev/campaign/plan.py
+  s_d1d39e59a20c39::t_bcf62236091c0f 24-25,756-761,781
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "716e24e6b4f5a600436c4636f15515807e8f8159",
+  "prompts": {},
+  "sessions": {
+    "s_d1d39e59a20c39": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d316479f-0782-47eb-a003-087da5c19333",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
