@@ -167,13 +167,18 @@ previous one's output, runs until 0.4 h before its limit and saves only the chec
 resume or a pending cooldown branch still needs (`cloud/session_run.py`). `all` chains up to
 `MAX_SESSIONS` sessions. Settings: `MIX`, `MODELS`, `SIZES`, `BUDGET`, `CAMPAIGN`,
 `WANDB_ENTITY`, `HF_DATASET`, and every `PROBE_*` variable of the shell, passed to the host.
-`PROBE_SWEEP_BACKUP=1` uploads the finished sweep and final runs' checkpoints to the private
-HF repo `PROBE_HF_REPO` before the save drops them, under `<CAMPAIGN>/<run>` (same-named
-runs of two campaigns overwrote each other under the bare run name; older backups stay
-there): every checkpoint retention kept, with the optimizer state of the last and of the
-selected step (the EMA adapters live in it). `PROBE_FETCH_CKPTS="RUN@STEP …"` fetches branch
-points back from it, and `PROBE_CALIB_RUNS` / `PROBE_FINISH_RUN` read it; RUN is the
-backup path, `<CAMPAIGN>/<run>` (or a bare `<run>` for the older backups).
+The finished runs' checkpoints go to private HF model repos before the save drops them,
+under `<CAMPAIGN>/<run>` (same-named runs of two campaigns overwrote each other under the
+bare run name; older backups stay there): every checkpoint retention kept, with the
+optimizer state of the last and of the selected step (the EMA adapters live in it). The
+final models (`final-*`, and the `smoke` probe's run of their line) always go to
+`PROBE_HF_FINAL_REPO` (`tychot/tjev-final`, the repo of [model-card.md](model-card.md)),
+unless `PROBE_SWEEP_BACKUP=0`; the sweep and reg runs go to `PROBE_HF_REPO`
+(`tychot/tjev-4b`) with `PROBE_SWEEP_BACKUP=1`. The final runs also log to their own W&B
+project, `tjev-final` (`TJEV_WANDB_FINAL_PROJECT`), the rest to `tjev-sweep`.
+`PROBE_FETCH_CKPTS="RUN@STEP …"` fetches branch points back, and `PROBE_CALIB_RUNS` /
+`PROBE_FINISH_RUN` read the backups; the repo follows the run's name, and RUN is the backup
+path, `<CAMPAIGN>/<run>` (or a bare `<run>` for the older backups).
 
 ### On the host
 

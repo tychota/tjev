@@ -121,6 +121,7 @@ host; `PROBE_ONLY=analyse` profiles the final train step of every size
 | [docs/export.md](docs/export.md) | PEFT, merged snapshots, MLX conversion and calibration |
 | [docs/serve.md](docs/serve.md) | The decision API: FastAPI, micro-batching, readout options, serving policies |
 | [docs/official-eval.md](docs/official-eval.md) | The official JevBench harness against tjev's server; v1.5 scoring; the frozen-prompt control; Decision Index |
+| [docs/model-card.md](docs/model-card.md) | The model card of the final adapters (HF `tychot/tjev-final`, private): recipe, data and licences, intended use, evaluation, limitations |
 | [docs/results.md](docs/results.md) | Everything measured so far |
 | [docs/research/](docs/research/) | The Jev landscape, LoRA and data notes, Muon on LoRA, LoRA optimizers, training notes, text analysis |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Development workflow |

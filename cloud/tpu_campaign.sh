@@ -16,8 +16,11 @@
 #                   campaign exits 3 (paused); running it again resumes. Finished phases are
 #                   skipped; a phase's queue is planned once (queues/PHASE.queue) and reused.
 #   TJEV_WANDB_CAMPAIGN (W&B group prefix)
-#   PROBE_HF_REPO (tychot/tjev-4b): the private HF model repo the probes read checkpoints
-#                 from and write backups, dumps and large captures to (needs HF_TOKEN)
+#   PROBE_HF_REPO (tychot/tjev-4b): the private HF model repo the sweep's probes read
+#                 checkpoints from and write backups, dumps and large captures to (needs HF_TOKEN)
+#   PROBE_HF_FINAL_REPO (tychot/tjev-final): the final models' private HF repo: the backup
+#                 of every final-* run and of the smoke probe's run, read by calib and finish
+#                 (backup_repo picks the repo from the run's name)
 #
 # Probe modes (PROBE_ONLY), each under reports/probe/:
 #   validate  TPU kernel tests (PROBE_TESTS: "test_pallas_tpu test_gdn_mega"), then the ground
@@ -28,7 +31,7 @@
 #             PROBE_DEBUG (variants whose compile log and XLA / Mosaic dumps are kept)
 #   analyse   every profile of the final train step per size: PROBE_ANALYSE_SIZES ("0.8B,2B,4B,9B")
 #   smoke     a final run's exact job, shortened: PROBE_SMOKE_SIZE (4B)  PROBE_SMOKE_STEPS (30)
-#             PROBE_SMOKE_EXTRA (more overrides)
+#             PROBE_SMOKE_EXTRA (more overrides); W&B tjev-final, backed up to PROBE_HF_FINAL_REPO
 #   resume    a run and its SIGTERMed + resumed twin, step for step: PROBE_RESUME_SIZE (0.8B)
 #   journey   every GDN-core iteration on real training (docs/kernel-journey.md):
 #             PROBE_JOURNEY_SIZES ("0.8B,4B")
@@ -45,7 +48,7 @@ set -uo pipefail
 cd "$(dirname "$0")/.."
 : "${TJEV_ROOT:=$HOME/tjev-work}" "${TJEV_VENV:=$HOME/tjev-venv}" "${MIX:=mix-v7.5}"
 : "${HARDWARE:=v6e}" "${CHIPS:=1}" "${SIZES:=4B,2B,0.8B}" "${DEADLINE_HOURS:=0}" "${BUDGET:=}"
-: "${PROBE_HF_REPO:=tychot/tjev-4b}"
+: "${PROBE_HF_REPO:=tychot/tjev-4b}" "${PROBE_HF_FINAL_REPO:=tychot/tjev-final}"
 ROOT=$TJEV_ROOT
 RUNS=$ROOT/runs
 MIXDIR=$ROOT/data/$MIX
@@ -54,6 +57,10 @@ MODELS=$ROOT/models
 REPORTS=$ROOT/reports
 QUEUES=$ROOT/queues
 START=$(date +%s)
+backup_repo() {  # the HF backup a run (bare name or <campaign>/<run>) lives in, by its kind
+  local name=${1##*/}
+  if [[ $name == final-* || $name == smoke-* ]]; then echo "$PROBE_HF_FINAL_REPO"; else echo "$PROBE_HF_REPO"; fi
+}
 mkdir -p "$RUNS" "$REPORTS" "$ROOT/logs" "$QUEUES"
 # shellcheck disable=SC1091
 [[ -f $TJEV_VENV/bin/activate ]] && source "$TJEV_VENV/bin/activate"
@@ -277,9 +284,10 @@ probe_calib() {  # per-item calibration dumps (docs/calibration.md): $1 the repo
   # post/predictions/) uploaded back as <RUN>/post-calib-<step>[-ema]/ (tjev.campaign.calib).
   # PROBE_CALIB_EXTRA_VALIDATION: space-separated held-out files also evaluated (`tjev post
   # --extra-validation`; names resolve in the mix dir, e.g. "validation-v7.jsonl calibration-v7.jsonl")
-  local out=$1 rc=0 repo=$PROBE_HF_REPO entry dir upload name zs size fetched
+  local out=$1 rc=0 repo entry dir upload name zs size fetched
   mkdir -p "$out"
   for entry in ${PROBE_CALIB_RUNS:-final-4b-h3000:1200 final-4b-h3000:3000 final-4b-h1500:1450}; do
+    repo=$(backup_repo "${entry%%:*}")
     say "calib $entry from hf:$repo"
     fetched=$(python -m tjev.campaign.calib fetch "$repo" "$entry" "$RUNS") \
       || { say "calib fetch FAILED"; rc=1; continue; }
@@ -479,7 +487,8 @@ probe() {  # kernel iteration, rerun every time: reports/probe/ (and tjev-experi
     # PROBE_FINISH_RUN: the run's path on the backup (<campaign>/<run>, or <run> for the older
     # backups); locally RUNS/<run>
     local hfrun=${PROBE_FINISH_RUN:-final-4b-h3000} size=${PROBE_FINISH_SIZE:-4B}
-    local repo=$PROBE_HF_REPO run=${hfrun##*/}
+    local repo run=${hfrun##*/}
+    repo=$(backup_repo "$hfrun")
     say "finish $hfrun ($size) from hf:$repo"
     python - "$repo" "$hfrun" "$RUNS" <<'PY' || return 1
 import json, shutil, sys
@@ -541,12 +550,13 @@ PY
   fi
   if [[ $mode == smoke ]]; then  # a final run's exact job, PROBE_SMOKE_STEPS long
     # (default 30): real throughput over the buckets, peak HBM, compiles, one checkpoint and
-    # one full eval; reports/probe/smoke/<run> (W&B tjev-sweep group …/smoke);
+    # one full eval; reports/probe/smoke/<run> (W&B project tjev-final as the final runs,
+    # group <campaign>/smoke; backed up to PROBE_HF_FINAL_REPO by session_run.py);
     # PROBE_SMOKE_EXTRA appends overrides
     local size=${PROBE_SMOKE_SIZE:-4B} steps=${PROBE_SMOKE_STEPS:-30} q=$out/smoke.queue
     plan plan final --mix "$MIXDIR" --models "$MODELS" "$KERNELS" --sizes "$size" \
       --horizon 3000 | head -n 1 \
-      | sed -E "s/^final-([^ ]+)/smoke-\1/; s/ post=[a-z]+/ post=none/; s/train\.steps=[0-9]+/train.steps=$steps/; s/train\.checkpoint_every=[0-9]+/train.checkpoint_every=$steps/" \
+      | sed -E "s/^final-([^ ]+)/smoke-\1/; s#(log\.wandb_group=[^ ]*)/final#\1/smoke#; s/ post=[a-z]+/ post=none/; s/train\.steps=[0-9]+/train.steps=$steps/; s/train\.checkpoint_every=[0-9]+/train.checkpoint_every=$steps/" \
       > "$q" || return 1
     # PROBE_SMOKE_EXTRA: more overrides on the line (e.g. an xprof trace, the chosen rank)
     [[ -z ${PROBE_SMOKE_EXTRA:-} ]] || sed -i "s|\$| $PROBE_SMOKE_EXTRA|" "$q"

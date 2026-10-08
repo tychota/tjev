@@ -13,8 +13,10 @@ Run on the session host by cloud/colab.sh (``python session_run.py JOB.json``). 
     <campaign>/<run> or <run>) fetches branch points from the private HF backup (PROBE_HF_REPO);
  5. cloud/tpu_campaign.sh PHASES with DEADLINE_HOURS = the session limit minus setup
     and a save margin: at the deadline every run checkpoints and the campaign pauses;
- 6. with PROBE_SWEEP_BACKUP=1 (or set to the repo's name), the finished sweep and final
-    runs' checkpoints to the HF backup (PROBE_HF_REPO), under <campaign>/<run>;
+ 6. the finished final runs' (and the smoke probe's) checkpoints to the final models' HF
+    backup (PROBE_HF_FINAL_REPO) under <campaign>/<run>, unless PROBE_SWEEP_BACKUP=0; with
+    PROBE_SWEEP_BACKUP=1 (or set to the repo's name) the finished sweep runs' too, to
+    PROBE_HF_REPO;
  7. copy the outputs to ``save``, keeping only the checkpoints a resume or a pending
     cooldown branch can still use.
 """
@@ -141,7 +143,20 @@ def pending_branch_points(runs: Path, queues: Path) -> dict[str, set[str]]:
     return out
 
 
-BACKED_UP = ("sweep-", "final-")  # the run kinds PROBE_SWEEP_BACKUP uploads
+# The private HF model repos the backup writes to and the probes read from, per run kind:
+# the sweep and reg runs to PROBE_HF_REPO (and the older bare-name layout), the final models
+# and the smoke probe's run of their line to PROBE_HF_FINAL_REPO
+SWEEP_REPO = ("PROBE_HF_REPO", "tychot/tjev-4b")
+FINAL_REPO = ("PROBE_HF_FINAL_REPO", "tychot/tjev-final")
+FINAL_KINDS = ("final-", "smoke-")
+BACKED_UP = ("sweep-", *FINAL_KINDS)  # the run kinds the backup uploads
+
+
+def backup_repo(name: str, env: dict[str, str]) -> str:
+    """The HF repo a run (its bare name or its backup path ``<campaign>/<run>``) is backed up
+    to and fetched from: the final models' for ``final-*`` / ``smoke-*``, else the sweep's."""
+    var, default = FINAL_REPO if name.rsplit("/", 1)[-1].startswith(FINAL_KINDS) else SWEEP_REPO
+    return env.get(var) or default
 
 
 def backup_path(run: str, campaign: str = "") -> str:
@@ -151,7 +166,8 @@ def backup_path(run: str, campaign: str = "") -> str:
     return f"{campaign.strip('/')}/{run}" if campaign.strip("/") else run
 
 
-def backup_sweep_runs(runs: Path, repo: str, token: str | None, campaign: str = "") -> None:
+def backup_sweep_runs(runs: Path, repo: str, token: str | None, campaign: str = "",
+                      kinds: tuple[str, ...] = BACKED_UP) -> None:  # fmt: skip
     """Finished sweep and final runs to a private HF model repo before save() drops their
     checkpoints (too large for the next session's restore): every checkpoint left after
     retention (the selected, the latest, train.keep_steps / keep_every), the optimizer state
@@ -159,7 +175,9 @@ def backup_sweep_runs(runs: Path, repo: str, token: str | None, campaign: str = 
     probe_calib's RUN:STEP:ema and a selection on the EMA need it), with the run's json /
     jsonl / txt and eval/, under ``<campaign>/<run>`` (backup_path): the layout tpu_campaign.sh's
     probe_calib reads (PROBE_CALIB_RUNS=<campaign>/<run>:<step>[:ema] runs JevBench on them).
-    Never fatal."""
+    ``kinds``: the run-name prefixes taken (BACKED_UP). Never fatal."""
+    if not runs.is_dir():
+        return
     try:
         from huggingface_hub import HfApi
 
@@ -167,9 +185,8 @@ def backup_sweep_runs(runs: Path, repo: str, token: str | None, campaign: str = 
         assert api.model_info(repo).private, f"{repo} must be private"
         for run in sorted(runs.iterdir()):
             ckpt = run / "checkpoints"
-            if not (
-                run.name.startswith(BACKED_UP) and (run / "queue.done").exists() and ckpt.is_dir()
-            ):
+            done = (run / "queue.done").exists() and ckpt.is_dir()
+            if not (run.name.startswith(kinds) and done):
                 continue
             steps = sorted(int(p.name) for p in ckpt.iterdir() if p.name.isdigit())
             if not steps:
@@ -271,9 +288,10 @@ def main() -> int:
     if env.get("WANDB_API_KEY"):
         (root / ".wandb_key").write_text(env["WANDB_API_KEY"])
     restore([Path(p) for p in job.get("restore", [])], root)
-    if fetch := env.get("PROBE_FETCH_CKPTS"):  # "RUN@STEP ...": branch points from the HF backup
-        fetch_checkpoints(fetch.split(), env.get("PROBE_HF_REPO", "tychot/tjev-4b"), root / "runs",
-                          job.get("hf_token"))  # fmt: skip
+    if fetch := env.get("PROBE_FETCH_CKPTS"):  # "RUN@STEP ...": branch points from the HF backups
+        for repo in sorted({backup_repo(i, env) for i in fetch.split()}):
+            fetch_checkpoints([i for i in fetch.split() if backup_repo(i, env) == repo], repo,
+                              root / "runs", job.get("hf_token"))  # fmt: skip
     subprocess.run(["bash", str(root / "src/cloud/tpu_bootstrap.sh")], env=env, check=True)
     # the session limit, minus what setup used and a margin to save the outputs
     left = job["session_hours"] - (time.time() - START) / 3600 - job.get("save_margin_hours", 0.4)
@@ -283,11 +301,19 @@ def main() -> int:
         ["bash", str(root / "src/cloud/tpu_campaign.sh"), *job["phases"].split()], env=env
     ).returncode
     log(f"campaign exited {code} (0 done, 3 paused: run the next session to resume)")
-    # PROBE_SWEEP_BACKUP=1 (or, the older form, the repo's own name) turns the backup on
-    backup = env.get("PROBE_SWEEP_BACKUP", "")
-    if backup not in ("", "0") and (root / "runs").is_dir():
-        repo = backup if "/" in backup else env.get("PROBE_HF_REPO", "tychot/tjev-4b")
-        backup_sweep_runs(root / "runs", repo, job.get("hf_token"), env["TJEV_WANDB_CAMPAIGN"])
+    # The finished runs' checkpoints to the private HF backups before save() drops them: the
+    # final models (and the smoke probe's run of their line, reports/probe/smoke) always,
+    # unless PROBE_SWEEP_BACKUP=0; the sweep runs with PROBE_SWEEP_BACKUP=1 (or, the older
+    # form, the repo's own name)
+    backup, campaign = env.get("PROBE_SWEEP_BACKUP", ""), env["TJEV_WANDB_CAMPAIGN"]
+    token, smoke = job.get("hf_token"), root / "reports/probe/smoke"
+    if backup != "0":
+        final_repo = backup_repo("final-", env)
+        backup_sweep_runs(root / "runs", final_repo, token, campaign, kinds=("final-",))
+        backup_sweep_runs(smoke, final_repo, token, campaign, kinds=("smoke-",))
+        if backup:
+            repo = backup if "/" in backup else backup_repo("sweep-", env)
+            backup_sweep_runs(root / "runs", repo, token, campaign, kinds=("sweep-",))
     save(root, Path(job["save"]))
     return 0  # the session's output is kept whatever happened; status is in logs/campaign.*
 

@@ -120,6 +120,28 @@ def test_sweep_backup_uploads_every_kept_checkpoint_of_finished_sweep_runs(tmp_p
     calls.clear()
     session_run.backup_sweep_runs(runs, "me/backup", None)
     assert [c["path_in_repo"] for c in calls] == ["final-4b-h5000", "sweep-reg-4b-rank16-s0"]
+    # per kind (the final models and the sweep go to different repos); a missing dir is fine
+    calls.clear()
+    session_run.backup_sweep_runs(runs, "me/final", None, "c1", kinds=("final-",))
+    assert [c["path_in_repo"] for c in calls] == ["c1/final-4b-h5000"]
+    smoke = tmp_path / "reports/probe/smoke"
+    _run(smoke, "smoke-4b-h5000", [30], done=True, selected=30)
+    calls.clear()
+    session_run.backup_sweep_runs(smoke, "me/final", None, "c1", kinds=("smoke-",))
+    session_run.backup_sweep_runs(tmp_path / "nowhere", "me/final", None, "c1")
+    assert [c["path_in_repo"] for c in calls] == ["c1/smoke-4b-h5000"]
+
+
+def test_backup_repo_follows_the_run_kind():
+    """final-* and smoke-* runs live in the final models' repo, the sweep's in the sweep's;
+    PROBE_HF_FINAL_REPO / PROBE_HF_REPO override the defaults; a backup path works too."""
+    assert session_run.backup_repo("sweep-reg-4b-centre-s0", {}) == "tychot/tjev-4b"
+    assert session_run.backup_repo("tjev-v75b/sweep-reg-4b-centre-s0", {}) == "tychot/tjev-4b"
+    assert session_run.backup_repo("final-4b-h5000", {}) == "tychot/tjev-final"
+    assert session_run.backup_repo("c1/final-4b-h5000-b2500", {}) == "tychot/tjev-final"
+    assert session_run.backup_repo("smoke-4b-h5000", {"PROBE_HF_FINAL_REPO": "me/f"}) == "me/f"
+    both = {"PROBE_HF_REPO": "me/s", "PROBE_HF_FINAL_REPO": "me/f"}
+    assert session_run.backup_repo("sweep-x", both) == "me/s"
 
 
 def test_fetch_checkpoints_reads_a_campaign_prefixed_backup(tmp_path, monkeypatch):
