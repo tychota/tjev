@@ -1,0 +1,111 @@
+docs/calibration.md
+  s_d1d39e59a20c39::t_143af879bb3f3a 1-456
+docs/export.md
+  s_d1d39e59a20c39::t_1a4f3f5211588a 25
+docs/official-eval.md
+  s_d1d39e59a20c39::t_36b9845f29fbe0 1-300
+docs/serve.md
+  s_d1d39e59a20c39::t_20a86cb5f0877d 24,31-37,39-40,47-49,51-167
+reports/calibration/1200-final-4b-h1500-1450/study.json
+  s_d1d39e59a20c39::t_cab3f27c81ed0f 1-881
+reports/calibration/1200-final-4b-h1500-1450/study.md
+  s_d1d39e59a20c39::t_e60ebe8e511658 1-150
+reports/calibration/1200-final-4b-h3000-3000/study.json
+  s_d1d39e59a20c39::t_c4004311d82f46 1-881
+reports/calibration/1200-final-4b-h3000-3000/study.md
+  s_d1d39e59a20c39::t_7c76d681b0e377 1-150
+reports/calibration/final-4b-h1500-1450/study.json
+  s_d1d39e59a20c39::t_bba257ee9acf6d 1-4013
+reports/calibration/final-4b-h1500-1450/study.md
+  s_d1d39e59a20c39::t_0270d5b8f671e7 1-453
+reports/calibration/final-4b-h3000-1200/study.json
+  s_d1d39e59a20c39::t_546b05549bd6a3 1-4013
+reports/calibration/final-4b-h3000-1200/study.md
+  s_d1d39e59a20c39::t_9a049818b31699 1-450
+reports/calibration/final-4b-h3000-3000/study.json
+  s_d1d39e59a20c39::t_ea82d958647623 1-4013
+reports/calibration/final-4b-h3000-3000/study.md
+  s_d1d39e59a20c39::t_617406db2ccde4 1-449
+scripts/calibration_study.py
+  s_d1d39e59a20c39::t_f5f1fd5ab31720 1-707
+scripts/v15_study.py
+  s_d1d39e59a20c39::t_1707c285f42f0b 1-331
+src/tjev/cli/evaluation.py
+  s_d1d39e59a20c39::t_f54c4f054cd1f0 1-2,11-24,29-35,44-46,51-52,58-76,79-82,94-95,108-109,122-146,148-150,153-229,231-319,326-327
+src/tjev/cli/export.py
+  s_d1d39e59a20c39::t_369058cebc48ac 11,61-62,74-77,86-87,101-103
+src/tjev/cli/serve.py
+  s_d1d39e59a20c39::t_ca7c982ccae997 10-22,34-53,61-64,70-71,73-74,77
+src/tjev/eval/calibrate.py
+  s_d1d39e59a20c39::t_129a540e4b4e56 1-17,20-24,30,32-34,39-43,81-302,304,311-312,317-325,333-334,336-340,342-358
+src/tjev/eval/evalset.py
+  s_d1d39e59a20c39::t_d054eeb938516e 1,3-12,14,20-21,23-25,30-53,56,62,64-65,69-70,72-75,79-110,112-116,118-121,124-132,134-138,148-150
+src/tjev/eval/metrics.py
+  s_d1d39e59a20c39::t_d6212d7141008e 5-10,31-82,131-133,137-139
+src/tjev/eval/official.py
+  s_d1d39e59a20c39::t_e043a8951fbd24 1-791
+src/tjev/eval/post.py
+  s_d1d39e59a20c39::t_9112a63456b0c9 3-15,17-34,43-45,47-49,63-68,75-77,81-85,87-100,102-108,111-115,117-118,120-151
+src/tjev/eval/predictions.py
+  s_d1d39e59a20c39::t_9f37f22a588ad9 1-82
+src/tjev/eval/report.py
+  s_d1d39e59a20c39::t_201d342900bf9d 34,66-68
+src/tjev/eval/runs.py
+  s_d1d39e59a20c39::t_e2c50def8a1b90 6-7,18,21,24,33-34,37-76,103-104,107-109,118-123,128-137,141,147-148,150-154,159-160,172-174,177-179,185-191,197,201-204,206-211,213-221,225,228-229,231-232,236-257,282-283,287,298,303,306-309,319-320
+src/tjev/eval/v15.py
+  s_d1d39e59a20c39::t_d4ca70eeaa480e 1-461
+src/tjev/export/mlx.py
+  s_d1d39e59a20c39::t_b79d3227beda9b 25-32,127-138,141-153,155,169-192,194-195,202-203,209-219
+src/tjev/export/peft.py
+  s_d1d39e59a20c39::t_467b98a1950ca4 9-14,25,29,55-56,58-60,64-82,84-86,92-93,97-113,126,143-148,153-155,157-158,166-167,171,174-200
+src/tjev/serve/app.py
+  s_d1d39e59a20c39::t_5bd4fc8b18e97d 7-8,22-29,32-41,54-62,75-76,78-79
+src/tjev/serve/backends.py
+  s_d1d39e59a20c39::t_ca3b0d2f69cf69 6-19,32-42,45-52,72-81,85-86,91-97,106-107,109-111,120,135,141-158,167,180-185,191-195,200-205,208-215,221-228,233-237,243-251
+src/tjev/serve/policy.py
+  s_d1d39e59a20c39::t_4bbd7da96f005f 1-133
+src/tjev/serve/wire.py
+  s_d1d39e59a20c39::t_87cc37fc269b03 7-8,12-37,42-43,47,50-52,73-84,89-90,101-103,108-109,111-114,139-143,145,147-172
+tests/eval/test_calibrate.py
+  s_d1d39e59a20c39::t_c913a5ede72674 6-13,54-162
+tests/eval/test_calibration_study.py
+  s_d1d39e59a20c39::t_5e5fbf376dca70 1-225
+tests/eval/test_evalset_orders.py
+  s_d1d39e59a20c39::t_b3c71276267a3b 1-139
+tests/eval/test_official.py
+  s_d1d39e59a20c39::t_bad24c17b10f22 1-186
+tests/eval/test_order_averaging.py
+  s_d1d39e59a20c39::t_8b30ddffde464c 1-113
+tests/eval/test_predictions.py
+  s_d1d39e59a20c39::t_d6f7ae8c215b61 1-48
+tests/eval/test_runs.py
+  s_d1d39e59a20c39::t_334090dda64ff3 12,50-58,101-120,122-191
+tests/eval/test_v15.py
+  s_d1d39e59a20c39::t_cd390701e149d6 1-283
+tests/export/test_export.py
+  s_d1d39e59a20c39::t_13c518c897049f 124-206
+tests/serve/test_serve.py
+  s_d1d39e59a20c39::t_c970d3a180cebf 51-56,110-111,127-137
+tests/serve/test_serve_orders.py
+  s_d1d39e59a20c39::t_13a80307f5ea8f 1-171
+tests/serve/test_serve_policy.py
+  s_d1d39e59a20c39::t_2f9ac95ebbddd0 1-100
+tests/test_runtime.py
+  s_d1d39e59a20c39::t_8371e5b7699876 27-45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "913bfb92189e95857ab12a37ecc3f6c2228dbb1d",
+  "prompts": {},
+  "sessions": {
+    "s_d1d39e59a20c39": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d316479f-0782-47eb-a003-087da5c19333",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}

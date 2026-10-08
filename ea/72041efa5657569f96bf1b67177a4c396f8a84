@@ -1,0 +1,43 @@
+README.md
+  s_d1d39e59a20c39::t_a156c7c4bae0fa 17-41,47-51,62,72,76-77,80-83,89,91,93,96-105,112-120,122-123,125,132-137,139-140,142-144,152-153
+docs/architecture.md
+  s_d1d39e59a20c39::t_a78682d363fca2 51-52,56-59,79-81,87-92,113-116,139
+docs/research/jev-landscape-2026-10.md
+  s_d1d39e59a20c39::t_790a0448c2cb1d 1-109
+docs/research/lora-and-data-2026-10.md
+  s_d1d39e59a20c39::t_3462458ca0218d 1-67
+docs/results.md
+  s_d1d39e59a20c39::t_73b3ce26702fc0 3-8,23-29,83-146,167-266,268-270
+reports/data/mix-v7.5/report.json
+  s_d1d39e59a20c39::t_3c7d86f7531d77 1-21825
+reports/data/mix-v7.5c/report.md
+  s_d1d39e59a20c39::t_3c7d86f7531d77 1-592
+reports/data/mix-v7/sources.md
+  s_d1d39e59a20c39::t_3c7d86f7531d77 1-115
+reports/data/mix-v7/report.json
+  s_d1d39e59a20c39::t_3c7d86f7531d77 1-19452
+reports/data/mix-v7/report.md
+  s_d1d39e59a20c39::t_3c7d86f7531d77 1-544
+reports/data/mix-v7.5c/report.json
+  s_d1d39e59a20c39::t_3c7d86f7531d77 1-21154
+reports/data/mix-v7.5/report.md
+  s_d1d39e59a20c39::t_3c7d86f7531d77 1-608
+cloud/session_run.py
+  s_d1d39e59a20c39::t_a44256ca62079a 16-17,263-267
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ea72041efa5657569f96bf1b67177a4c396f8a84",
+  "prompts": {},
+  "sessions": {
+    "s_d1d39e59a20c39": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d316479f-0782-47eb-a003-087da5c19333",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
