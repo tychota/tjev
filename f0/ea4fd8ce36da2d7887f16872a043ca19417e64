@@ -1,0 +1,21 @@
+docs/results.md
+  s_d1d39e59a20c39::t_8336279641cc47 138,271-276
+README.md
+  s_d1d39e59a20c39::t_8336279641cc47 48,118
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f0ea4fd8ce36da2d7887f16872a043ca19417e64",
+  "prompts": {},
+  "sessions": {
+    "s_d1d39e59a20c39": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d316479f-0782-47eb-a003-087da5c19333",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
