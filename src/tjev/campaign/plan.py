@@ -21,8 +21,8 @@ Three phases, each planned from the results of the ones before (docs/tpu.md):
   final     every final size at the decided recipe (FINAL_RECIPE, from the reg stage): rank 16
             at fit's rank-rule rate for the horizon, CogCalib, the EMA tracked, post=full, a
             checkpoint every 250 steps (100 in the cooldown) kept from horizon/2, and the
-            1-epoch WSD cooldown branch to horizon/2; ``select`` picks the better of the two
-            per size. ``--final-recipe generic``: fit's recipe as is (its rank, no CogCalib,
+            1-epoch WSD cooldown branch to horizon/2 (``final-<size>-h<H>-b<H/2>``);
+            ``select`` picks the better of the two per size. ``--final-recipe generic``: fit's recipe as is (its rank, no CogCalib,
             post=quick, cooldown branches at ¼ and ½ of the horizon). ``--final-mix rep1``:
             the train files of the sibling mix <mix>-rep1 (the held-out stays the campaign's).
 
@@ -753,9 +753,12 @@ FINAL_BASE = (*FINAL_OVERRIDES, "train.quick_eval_every=0", "train.keep_checkpoi
               "train.health_kill=true")  # fmt: skip
 
 
-def final_name(size: str, horizon: int, mix: str = "") -> str:
-    """``final-<size>-h<horizon>``, ``-<mix>`` for a sibling mix's runs."""
-    return f"final-{size.lower()}-h{horizon}" + (f"-{mix}" if mix else "")
+def final_name(size: str, horizon: int, mix: str = "", branch: int = 0) -> str:
+    """``final-<size>-h<horizon>``; ``-b<steps>`` for the long run's cooldown branch (named
+    after its parent, so the branch of one horizon never collides with the long run of
+    half that horizon); ``-<mix>`` for a sibling mix's runs."""
+    name = f"final-{size.lower()}-h{horizon}" + (f"-b{branch}" if branch else "")
+    return name + (f"-{mix}" if mix else "")
 
 
 def final_jobs(c: Campaign, recipe: dict, factor: float) -> list[str]:
@@ -775,7 +778,7 @@ def final_jobs(c: Campaign, recipe: dict, factor: float) -> list[str]:
         point = int(0.8 * half)
         lines.append(job(c, long, size, [*over, f"train.keep_steps=[{point}]"], steps=steps,
                          post="full"))  # fmt: skip
-        lines.append(job(c, final_name(size, half, c.final_mix), size,
+        lines.append(job(c, final_name(size, steps, c.final_mix, branch=half), size,
                          [*over, f"train.branch_from=$RUNS/{long}@{point}",
                           "train.health_kill=false"],
                          steps=half, after=f"{long}@{point}", post="full"))  # fmt: skip

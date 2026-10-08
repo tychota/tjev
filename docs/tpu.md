@@ -45,7 +45,7 @@ the phases before it (`tjev campaign fit`).
 | `s0` | — | libtpu flags probed one by one; the Pallas kernel tests on the TPU (on failure every job falls back to the XLA paths); kernel and train-step bench per size; zero-shot controls |
 | `sweep` | 21 | The 2B proxy at 600 steps: AdamW at 2.5, 3.54, 5 and 7.07e-5 (seed 0; 3.54e-5 also seed 1); Muon (Polar Express) at 2.5, 3.54 and 5e-5; paired arms at 3.54e-5 (below) |
 | `transfer` | 12 | The proxy's horizon at its fitted rate and at 0.64× it (each a 2400-step run with WSD cooldown branches at 600 and 1200): the best horizon and the horizon exponent γ; 0.8B and 4B at the predicted rate × {½, 1, 2} |
-| `final` | 2 per size | Every size of `--sizes` (4B, 2B, 0.8B, 9B) at the decided recipe (below): the long run to the horizon H (`final-<size>-h<H>`) and its 1-epoch WSD cooldown branch to H/2 (`final-<size>-h<H/2>`); `tjev campaign select` picks the better of the two per size |
+| `final` | 2 per size | Every size of `--sizes` (4B, 2B, 0.8B, 9B) at the decided recipe (below): the long run to the horizon H (`final-<size>-h<H>`) and its 1-epoch WSD cooldown branch to H/2 (`final-<size>-h<H>-b<H/2>`); `tjev campaign select` picks the better of the two per size |
 
 **The final recipe** (`FINAL_RECIPE` in `tjev.campaign.plan`, decided from the reg stage,
 [results.md](results.md)): fit's recipe at the horizon (`--horizon H`, else the fitted
@@ -59,10 +59,10 @@ validation files of `PROBE_POST_ARGS`), a checkpoint and full eval every 250 ste
 the cooldown) all kept from H/2 on, health kill on the long run. The branch starts at
 0.8·H/2 (kept by `train.keep_steps`) with `train.health_kill=false`. `--final-mix rep1`
 trains on the sibling mix `<mix>-rep1` (the held-out stays the campaign's; runs
-`final-<size>-h<H>-rep1`). `--final-recipe generic` plans fit's recipe as is (its rank,
-no CogCalib or EMA, `post=quick`, branches at H/4 and H/2): the kernel journey's line.
-The branch of one horizon has the name of the long run of half that horizon: plan one
-horizon per campaign (runs directory).
+`final-<size>-h<H>-rep1`, `…-b<H/2>-rep1`). `--final-recipe generic` plans fit's recipe
+as is (its rank, no CogCalib or EMA, `post=quick`, branches at H/4 and H/2 named
+`final-<size>-h<H/4>`, `-h<H/2>`): the kernel journey's line. Its branch of one horizon has
+the name of the long run of half that horizon: plan one generic horizon per campaign.
 
 ```bash
 tjev campaign plan final --runs runs --mix MIX --models MODELS --hardware v6e1 \

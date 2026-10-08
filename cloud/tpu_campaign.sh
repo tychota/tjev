@@ -668,9 +668,12 @@ final() {
   for run in $(python -c "import json,sys; print(' '.join(json.load(open(sys.argv[1])).values()))" "$REPORTS/final-selection.json"); do
     [[ -s $RUNS/$run/export/tjev_decision.json ]] && continue
     size=$(python -c "import json,re,sys; print(re.search(r'Qwen3\.5-([0-9.]+B)', json.load(open(sys.argv[1]))['config']['model']['path']).group(1))" "$RUNS/$run/config.json")
+    # post=full in the queue already ran the full post-training (post/validation-cal.json);
+    # only a run whose queue post was quick or failed gets it here
     say "full post-training and export: $run"
     {
-      tjev post "$RUNS/$run" --mix "$MIXDIR" --jevbench "$JEVBENCH" --zeroshot "$REPORTS/zeroshot-$size.json" &&
+      [[ -s $RUNS/$run/post/validation-cal.json ]] ||
+        tjev post "$RUNS/$run" --mix "$MIXDIR" --jevbench "$JEVBENCH" --zeroshot "$REPORTS/zeroshot-$size.json" &&
       tjev export "$RUNS/$run" "$RUNS/$run/export" --jevbench "$JEVBENCH"
     } > "$RUNS/$run/post-full.log" 2>&1 || say "post-training $run failed"
   done

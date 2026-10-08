@@ -502,7 +502,9 @@ def test_final_plans_the_decided_recipe_for_every_size(tmp_path, horizon):
     jobs = parse_lines(planner.plan("final", c), c.runs)
     half, point = horizon // 2, int(0.8 * (horizon // 2))
     assert [j.name for j in jobs] == [
-        n for s in sizes for n in (f"final-{s.lower()}-h{horizon}", f"final-{s.lower()}-h{half}")
+        n
+        for s in sizes
+        for n in (f"final-{s.lower()}-h{horizon}", f"final-{s.lower()}-h{horizon}-b{half}")
     ]
     report = planner.fit(c)
     factor = report["decisions"]["rank_lr_factor_per_doubling"]
@@ -543,7 +545,7 @@ def test_final_on_a_sibling_mix_and_the_generic_recipe(tmp_path):
     (tmp_path / "mix-rep1" / "mix.yaml").write_text("data:\n  validation: v.jsonl\n")
     c = _campaign(tmp_path, hardware="v6e1", final_sizes=("4B",), horizon=2500, final_mix="rep1")
     jobs = parse_lines(planner.plan("final", c), c.runs)
-    assert [j.name for j in jobs] == ["final-4b-h2500-rep1", "final-4b-h1250-rep1"]
+    assert [j.name for j in jobs] == ["final-4b-h2500-rep1", "final-4b-h2500-b1250-rep1"]
     assert jobs[1].after == "final-4b-h2500-rep1@1000"
     for j in jobs:  # the sibling's train files, the campaign's held-out
         assert f"{c.mix}-rep1/mix.yaml" in j.args
