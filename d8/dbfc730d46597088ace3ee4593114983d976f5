@@ -1,0 +1,34 @@
+src/tjev/campaign/plan.py
+  s_d1d39e59a20c39::t_b631462c7e0dae 23-24,633-640,756
+src/tjev/config/schema.py
+  s_d1d39e59a20c39::t_b631462c7e0dae 348-350
+tests/campaign/test_plan.py
+  s_d1d39e59a20c39::t_b631462c7e0dae 480,482-483,524-526
+docs/tpu.md
+  s_d1d39e59a20c39::t_b631462c7e0dae 58-73
+docs/training.md
+  s_d1d39e59a20c39::t_b631462c7e0dae 34,524-526,538-542
+docs/sweep-plan.md
+  s_d1d39e59a20c39::t_b631462c7e0dae 330-333
+tests/train/test_train.py
+  s_d1d39e59a20c39::t_b631462c7e0dae 389-407,445
+src/tjev/train/loop.py
+  s_d1d39e59a20c39::t_b631462c7e0dae 84,292,309-316
+  s_d1d39e59a20c39::t_919ee78cf8eae6 317
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d8dbfc730d46597088ace3ee4593114983d976f5",
+  "prompts": {},
+  "sessions": {
+    "s_d1d39e59a20c39": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d316479f-0782-47eb-a003-087da5c19333",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
