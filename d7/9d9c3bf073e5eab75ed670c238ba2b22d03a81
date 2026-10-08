@@ -1,0 +1,32 @@
+docs/model-card.md
+  s_d1d39e59a20c39::t_66cb6a5e990d94 52-53,107
+  s_d1d39e59a20c39::t_493460b3ba7e59 1-51,54-106,108-136
+README.md
+  s_d1d39e59a20c39::t_66cb6a5e990d94 124
+cloud/session_run.py
+  s_d1d39e59a20c39::t_c28724909fbf72 188-189,308-309,313
+  s_d1d39e59a20c39::t_48a0256c3f1528 16-19,146-159,169-170,178-180,291-294,304-307,310-312,314-316
+tests/campaign/test_session.py
+  s_d1d39e59a20c39::t_c28724909fbf72 143-144
+  s_d1d39e59a20c39::t_48a0256c3f1528 123-142
+cloud/tpu_campaign.sh
+  s_d1d39e59a20c39::t_48a0256c3f1528 19-23,34,51,60-63,287,290,490-491,553-554,559
+docs/tpu.md
+  s_d1d39e59a20c39::t_66cb6a5e990d94 170-181
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d79d9c3bf073e5eab75ed670c238ba2b22d03a81",
+  "prompts": {},
+  "sessions": {
+    "s_d1d39e59a20c39": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d316479f-0782-47eb-a003-087da5c19333",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
