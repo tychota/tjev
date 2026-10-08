@@ -263,6 +263,66 @@ studied by `scripts/calibration_study.py`; the per-checkpoint tables are in
   alone, at twice the inference cost. The pair is complementary by language (h3000@1200
   better in English, h1500@1450 in French).
 
+## The reg stage and the final-length 4B runs (v6e-1, measured)
+
+Paired arms (same seed, same batches) against their size's centre, W&B `tychota/tjev-sweep`.
+"Online" is the paired training loss over the last 20% of steps (10-step windows, mean ± SE,
+negative better); "per-eval" the mean difference of the calibrated selection score over the
+common full evals (negative better, wins out of evals); fit reports
+`reports/fit-after-sweep-reg-200378.json` (campaign tjev-reg) unless stated. Seed noise of the
+selection score: 4B centre s0 vs s1 best .4349 vs .4161, end .4682 vs .4503; 2B centre s0 vs
+s1 best .4703 vs .4610, per-eval sd 0.025. One seed unless stated.
+
+| Axis (size, mix, steps) | Arm vs control | Online Δ | Selection score | Decision |
+|---|---|---|---|---|
+| Rank (4B, mix-v5, 1500) | r32 at 3.39e-5 vs r64 at 2.4e-5 | +0.0014 ± 0.0024 | per-eval −0.004; end .4671 vs .4682 | — |
+| | r16 at 4.8e-5 vs r64 | +0.0036 ± 0.0028 | per-eval −0.019 (11/15); end .4356 vs .4682 | r16 adopted |
+| Rate (4B r16, mix-v6, 1500) | lr ×0.7 vs ×1 | −0.0066 ± 0.0032 | per-eval −0.0146 (11/15); best .3911 vs .3988 | open (JevBench below, 1 ckpt) |
+| | lr ×1.4 vs ×1 | +0.0016 ± 0.0038 | end .4525 vs .4056 | rejected |
+| Weight decay (4B) | wd 0.1, s0 / s1 | −0.0004 ± 0.0028 / +0.0020 ± 0.0033 | −0.034 (14/15) / −0.005 (8/15) | not adopted (seeds disagree) |
+| Weight decay (2B) | wd 1 / 5 / 10 | +0.0122 ± 0.0040 / +0.0053 ± 0.0044 / +0.0049 ± 0.0027 | +0.004 / +0.028 / +0.007 | rejected |
+| LR floor (4B) | final_lr_fraction 0.1 | −0.0003 ± 0.0007 | 0.0 | rejected |
+| Label smoothing (2B) | 0.1 all / generators only | +0.0546 ± 0.0038 / +0.0178 ± 0.0033 | +0.0086 / +0.0178 | rejected |
+| KL to base (2B) | weight 0.1 | +0.0344 ± 0.0035 | −0.0074 (+1/3 step cost) | rejected (neutral) |
+| LoRA on GDN (2B) | nogdn | +0.0055 ± 0.0042 | per-eval +0.019 (3/15) | rejected |
+| CogCalib (4B r16, mix-v6, 1500) | weight 0.1, q 0.3 vs off | −0.0113 ± 0.0026 | per-eval −0.0125 (11/15); best .3879 vs .3988 | adopted (0.1) |
+| CogCalib (2B, mix-v7.5, 2500; tjev-cc2b) | weight 1.0 vs 0.1 | +0.0944 ± 0.0018 | per-eval +0.0335 (0/13); T 0.78 vs 1.19 | rejected |
+| EMA weights (centres, decay 0.999) | EMA vs raw, 4B s0 / s1 | (same run) | per-eval −0.018 (13/15) / −0.016 (14/15) | open (not used since) |
+| | EMA vs raw, 2B s0 / s1 | (same run) | per-eval −0.020 (13/15) / −0.021 (14/15) | |
+
+EMA is the one lever consistent over two seeds and two sizes; no run since mix-v5b enabled it
+and `train.select_ema` was never used.
+
+**Data mixes** (4B r16 at 4.8e-5, 1500 steps, seed 0; one checkpoint each for JevBench; v1.5 public, 231 items,
+per-type temperature and noul commit at margin 0.1, `tjev eval-v15`):
+
+| Mix | Best score | Held-out NLL at best | End score | JevBench I / C |
+|---|---|---|---|---|
+| v5 | .4168 | .4099 | .4356 | not measured |
+| v5b | .4036 | .4097 | .4091 | 66.9 / 84.2 |
+| v6 | .3988 | .4076 | .4056 | 70.1 / 86.1 |
+| v7 | .3983 | .4066 | .3983 | 64.2 / 87.2 |
+
+Different mixes draw different batches: no paired loss. validation-v7 favours v7 (66.1 / 90.4
+against 54.9 / 85.8 for v6) but is in-distribution for it.
+
+**Final-length 4B on mix-v7.5** (r16, CogCalib 0.1, best-fit packing, 4e-5; tjev-v75b, tjev-jb-v75b):
+
+| Checkpoint | Selection score | Temperature | JevBench I / C | validation-v7 I / C |
+|---|---|---|---|---|
+| 1-epoch branch, cooled 2000 → 2500 (core sources once) | .3902 | 1.21 | 75.3 / 85.8 | 65.3 / 89.3 |
+| 5000 steps, selected at 4800 (core sources twice) | .3702 | 1.41 | 70.2 / 84.6 | 66.8 / 90.2 |
+| 2750 / 3000 / 3500 / 4000, not cooled | — | — | 70.0 / 64.4 / 71.7 / 65.5 | 64.8 / 65.7 / 66.1 / 66.1 |
+
+- **JevBench public is too small to rank checkpoints alone**: neighbouring checkpoints of one
+  run swing 64–72, as wide as the 1-epoch / 2-epoch gap (75.3 / 70.2). The two metrics
+  disagree (validation-v7, 12.8k rows, slightly favours two epochs). Open; the
+  `-rep1` pair (fresh rows in place of the second epoch) decides.
+- The second epoch fits the training distribution: lower selection score, but a calibration
+  temperature of 1.41 against 1.21 (over-confident before calibration).
+- For reference, the r64 finals on mix-v4 (same scoring): h3000 @ 1200 75.2 / 85.8,
+  @ 3000 72.7 / 86.0, h1500 @ 1450 71.4 / 84.4.
+
 ## Still unmeasured
 
 - The on-TPU gradient check of the GDN kernels at T = 8192 (the CPU interpret-mode check
@@ -271,6 +331,5 @@ studied by `scripts/calibration_study.py`; the per-checkpoint tables are in
 - The planner's `v6e1` line (mega2, merged LoRA, flat norm, best-fit packing, splash 1024
   with the fused backward) timed as one configuration: each gain was measured against its
   own baseline, and the +5–9% of the splash tiles on a setup with the fused LoRA kernel.
-- The reg stage (the 4B / 2B regularisers, CogCalib, EMA weights, the `-rep1` mix and the
-  1-epoch branch, the mix-v6 → v7 → v7.5 steps) and the JevBench score of a trained
-  checkpoint: run, not yet tabulated here.
+- The `-rep1` mix (running), CogCalib off against 0.1 on mix-v7.5, the teacher loss, a second
+  seed of any final-length 4B arm.
