@@ -600,6 +600,20 @@ flat norm (39.2 MiB, `tjev-v75b` seed 1), which the verification arms did not ha
 fused LoRA kernel was removed. 9B was not tuned. The autotuner itself was not merged; the
 picks that remain are plain config values.
 
+Whether the 32 MiB limit the failure reported is the session's (the preset asks for
+`--xla_tpu_scoped_vmem_limit_kib=98304`, 96 MiB) or the kernel's own `vmem_limit_bytes` is
+open; every run now logs its effective libtpu flags and scoped-VMEM limit at start
+(`tjev.sharding.libtpu_settings`: stdout, `config.json`, W&B, `summary.json`), and the next
+final run's line settles it.
+
+**The rule for any future tuning.** A pick is adopted only if it is faster *and* fits the
+memory budget of the exact production configuration: compiled ahead of time for v6e
+(`scripts/aot_tpu.py`) on every sequence bucket, under the session's libtpu flags, with the
+step's HBM peak reported next to its time. The verification arm must be the planner's
+`v6e1` line itself (`tjev campaign plan final --hardware v6e1`, one job per size), not a
+bench variant: the removed fused all-in arm is how a +5–9% was measured on a setup that
+never shipped. No code from `perf/tune` is merged; a port runs its search on that line.
+
 ## Running under data parallelism
 
 XLA cannot partition a Pallas custom call; on a multi-device mesh it would replicate it and
