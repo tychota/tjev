@@ -1,0 +1,31 @@
+reports/data/mix-v7.5/report.json
+  s_d1d39e59a20c39::t_3c7d86f7531d77 1-21825
+reports/data/mix-v7.5c/report.md
+  s_d1d39e59a20c39::t_3c7d86f7531d77 1-592
+reports/data/mix-v7/sources.md
+  s_d1d39e59a20c39::t_3c7d86f7531d77 1-115
+reports/data/mix-v7/report.json
+  s_d1d39e59a20c39::t_3c7d86f7531d77 1-19452
+reports/data/mix-v7/report.md
+  s_d1d39e59a20c39::t_3c7d86f7531d77 1-544
+reports/data/mix-v7.5c/report.json
+  s_d1d39e59a20c39::t_3c7d86f7531d77 1-21154
+reports/data/mix-v7.5/report.md
+  s_d1d39e59a20c39::t_3c7d86f7531d77 1-608
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a5cfd11fe59afca6c8af8ddda5a1d573e21d92b8",
+  "prompts": {},
+  "sessions": {
+    "s_d1d39e59a20c39": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d316479f-0782-47eb-a003-087da5c19333",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
