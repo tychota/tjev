@@ -1,0 +1,29 @@
+docs/sweep-plan.md
+  s_d1d39e59a20c39::t_fedde6a829994c 363-364
+  s_d1d39e59a20c39::t_c72d59a1bfd140 313-314
+src/tjev/train/loop.py
+  s_d1d39e59a20c39::t_098ae3b1673ead 507-512
+src/tjev/campaign/plan.py
+  s_d1d39e59a20c39::t_346c82ebc8d5d2 626-628
+  s_d1d39e59a20c39::t_65b4f528c88599 614-615
+  s_d1d39e59a20c39::t_8d98f28628a67f 613,616-625
+tests/campaign/test_plan.py
+  s_d1d39e59a20c39::t_0c9fb4b91bb31a 711
+  s_d1d39e59a20c39::t_d243ec6f8647b9 700-710,712-721
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9865f13963d48f6817570bc788fd490fb7848d49",
+  "prompts": {},
+  "sessions": {
+    "s_d1d39e59a20c39": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d316479f-0782-47eb-a003-087da5c19333",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
