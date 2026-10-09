@@ -4,9 +4,10 @@
     python -m tjev.campaign.calib fetch REPO ENTRY RUNS   # prints: LOCAL_DIR HF_UPLOAD_PATH
 
 ENTRY (one of PROBE_CALIB_RUNS): ``RUN:STEP`` scores the adapters of that checkpoint,
-``RUN:STEP:ema`` their EMA (``optim.ema_decay``: it lives in the optimizer state, so the
-backup must hold that step's ``opt/``, as cloud/session_run.py keeps it for the selected and
-the last step). RUN is the run's path on the HF backup: ``<campaign>/<run>`` (the layout of
+``RUN:STEP:ema`` their EMA (``optim.ema_decay``: the checkpoint's own ``ema/`` item, backed
+up with every kept checkpoint; the checkpoints before that item hold it in their optimizer
+state, which cloud/session_run.py backs up for the selected and the last step only). RUN is
+the run's path on the HF backup: ``<campaign>/<run>`` (the layout of
 cloud/session_run.py's backup) or a bare ``<run>`` (the backups before the campaign prefix).
 The checkpoint becomes the run's selection (``selection.json``: its step, and ``"weights":
 "ema"`` for the EMA; tjev.eval.runs loads the weights the selection names); the original
@@ -64,13 +65,14 @@ def parse_entry(entry: str) -> Entry:
 
 def prepare(src: Path, dest: Path, entry: Entry) -> Path:
     """``src`` (the downloaded run) copied to ``dest`` with the entry's checkpoint as its
-    selection; refuses an EMA entry whose checkpoint has no optimizer state."""
+    selection; refuses an EMA entry whose checkpoint has neither the EMA item nor the
+    optimizer state."""
     ckpt = src / "checkpoints" / str(entry.step)
     if not ckpt.is_dir():
         raise FileNotFoundError(f"no checkpoint {entry.step} of {entry.hf_run} on the backup")
-    if entry.weights == "ema" and not (ckpt / "opt").is_dir():
+    if entry.weights == "ema" and not ((ckpt / "ema").is_dir() or (ckpt / "opt").is_dir()):
         raise FileNotFoundError(
-            f"{entry.hf_run}@{entry.step}: no optimizer state backed up (the EMA lives there)"
+            f"{entry.hf_run}@{entry.step}: no EMA item and no optimizer state backed up"
         )
     shutil.rmtree(dest, ignore_errors=True)
     shutil.copytree(src, dest)

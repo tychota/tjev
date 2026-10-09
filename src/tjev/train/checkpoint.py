@@ -62,21 +62,23 @@ class Checkpoints:
 
     def save(self, step: int, lora, opt_state, meta: dict, keep: int | None = None,
              protect: Iterable[int] = (), resume_only: Callable[[int], bool] | None = None,
-             ) -> None:  # fmt: skip
+             ema=None) -> None:  # fmt: skip
         """Async save of ``step`` after deleting :meth:`prune_plan`'s steps (``keep``: the
         best step; ``protect``: more steps never deleted; ``resume_only(s)``: whether step
-        s was a resume-only save)."""
+        s was a resume-only save). ``ema``: the EMA adapters (``optim.ema_decay``), saved as
+        their own item ``ema/`` with the adapters' tree, so a checkpoint backed up without
+        its optimizer state still has them (the EMA inside ``opt/`` is the one resumed)."""
         self.manager.wait_until_finished()  # the previous save, before pruning around it
         for s in self.prune_plan(step, keep, protect, resume_only):
             self.manager.delete(s)
-        self.manager.save(
-            step,
-            args=ocp.args.Composite(
-                lora=ocp.args.StandardSave(_flat(lora)),
-                opt=ocp.args.StandardSave(_flat(opt_state)),
-                meta=ocp.args.JsonSave(meta),
-            ),
-        )
+        items = {
+            "lora": ocp.args.StandardSave(_flat(lora)),
+            "opt": ocp.args.StandardSave(_flat(opt_state)),
+            "meta": ocp.args.JsonSave(meta),
+        }
+        if ema is not None:
+            items["ema"] = ocp.args.StandardSave(_flat(ema))
+        self.manager.save(step, args=ocp.args.Composite(**items))
 
     def restore(self, step: int, lora_template, opt_template):
         def abstract(tree):
@@ -95,21 +97,36 @@ class Checkpoints:
         )
         return _unflat(lora_template, out["lora"]), _unflat(opt_template, out["opt"]), out["meta"]
 
-    def restore_lora(self, step: int, lora_template):
-        """The adapters and meta of ``step`` only: an evaluation needs no optimizer state, and
-        a backed-up checkpoint other than a run's last one has none."""
-        flat = _flat(lora_template)
+    def _restore_item(self, step: int, item: str, template):
+        flat = _flat(template)
         out = self.manager.restore(
             step,
-            args=ocp.args.Composite(
-                lora=ocp.args.StandardRestore({
+            args=ocp.args.Composite(**{
+                item: ocp.args.StandardRestore({
                     k: jax.ShapeDtypeStruct(v.shape, v.dtype, sharding=getattr(v, "sharding", None))
                     for k, v in flat.items()
                 }),
-                meta=ocp.args.JsonRestore(),
-            ),
+                "meta": ocp.args.JsonRestore(),
+            }),
         )  # fmt: skip
-        return _unflat(lora_template, out["lora"]), out["meta"]
+        return _unflat(template, out[item]), out["meta"]
+
+    def restore_lora(self, step: int, lora_template):
+        """The adapters and meta of ``step`` only: an evaluation needs no optimizer state, and
+        a backed-up checkpoint other than a run's last one has none."""
+        return self._restore_item(step, "lora", lora_template)
+
+    def has_ema(self, step: int) -> bool:
+        """Whether ``step`` saved the EMA adapters as their own item."""
+        return (self.directory / str(step) / "ema").is_dir()
+
+    def restore_ema(self, step: int, lora_template):
+        """The EMA adapters of ``step`` (the ``ema/`` item; the adapters' tree and dtype), or
+        None when the checkpoint has none (a run without ``optim.ema_decay``, or one saved
+        before the item existed: its EMA is in the optimizer state, :func:`ema_params`)."""
+        if not self.has_ema(step):
+            return None
+        return self._restore_item(step, "ema", lora_template)[0]
 
     def wait(self) -> None:
         self.manager.wait_until_finished()

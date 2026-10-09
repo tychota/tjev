@@ -125,14 +125,18 @@ class LoadedRun:
         install_mesh(cfg.compute, self.mesh)
         self.graphdef, lora, frozen = split_model(model)
         del model
-        if self.weights == "ema":  # the EMA adapters live in the optimizer state
-            tx = make_optimizer(cfg.optim, cfg.train.steps, cfg.loss)
-            self.lora, opt, _ = ckpt.restore(self.step, lora, tx.init(lora))
-            ema = ema_params(opt)
-            if ema is None:
-                raise ValueError(f"{self.dir}: selection.json names EMA weights, none saved")
-            self.lora = jax.tree.map(lambda e, p: e.astype(p.dtype), ema, self.lora)
-            del opt
+        if self.weights == "ema":
+            # the EMA adapters: their own checkpoint item (ema/, every checkpoint since it
+            # exists), else from the optimizer state of the older checkpoints
+            self.lora = ckpt.restore_ema(self.step, lora)
+            if self.lora is None:
+                tx = make_optimizer(cfg.optim, cfg.train.steps, cfg.loss)
+                self.lora, opt, _ = ckpt.restore(self.step, lora, tx.init(lora))
+                ema = ema_params(opt)
+                if ema is None:
+                    raise ValueError(f"{self.dir}: selection.json names EMA weights, none saved")
+                self.lora = jax.tree.map(lambda e, p: e.astype(p.dtype), ema, self.lora)
+                del opt
         else:  # the adapters only (a backed-up intermediate checkpoint has no optimizer state)
             self.lora, _ = ckpt.restore_lora(self.step, lora)
         ckpt.close()

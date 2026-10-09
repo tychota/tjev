@@ -22,12 +22,14 @@ def test_entries_name_the_step_the_weights_and_the_backup_path():
             calib.parse_entry(bad)
 
 
-def _backup(root, step=2750, opt=True, selection=None):
+def _backup(root, step=2750, opt=True, ema=False, selection=None):
     run = root / "c1" / "final-4b-h5000"
     ckpt = run / "checkpoints" / str(step)
     (ckpt / "lora").mkdir(parents=True)
     if opt:
         (ckpt / "opt").mkdir()
+    if ema:
+        (ckpt / "ema").mkdir()
     (run / "config.json").write_text("{}")
     (run / "selection.json").write_text(json.dumps(selection or {"step": 5000, "score": 0.4}))
     return run
@@ -50,10 +52,14 @@ def test_a_raw_entry_scores_the_adapters_even_of_an_ema_selected_run(tmp_path):
     assert sel == {"step": 2750, "score": 0.4}
 
 
-def test_an_ema_entry_needs_the_backed_up_optimizer_state(tmp_path):
+def test_an_ema_entry_needs_the_ema_item_or_the_optimizer_state(tmp_path):
+    entry = calib.parse_entry("c1/final-4b-h5000:2750:ema")
     src = _backup(tmp_path / "hf", opt=False)
-    with pytest.raises(FileNotFoundError, match="optimizer state"):
-        calib.prepare(src, tmp_path / "d", calib.parse_entry("c1/final-4b-h5000:2750:ema"))
+    with pytest.raises(FileNotFoundError, match="no EMA item and no optimizer state"):
+        calib.prepare(src, tmp_path / "d", entry)
+    # a checkpoint backed up without its optimizer state, with the EMA item (every kept one)
+    with_item = _backup(tmp_path / "hf2", opt=False, ema=True)
+    assert (calib.prepare(with_item, tmp_path / "d", entry) / "checkpoints/2750/ema").is_dir()
     with pytest.raises(FileNotFoundError, match="no checkpoint 100"):
         calib.prepare(src, tmp_path / "d", calib.parse_entry("c1/final-4b-h5000:100"))
 

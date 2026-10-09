@@ -61,8 +61,8 @@ the cooldown, a quick eval every 25) all kept from H/2 on and through the cooldo
 branch starts at 0.8·H/2 (kept by `train.keep_steps`) with `train.health_kill=false`. The
 cadence costs a 4B 5,000-step run 40 full evals (20 + 20) against 26 before, about 15–20
 min at 1–1.5 min each (the quick evals' cost is measured by the first final run), and
-keeps 28 checkpoints of ~13 MB (8 from H/2, 20 in the cooldown) plus the optimizer state
-(222 MB) of the selected and the last step.
+keeps 28 checkpoints of ~13 MB of adapters plus ~13 MB of EMA adapters (8 from H/2, 20 in
+the cooldown), and the optimizer state (222 MB) of the selected and the last step.
 
 Both candidates of a size, the long run and its branch, are kept with their full `post/`
 outputs: the selection does not pick between them automatically. On mix-v7.5 the held-out
@@ -182,8 +182,9 @@ resume or a pending cooldown branch still needs (`cloud/session_run.py`). `all` 
 `WANDB_ENTITY`, `HF_DATASET`, and every `PROBE_*` variable of the shell, passed to the host.
 The finished runs' checkpoints go to private HF model repos before the save drops them,
 under `<CAMPAIGN>/<run>` (same-named runs of two campaigns overwrote each other under the
-bare run name; older backups stay there): every checkpoint retention kept, with the
-optimizer state of the last and of the selected step (the EMA adapters live in it). The
+bare run name; older backups stay there): every checkpoint retention kept, each with its
+adapters and its EMA adapters (`ema/`), the optimizer state of the last and of the selected
+step only. The
 final models (`final-*`, and the `smoke` probe's run of their line) always go to
 `PROBE_HF_FINAL_REPO` (`tychot/tjev-final`, the repo of [model-card.md](model-card.md)),
 unless `PROBE_SWEEP_BACKUP=0`; the sweep and reg runs go to `PROBE_HF_REPO`
@@ -216,7 +217,7 @@ path, `<CAMPAIGN>/<run>` (or a bare `<run>` for the older backups).
   | `smoke` | a final run's exact job, shortened: throughput, HBM, one checkpoint and eval | `PROBE_SMOKE_SIZE`, `PROBE_SMOKE_STEPS`, `PROBE_SMOKE_EXTRA` |
   | `resume` | a run and its SIGTERMed + resumed twin, step for step | `PROBE_RESUME_SIZE` |
   | `journey` | every GDN-core iteration on real training ([kernel-journey.md](kernel-journey.md)) | `PROBE_JOURNEY_SIZES` |
-  | `calib` | per-item calibration dumps of kept checkpoints ([calibration.md](calibration.md)); an entry `RUN:STEP:ema` scores that step's EMA adapters (its optimizer state must be backed up: the selected and the last step are) | `PROBE_CALIB_RUNS`, `PROBE_CALIB_EXTRA_VALIDATION` |
+  | `calib` | per-item calibration dumps of kept checkpoints ([calibration.md](calibration.md)); an entry `RUN:STEP:ema` scores that step's EMA adapters (every kept checkpoint's `ema/` item; the runs before it need the step's optimizer state, backed up for the selected and the last step) | `PROBE_CALIB_RUNS`, `PROBE_CALIB_EXTRA_VALIDATION` |
   | `official` | the official JevBench harness against tjev's server ([official-eval.md](official-eval.md)) | `PROBE_OFFICIAL_TARGETS`, `PROBE_OFFICIAL_DI_SUITE` |
   | `finish` | a final run's full post-training and export from its HF backup | `PROBE_FINISH_RUN`, `PROBE_FINISH_SIZE` |
 

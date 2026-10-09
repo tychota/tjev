@@ -405,7 +405,7 @@ older run is unchanged (tested). Each is logged under `hp.*` in W&B.
 | `loss.hard_targets` | trains on the argmax of a soft target: the control of the soft-target CE |
 | `loss.cogcalib_weight` w, `cogcalib_threshold` t / `cogcalib_quantile` q, `cogcalib_ema` | CogCalib's gated confidence penalty: + w·𝟙[nll ≤ t]·(−H(p)) on each slot ([below](#calibration-losses)); logged as `learning/cogcalib_frac`, `cogcalib_term`, `cogcalib_threshold` |
 | `loss.teacher_mix` λ, `loss.teacher_gate` g | gated teacher soft targets: (1 − λ)·t + λ·teacher on the rows whose teacher puts ≥ g on a non-gold letter ([below](#calibration-losses)); logged as `learning/teacher_frac` |
-| `optim.ema_decay` d | an fp32 EMA of the adapters in the optimizer state, d_t = min(d, (1 + t)/(10 + t)); checkpointed with it, and every full eval scores it too (`eval_ema/*`, `eval_calibrated_ema/*`, `eval/step-N-ema.json`) |
+| `optim.ema_decay` d | an fp32 EMA of the adapters in the optimizer state, d_t = min(d, (1 + t)/(10 + t)); checkpointed with it and, in the adapters' dtype, as every checkpoint's own `ema/` item (what evaluation loads; it survives the backup dropping the optimizer state), and every full eval scores it too (`eval_ema/*`, `eval_calibrated_ema/*`, `eval/step-N-ema.json`) |
 | `train.select_ema` | selects on the EMA's score; `selection.json` then says `"weights": "ema"`, and `tjev eval` / `calibrate` / `post` / `export` load the EMA adapters (bound to their own calibration identity). Off (the default): the selection is on the raw adapters' score, and the EMA's scores are logged only |
 | `lora.dropout` p | inverted dropout on the adapter's input, y = xW + s·drop(x)·AB, in training steps only (a key per step from the seed, one per microbatch and decoder layer; the remat recompute replays the masks). Merged LoRA cannot drop the adapter input alone: with p > 0 the model builds the (equal) unmerged layers, ~9% slower at 4B |
 | `optim.weight_decay` | decoupled AdamW decay, on the LoRA factors only (a `gate_full` kernel is the base weight: decaying it would pull it to 0, not to the base). Under Muon it applies to the matrix parameters |
@@ -530,8 +530,9 @@ steps in their cooldown (`tjev.campaign.plan.tail_every`).
 
 ## Checkpoints, resume and branches
 
-- **What is saved.** Orbax saves are async: adapters, optimizer state (with the EMA), the
-  data-stream state, and the selection so far.
+- **What is saved.** Orbax saves are async: adapters (`lora/`), optimizer state (`opt/`,
+  with the fp32 EMA), the EMA adapters as their own item (`ema/`, with `optim.ema_decay`),
+  the data-stream state, and the selection so far.
 - **Retention.** The latest `keep_checkpoints` planned steps are kept, plus the selected step,
   `train.keep_steps` (the planner sets the branch points of the cooldown branches it
   plans: a sequential queue starts them after the long run) and, with `train.keep_every=K
@@ -542,9 +543,11 @@ steps in their cooldown (`tjev.campaign.plan.tail_every`).
   deadline) is deleted once a
   newer save exists. The backup (`PROBE_SWEEP_BACKUP`, [tpu.md](tpu.md)) uploads every
   kept checkpoint of the finished sweep and final runs, under `<campaign>/<run>`, with the
-  optimizer state of the last and the selected step only; `tjev post` / JevBench can score
-  a checkpoint's adapters without its optimizer state, its EMA needs it (`PROBE_CALIB_RUNS`
-  entry `RUN:STEP:ema`).
+  optimizer state of the last and the selected step only; `tjev post` / JevBench score a
+  checkpoint's adapters or its EMA (`PROBE_CALIB_RUNS` entry `RUN:STEP:ema`) from the
+  backup alone. The runs before the `ema/` item (tjev-final-rep1 and earlier) have the EMA
+  of their selected and last step only: the rep1 final's best checkpoint, the EMA at step
+  2800 (.378 against the best raw .395), was lost that way.
 - **When.** Every checkpoint or full-eval step, and, for resuming only, every
   `checkpoint_secs` seconds (900 s by default, for preemptible or time-limited hosts).
 - **Stopping at any step.** SIGTERM, SIGINT and `TJEV_DEADLINE` (unix seconds, checked every

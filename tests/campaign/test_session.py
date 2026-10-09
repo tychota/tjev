@@ -111,9 +111,10 @@ def test_sweep_backup_uploads_every_kept_checkpoint_of_finished_sweep_runs(tmp_p
     assert [c["path_in_repo"] for c in calls] == ["tjev-v75b/final-4b-h5000",
                                                   "tjev-v75b/sweep-reg-4b-rank16-s0"]  # fmt: skip
     final, sweep = calls
-    # every checkpoint retention left; the optimizer state of the last and the selected one
-    # (the EMA lives in it): never ignored
+    # every checkpoint retention left, with its adapters and EMA item; the optimizer state
+    # of the last and the selected one only
     assert sweep["ignore_patterns"][3:] == ["checkpoints/1450/opt/**"]
+    assert not any("ema" in p or "lora" in p for p in sweep["ignore_patterns"])
     assert final["ignore_patterns"][3:] == ["checkpoints/2500/opt/**"]
     assert "1300, 1450, 1500" in sweep["commit_message"]
     # no campaign: the bare run name (the older layout)

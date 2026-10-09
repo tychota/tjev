@@ -170,10 +170,10 @@ def backup_sweep_runs(runs: Path, repo: str, token: str | None, campaign: str = 
                       kinds: tuple[str, ...] = BACKED_UP) -> None:  # fmt: skip
     """Finished sweep and final runs to a private HF model repo before save() drops their
     checkpoints (too large for the next session's restore): every checkpoint left after
-    retention (the selected, the latest, train.keep_steps / keep_every), the optimizer state
-    of the last one and of the selected one (the EMA adapters, optim.ema_decay, live in it:
-    probe_calib's RUN:STEP:ema and a selection on the EMA need it), with the run's json /
-    jsonl / txt and eval/, under ``<campaign>/<run>`` (backup_path): the layout tpu_campaign.sh's
+    retention (the selected, the latest, train.keep_steps / keep_every) with its adapters
+    and its EMA adapters (the ``ema/`` item: probe_calib's RUN:STEP:ema), the optimizer state
+    of the last one and of the selected one (a resume's or a branch's source), with the run's
+    json / jsonl / txt and eval/, under ``<campaign>/<run>`` (backup_path): the layout tpu_campaign.sh's
     probe_calib reads (PROBE_CALIB_RUNS=<campaign>/<run>:<step>[:ema] runs JevBench on them).
     ``kinds``: the run-name prefixes taken (BACKED_UP). Never fatal."""
     if not runs.is_dir():

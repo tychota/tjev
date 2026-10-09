@@ -33,8 +33,9 @@ kernels, data pipeline and every measurement are documented there (`docs/`).
 <campaign>/<run>/                  e.g. final-v75/final-4b-h5000
   config.json, selection.json      the run's configuration and its selected step
   metrics.jsonl, eval/             the training curve and every full evaluation
-  checkpoints/<step>/              LoRA adapters (bf16, ~13 MB at rank 16 for 4B)
-  checkpoints/<step>/opt/          optimizer state (with the EMA adapters), the selected and the last step only
+  checkpoints/<step>/lora/         LoRA adapters (bf16, ~13 MB at rank 16 for 4B)
+  checkpoints/<step>/ema/          their EMA (decay 0.999), same format
+  checkpoints/<step>/opt/          optimizer state, the selected and the last step only
   post-calib-<step>[-ema]/         calibration, JevBench per-item dumps and predictions of that step
 <campaign>/<run>-b<H/2>/           the run's 1-epoch cooldown branch, same layout
 ```

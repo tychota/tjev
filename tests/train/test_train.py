@@ -4,6 +4,7 @@ branches equal uninterrupted runs, metrics never overlap, selection, the TPU ker
 import json
 import logging
 import re
+import shutil
 from types import SimpleNamespace
 
 import jax
@@ -551,13 +552,25 @@ def test_ema_is_evaluated_checkpointed_and_selectable(setup):
         for e, r in zip(ema, raw.values(), strict=True)
     )
     assert Run(run, step=sel["step"]).weights == "raw"  # an explicit step: the raw adapters
+    # the EMA is its own checkpoint item (ema/, the adapters' tree and dtype): what the
+    # loader reads, and what a backup without the optimizer state keeps
+    ckpt = Checkpoints(run / "checkpoints")
+    assert ckpt.has_ema(4) and (run / "checkpoints" / "4" / "ema").is_dir()
+    for a, b in zip(jax.tree.leaves(ckpt.restore_ema(4, loaded.lora)), ema, strict=True):
+        np.testing.assert_array_equal(np.asarray(a), np.asarray(b))
+    ckpt.close()
+    plain = Checkpoints(setup / "runs" / "br-short" / "checkpoints")  # no optim.ema_decay
+    assert not plain.has_ema(4) and plain.restore_ema(4, loaded.lora) is None
+    plain.close()
     # probe_calib's RUN:STEP:ema / RUN:STEP entries (tjev.campaign.calib): the run's checkpoint
-    # as the selection, scored on its EMA (from the optimizer state) or on its adapters
+    # as the selection, scored on its EMA (from the ema/ item, even once the backup dropped
+    # the optimizer state) or on its adapters
     from tjev.campaign import calib
 
     for entry, weights in (("c1/ema:4:ema", "ema"), ("c1/ema:4", "raw")):
         parsed = calib.parse_entry(entry)
         dest = calib.prepare(run, setup / "calib" / parsed.local, parsed)
+        shutil.rmtree(dest / "checkpoints" / "4" / "opt")
         scored = Run(dest)
         assert scored.weights == weights and scored.step == 4
         want = jax.tree.leaves(Run(run, step=4).lora) if weights == "raw" else None

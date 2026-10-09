@@ -690,8 +690,14 @@ def train(cfg: RunConfig) -> dict:
             )
             if save or timed or stop.is_set():
                 meta = {"stream": stream_state, "best": best}
+                # the EMA adapters as their own item too (the adapters' dtype, as evaluated):
+                # the backup drops the optimizer state of most kept checkpoints
+                ema = ema_params(opt_state)
+                if ema is not None:
+                    ema = jax.tree.map(lambda e, p: e.astype(p.dtype), ema, lora)
                 ckpt.save(step, lora, opt_state, meta, keep=best["step"],
-                          protect=filter(cadence.kept, ckpt.all_steps()), resume_only=cadence.resume_only)  # fmt: skip
+                          protect=filter(cadence.kept, ckpt.all_steps()),
+                          resume_only=cadence.resume_only, ema=ema)  # fmt: skip
                 t_saved = time.monotonic()
             if new_best:
                 ckpt.wait()
