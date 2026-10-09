@@ -1,0 +1,48 @@
+src/tjev/train/checkpoint.py
+  s_d1d39e59a20c39::t_bafd3891ae8881 65,68-70,74-81
+  s_d1d39e59a20c39::t_6388c4fee658db 100-101,104-105,109-110,112-129
+tests/train/test_train.py
+  s_d1d39e59a20c39::t_ad759c75493817 555-564,566-567,573
+  s_d1d39e59a20c39::t_071469b855fada 7
+tests/campaign/test_calib.py
+  s_d1d39e59a20c39::t_31fcdc7a3fd44f 55-56,58-62
+  s_d1d39e59a20c39::t_80aedb8c226c7b 25,31-32
+cloud/session_run.py
+  s_d1d39e59a20c39::t_b2defc8a630c0d 173-176
+src/tjev/train/loop.py
+  s_d1d39e59a20c39::t_2e5f5d1acbebc0 693-697
+  s_d1d39e59a20c39::t_0096044e55e33d 699-700
+docs/training.md
+  s_d1d39e59a20c39::t_a8ab1e294757e5 533-535
+  s_d1d39e59a20c39::t_764de7223de3da 408
+  s_d1d39e59a20c39::t_ea77c3bdf1cd86 546-550
+docs/tpu.md
+  s_d1d39e59a20c39::t_ed772f8e6c8e9f 185-187
+  s_d1d39e59a20c39::t_a42e52f723d9a9 220
+  s_d1d39e59a20c39::t_77d297d2ba73af 64-65
+docs/model-card.md
+  s_d1d39e59a20c39::t_427a623d42181d 36-38
+src/tjev/campaign/calib.py
+  s_d1d39e59a20c39::t_0273ea1a1ab860 68-69,73,75
+  s_d1d39e59a20c39::t_b379a7bde8b7fc 7-10
+tests/campaign/test_session.py
+  s_d1d39e59a20c39::t_44a3032201a0b1 114-115,117
+src/tjev/eval/runs.py
+  s_d1d39e59a20c39::t_9a6971a3795293 128-139
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "12d49e939a3334bdec8466d8956a53c3d74fc306",
+  "prompts": {},
+  "sessions": {
+    "s_d1d39e59a20c39": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d316479f-0782-47eb-a003-087da5c19333",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
