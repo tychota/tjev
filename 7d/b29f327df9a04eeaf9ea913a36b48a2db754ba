@@ -1,0 +1,31 @@
+src/tjev/train/loop.py
+  s_d1d39e59a20c39::t_098ae3b1673ead 492,498,507-512
+  s_d1d39e59a20c39::t_279f3409a03a89 574,579
+tests/train/test_log.py
+  s_d1d39e59a20c39::t_3d5b80d026d689 25,27-28,32-49
+  s_d1d39e59a20c39::t_a0ca84479eb7d1 50-51
+src/tjev/train/log.py
+  s_d1d39e59a20c39::t_d786373641cf75 23-29
+  s_d1d39e59a20c39::t_7aa91964bdb413 74,82-94
+  s_d1d39e59a20c39::t_50e7fe880db466 45
+tests/train/test_train.py
+  s_d1d39e59a20c39::t_28364c10353088 193
+docs/training.md
+  s_d1d39e59a20c39::t_1f124d49676288 577-581
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7db29f327df9a04eeaf9ea913a36b48a2db754ba",
+  "prompts": {},
+  "sessions": {
+    "s_d1d39e59a20c39": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d316479f-0782-47eb-a003-087da5c19333",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
