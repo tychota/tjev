@@ -310,8 +310,8 @@ one win (−0.013 ± 0.006), now `plan.FINAL_OVERRIDES`; no initialisation beats
 ```bash
 tjev campaign plan sweep --stage reg --hardware v6e1 --mix data/MIX ...        # REG_PLAN: 4B + 2B arms
 tjev campaign plan sweep --stage reg --hardware v6e1 --sizes 4B ...            # 4B only
-tjev campaign plan sweep --stage reg --hardware v6e1 --sizes 4B --horizon 3000 \
-    --arms rank16-cogcalib,rank16-cc1.0,nocentre ...                           # final-length tests
+tjev campaign plan sweep --stage reg --hardware v6e1 --sizes 2B --horizon 2500 \
+    --arms rank16-cc0,rank16-cc0.1-q0.3,rank16-cc0.3-q0.6,rank16-cc1.0-q0.6,nocentre ...  # CogCalib, final length
 ```
 
 Against the over-confidence the 4B long runs show after ~900 steps
@@ -360,7 +360,8 @@ second epoch), paired with the same arm on `<mix>`.
 | `rank16-lr0.5`, `-lr0.7`, `-lr0.85`, `-lr1.4` | rank 16 around its rank-rule rate (never tuned at r16: the rsLoRA rule doubles it from r64, LoRA Without Regret finds the rate nearly rank-free under α/r) |
 | `rank16-h3000` | rank 16 at twice the horizon, the rate × 2^−0.15 (the horizon rule) |
 | `rank16-rep1` | rank 16 on the `-rep1` sibling mix (one epoch of the core sources), paired with `rank16` |
-| `rank16-cogcalib`, `rank16-cc0.1`, `rank16-cc1.0` | CogCalib's gated entropy penalty at w = 0.1 (and 1.0), q = 0.3, at rank 16 ([training.md](training.md#calibration-losses)); its term is ~0.1% of the loss at w = 0.1 on mix-v7.5 4B |
+| `rank16-cogcalib` | CogCalib's gated entropy penalty at w = 0.1, q = 0.3, at rank 16 ([training.md](training.md#calibration-losses)); its term is ~0.1% of the loss on mix-v7.5 4B; at a final length it also gets the 1-epoch cooldown branch |
+| `rank16-cc0`, `rank16-cc0.1-q0.3`, `rank16-cc0.3-q0.6`, `rank16-cc1.0-q0.6` | CogCalib's strength and gate: off, the decided 0.1 / q 0.3, 0.3 and 1.0 on the lowest 60% of NLL; all rank 16 at the same rate, the EMA tracked, run together with `nocentre` (paired with each other), no branch |
 | `rank16-cogcalib-rep1`, `rank16-cogcalib-rep1-lr5k` | the same on `-rep1`; `-lr5k` at a 2500-step horizon with the 5000-step rate, paired with `rank16-cogcalib`'s 1-epoch cooldown branch |
 | `rank16-teacher` | Kev's gated teacher targets, λ = 0.5, gate 0.6 (no mix-v6 row passes the gate: it needs a mix that keeps decider's disagreeing questions) |
 | `wd1.0`, `wd5`, `wd10` | decoupled decay that bites: at the 2e-5 rates wd 0.1 shrinks the adapters by ≤ 0.4% over 1500 steps (‖B‖ −3% on 4B) and wd 1.0 moves ‖B‖ by −1% on 2B; wd 10 decays by up to e^−0.5 and hurt the cooldown (A −15%, B −6% by step 500); 5 is the middle |

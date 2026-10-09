@@ -604,19 +604,28 @@ REG_ARMS = {
     "rank16-cogcalib": Arm(
         ("lora.rank=16", "loss.cogcalib_weight=0.1", "loss.cogcalib_quantile=0.3")
     ),
-    # Kev's gated teacher targets: (1 − 0.5)·gold + 0.5·teacher where a teacher puts ≥ 0.6 on
-    # another letter (plumb / decider rows that carry a teacher), at r16. No mix-v6 row passes
-    # the gate (decider drops its disagreeing questions): it needs a mix that keeps them
-    # CogCalib strength (its term is ~0.1% of the loss at weight 0.1 on mix-v7.5 4B: the gated
-    # rows' NLL threshold is ~0.005): 0.1 vs 10x, paired, without the cooldown branch
     # rep1 at a 2500-step horizon with the 5000-step rate (2^-0.15: the horizon rule), paired with
     # rank16-cogcalib's 1-epoch cooldown branch (2000 -> 2500 at that rate)
     "rank16-cogcalib-rep1-lr5k": Arm(
         ("lora.rank=16", "loss.cogcalib_weight=0.1", "loss.cogcalib_quantile=0.3", "@rep1"),
         2**-0.15,
     ),
-    "rank16-cc0.1": Arm(("lora.rank=16", "loss.cogcalib_weight=0.1", "loss.cogcalib_quantile=0.3")),
-    "rank16-cc1.0": Arm(("lora.rank=16", "loss.cogcalib_weight=1.0", "loss.cogcalib_quantile=0.3")),
+    # CogCalib's strength and gate, at r16, paired with each other (--arms …,nocentre): off,
+    # the decided 0.1 / q 0.3 (its term is ~0.1% of the loss on mix-v7.5 4B: the gated rows'
+    # NLL threshold is ~0.005), and stronger penalties on a wider gate (the lowest 60% of NLL)
+    "rank16-cc0": Arm(("lora.rank=16", "loss.cogcalib_weight=0")),
+    "rank16-cc0.1-q0.3": Arm(
+        ("lora.rank=16", "loss.cogcalib_weight=0.1", "loss.cogcalib_quantile=0.3")
+    ),
+    "rank16-cc0.3-q0.6": Arm(
+        ("lora.rank=16", "loss.cogcalib_weight=0.3", "loss.cogcalib_quantile=0.6")
+    ),
+    "rank16-cc1.0-q0.6": Arm(
+        ("lora.rank=16", "loss.cogcalib_weight=1.0", "loss.cogcalib_quantile=0.6")
+    ),
+    # Kev's gated teacher targets: (1 − 0.5)·gold + 0.5·teacher where a teacher puts ≥ 0.6 on
+    # another letter (plumb / decider rows that carry a teacher), at r16. No mix-v6 row passes
+    # the gate (decider drops its disagreeing questions): it needs a mix that keeps them
     "rank16-teacher": Arm(("lora.rank=16", "loss.teacher_mix=0.5", "loss.teacher_gate=0.6")),
     # no LoRA on the GDN layers (in_proj_qkv / in_proj_z / out_proj; the gates stay frozen):
     # attention + MLP only, arXiv 2604.22127's advice for hybrids (its GDN arm also adapted

@@ -697,3 +697,25 @@ def test_reg_calibration_arms_run_at_the_rank16_rate(tmp_path):
         3.5e-5 * 2**0.5, rel=1e-2
     )
     assert cfgs["sweep-reg-4b-rank16-cogcalib-s0"].optim.lr == pytest.approx(2.4e-5 * 2, rel=1e-2)
+
+
+def test_reg_cogcalib_strength_arms_on_2b_at_a_final_length(tmp_path):
+    """The CogCalib sweep: off, the decided 0.1 / q0.3, 0.3 / q0.6, 1.0 / q0.6, all r16 at
+    the same rate (paired with each other, no centre), on 2B at a 2500-step horizon: a
+    final-length run (post=full, long_cadence, the EMA tracked), no cooldown branch."""
+    arms = ("rank16-cc0", "rank16-cc0.1-q0.3", "rank16-cc0.3-q0.6", "rank16-cc1.0-q0.6")
+    c = _campaign(tmp_path, hardware="v6e1", stage="reg", final_sizes=("2B",), horizon=2500,
+                  arms=(*arms, "nocentre"), wandb={"campaign": "c1"})  # fmt: skip
+    jobs = parse_lines(planner.plan("sweep", c), c.runs)
+    assert [j.name for j in jobs] == [f"sweep-reg-2b-{a}-s0" for a in arms]
+    assert all(j.post == "full" and not j.after and j.chips == 1 for j in jobs)
+    cfgs = [_config(j) for j in jobs]
+    want = [(0.0, 0.0), (0.1, 0.3), (0.3, 0.6), (1.0, 0.6)]
+    assert [(cfg.loss.cogcalib_weight, cfg.loss.cogcalib_quantile) for cfg in cfgs] == want
+    for cfg in cfgs:
+        assert cfg.lora.rank == 16 and cfg.optim.lr == cfgs[0].optim.lr
+        assert cfg.optim.ema_decay == 0.999 and cfg.train.steps == 2500
+        assert cfg.train.checkpoint_every == 200 and cfg.train.checkpoint_tail_every == 50
+        assert cfg.train.quick_eval_every == 25 and cfg.train.keep_tail
+        assert cfg.train.keep_every == 200 and cfg.train.keep_from == 1250
+        assert "Qwen3.5-2B" in cfg.model.path and cfg.train.health_kill
