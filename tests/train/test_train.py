@@ -190,6 +190,7 @@ def test_branch_from_equals_the_standalone_shorter_run(setup):
     branch = f"{setup / 'runs' / 'br-long'}@2"
     train(tiny_config(setup, "br-branch", 4, **wsd, **{"train.branch_from": branch}))
     assert_same_adapters(lora_at(setup, "br-short", 4), lora_at(setup, "br-branch", 4))
+    assert min(r["step"] for r in rows(setup, "br-branch")) > 2  # its own curve, from its step
     late = f"{setup / 'runs' / 'br-long'}@4"  # step 4 is stable in the long run, decayed here
     with pytest.raises(ValueError, match="learning rates differ"):
         train(tiny_config(setup, "br-late", 4, **wsd, **{"train.branch_from": late}))

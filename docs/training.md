@@ -574,8 +574,11 @@ step does not stall the device. The sinks are:
 - TensorBoard (`tb/`).
 - W&B (`log.wandb=true`; `log.wandb_mode=offline` for hosts without a key or network).
 
-A resumed run drops rows logged after its checkpoint in every sink (JSONL filter,
-TensorBoard `purge_step`, W&B rewind), so resumed curves never overlap.
+A resumed run drops rows logged after its checkpoint from the JSONL and TensorBoard
+(`purge_step`) and reopens its W&B run (`resume="allow"`; W&B's rewind, `resume_from`, is a
+private preview that answered HTTP 400 and left runs offline, so it is not used). A
+cooldown branch is a new W&B run of its own: its parent run, step and W&B id are in its
+config (`parent`) and notes.
 
 | Prefix | Keys |
 |---|---|

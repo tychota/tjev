@@ -20,9 +20,13 @@ def _flatten(prefix: str, value, out: dict):
 
 class MetricLogger:
     """``resume_step``: the checkpoint step a resumed run restarts from. Metrics logged past
-    it by the interrupted process are discarded in every sink (JSONL rows dropped,
-    TensorBoard ``purge_step``, W&B rewind), so resumed curves continue instead of overlapping.
-    """
+    it by the interrupted process are dropped from the JSONL and TensorBoard (``purge_step``);
+    W&B resumes the same run (``resume="allow"``; its rewind, ``resume_from``, is a private
+    preview that answered HTTP 400 and left the run offline) and keeps the overlap.
+
+    ``parent``: a cooldown branch's source (``{"run", "step", "wandb_id"}``): the branch is a
+    new W&B run (its own id, the parent in its config and notes), never a resume of the
+    parent's."""
 
     def __init__(
         self,
@@ -38,6 +42,7 @@ class MetricLogger:
         group: str = "",
         tags: tuple[str, ...] = (),
         mode: str = "online",
+        parent: dict | None = None,
     ):
         self.directory = Path(directory)
         self.directory.mkdir(parents=True, exist_ok=True)
@@ -66,7 +71,7 @@ class MetricLogger:
             common: dict[str, Any] = {
                 "project": project,
                 "name": name,
-                "config": config,
+                "config": config | ({"parent": parent} if parent else {}),
                 "dir": str(self.directory),
                 "group": group or None,
                 "tags": list(tags) or None,
@@ -74,23 +79,19 @@ class MetricLogger:
                 "mode": mode,
                 **({"entity": entity} if entity else {}),
             }
-            self.wandb = None
-            if resume_step:  # rewind: drop the interrupted process's steps past the checkpoint
-                try:
-                    self.wandb = wb.init(resume_from=f"{run_id}?_step={resume_step}", **common)
-                except Exception as e:
-                    print(json.dumps({"event": "wandb_rewind_failed", "error": str(e)[:200]}))
-            if self.wandb is None:
-                try:
-                    self.wandb = wb.init(id=run_id, resume="allow", **common)
-                except Exception as e:  # a bad key or entity, or W&B down: never kill the run
-                    if mode == "offline":
-                        raise
-                    print(json.dumps({"event": "wandb_offline_fallback", "error": str(e)[:200]}))
-                    wb.teardown()  # the failed init keeps run_id registered in the service
-                    offline = dict(common)
-                    offline["mode"] = "offline"
-                    self.wandb = wb.init(id=run_id, resume="allow", **offline)
+            if parent:
+                common["notes"] = (f"cooldown branch of {parent['run']}@{parent['step']}"
+                                   f" (W&B run {parent.get('wandb_id') or '?'})")  # fmt: skip
+            try:
+                self.wandb = wb.init(id=run_id, resume="allow", **common)
+            except Exception as e:  # a bad key or entity, or W&B down: never kill the run
+                if mode == "offline":
+                    raise
+                print(json.dumps({"event": "wandb_offline_fallback", "error": str(e)[:200]}))
+                wb.teardown()  # the failed init keeps run_id registered in the service
+                offline = dict(common)
+                offline["mode"] = "offline"
+                self.wandb = wb.init(id=run_id, resume="allow", **offline)
 
     def log(self, step: int, metrics: dict) -> None:
         flat: dict[str, float] = {}

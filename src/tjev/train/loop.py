@@ -489,13 +489,13 @@ def train(cfg: RunConfig) -> dict:
     stream = make_stream(cfg.data.workers)
 
     ckpt = Checkpoints(run_dir / "checkpoints", cfg.train.keep_checkpoints)
-    start = 0
+    start = resume_step = 0
     best: dict[str, Any] = {"step": None, "score": float("inf")}
     if (latest := ckpt.latest()) is not None:
         lora, opt_state, meta = ckpt.restore(latest, lora, opt_state)
         stream.set_state(meta["stream"])
         best = meta.get("best", best)
-        start = latest
+        start = resume_step = latest
         print(json.dumps({"event": "resumed", "step": start}), flush=True)
     elif cfg.train.branch_from:
         source, start = branch_source(cfg, identity)
@@ -504,6 +504,12 @@ def train(cfg: RunConfig) -> dict:
         other.close()
         stream.set_state(meta["stream"])  # best stays fresh: this run selects its own
         print(json.dumps({"event": "branched", "from": str(source), "step": start}), flush=True)
+    parent = None
+    if cfg.train.branch_from:  # the branch's W&B run names its parent (a new run, not a resume)
+        path, _, step_text = cfg.train.branch_from.rpartition("@")
+        wandb_id = Path(path) / "wandb_id.txt"
+        parent = {"run": Path(path).name, "step": int(step_text),
+                  "wandb_id": wandb_id.read_text().strip() if wandb_id.exists() else ""}  # fmt: skip
 
     if cfg.loss.kl_base_weight and cfg.lora.gate_full:
         raise ValueError("loss.kl_base_weight: the base of a lora.gate_full model is not kept")
@@ -565,11 +571,12 @@ def train(cfg: RunConfig) -> dict:
         project=log.wandb_project,
         config=cfg.to_dict() | {"identity": identity, "system": system, "hp": hyperparameters(cfg)},
         name=cfg.name,
-        resume_step=start,
+        resume_step=resume_step,
         entity=log.wandb_entity,
         group=log.wandb_group,
         tags=log.wandb_tags,
         mode=log.wandb_mode,
+        parent=parent,
     )
     # numbers only in the summary (0: libtpu's / Mosaic's default); the flags in config.json
     logger.summary({"libtpu": {k: libtpu[k] or 0 for k in ("scoped_vmem_limit_kib",
