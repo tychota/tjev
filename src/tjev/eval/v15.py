@@ -70,6 +70,7 @@ class Row:
     family: str = "unknown"
     source: str = ""
     gold_probs: np.ndarray | None = None  # a gold distribution (choice TVD), if any
+    lang: str | None = None
 
     def dist(self) -> dict[str, float]:
         assert self.probs is not None
@@ -387,7 +388,8 @@ def rows_from_predictions(
         )
         rows.append(Row(id=rec["id"], type=rec["type"], labels=labels, gold=labels[int(top[0])],
                         probs=probs / probs.sum(), tier=tier, family=rec.get("family") or "unknown",
-                        source=rec.get("source", ""), gold_probs=gp))  # fmt: skip
+                        source=rec.get("source", ""), gold_probs=gp,
+                        lang=rec.get("lang")))  # fmt: skip
     return rows, dict(skipped)
 
 
@@ -442,10 +444,15 @@ def score_dumps(
     policy: ServingPolicy | AbstentionPolicy | None = None,
     gold_probs: dict[str, dict[str, float]] | None = None,
     with_sweep: bool = False,
+    bootstrap: int = 0,
+    seed: int = 0,
 ) -> dict:
     """v1.5 reports of prediction dumps (one per file): as calibrated (``temperatures``,
-    else the dump's own probabilities), under ``policy`` if given, and the policy
-    :func:`sweep` if ``with_sweep``."""
+    else the dump's own probabilities), under ``policy`` if given, the policy :func:`sweep`
+    if ``with_sweep``, the calibration diagnostics of the calibrated probabilities, and
+    with ``bootstrap`` > 0 the item-bootstrap intervals of the headline numbers
+    (:mod:`tjev.eval.v15_stats`)."""
+    from tjev.eval import v15_stats as stats
     from tjev.eval.predictions import read
 
     out: dict[str, Any] = {}
@@ -457,5 +464,23 @@ def score_dumps(
             rep["policy"] = report(rows, policy)
         if with_sweep:
             rep["sweep"] = sweep(rows)
+        rep["calibration_diagnostics"] = stats.calibration_diagnostics(rows)
+        if bootstrap > 0:
+            rep["bootstrap"] = {"n": bootstrap, "seed": seed, "level": stats.LEVEL} | {
+                k: stats.bootstrap(stats.items(rows, p), bootstrap, seed)
+                for k, p in (("calibrated", None), ("policy", policy))
+                if k == "calibrated" or as_policy(policy) is not None
+            }
         out[path.name.removesuffix(".jsonl.gz")] = rep
     return out
+
+
+def load_rows(
+    path: str | Path,
+    temperatures: dict[str, float] | None = None,
+    gold_probs: dict[str, dict[str, float]] | None = None,
+) -> tuple[list[Row], dict]:
+    """The rows of one prediction dump (:func:`rows_from_predictions`)."""
+    from tjev.eval.predictions import read
+
+    return rows_from_predictions(read(Path(path)), temperatures, gold_probs=gold_probs)

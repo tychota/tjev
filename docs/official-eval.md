@@ -111,6 +111,39 @@ item's target (a tied target is skipped); a soft target, or `--harness`'s publis
 (`jevbench_easy` / `_original` → standard / `_hard`). `tjev post` writes `post/v15{tag}.json`
 (every dumped split, with the sweep) and dumps `predictions/jevbench{tag}.jsonl.gz`.
 
+### Statistical rigour
+
+```bash
+tjev eval-v15 RUN/post/predictions/{jevbench,validation-v7}-k2.jsonl.gz --bootstrap 2000 [--diagnostics]
+tjev eval-compare RUN_A/post/predictions/{jevbench,validation-v7}-k2.jsonl.gz \
+  --against RUN_B/post/predictions [--harness H] [--abstention noul --commit-margin M] [--bootstrap 2000]
+```
+
+`tjev.eval.v15_stats`. `--bootstrap N` resamples the items with replacement (a resample is
+a multiplicity per item; the headline is recomputed as weighted aggregates, `w = 1`
+reproduces the scorer exactly) and reports, per dump and per view (`calibrated`, `policy`),
+the point, the standard error, the bias (mean of the resamples − point) and the 95%
+percentile interval of I, C, I/C per type and the noul abstention rate (`bootstrap` in the
+`--out` report, `ci95` in the brief). Tiers and types stay as in the full set; a resample
+that loses a cell renormalises as the scorer does. Caveat: the binned ECE inside C is
+biased upward by resampling (duplicates add noise to every bin), so C's resamples sit low
+and on a large set (validation-v7) its percentile interval can exclude the point: read C's
+spread from `se`, and compare runs with `eval-compare`.
+
+`tjev eval-compare` pairs each A dump with the B dump of the same name (a file, or a
+directory holding it), keeps the items present in both (by id; the counts dropped from each
+side are reported), and draws one resample for both sides: per metric, A, B, A − B, the
+95% interval of A − B and P(A > B) (the share of resamples, ties half). Each side uses its
+dump's own probabilities.
+
+Every `eval-v15` report also carries `calibration_diagnostics` (from the calibrated
+probabilities, top label = the argmax and its probability), per type and per language ×
+type: smooth ECE (Błasiok & Nakkiran 2024; Gaussian kernel reflected at 0 and 1, fixed
+bandwidth 0.05), adaptive ECE (15 equal-mass bins), the top-label Brier score and its
+Murphy decomposition over the same bins (reliability − resolution + uncertainty, exact up
+to the within-bin variance), AURC and E-AURC (risk–coverage of the top-label confidence),
+and the normalised RPS of score items.
+
 **Validation of the scorer.** The harness has no v1.5 code. `tests/eval/test_v15.py`
 checks hand-computed cases (the band edges, the argmax tie rule, the per-item chance, the
 expected-level nMAE and its uniform chance, the tier/type renormalisation, each calibration

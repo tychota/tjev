@@ -1,5 +1,5 @@
 """``tjev eval``, ``tjev calibrate``, ``tjev eval-base``, ``tjev eval-official``, ``tjev eval-v15``,
-``tjev post``."""
+``tjev eval-compare``, ``tjev post``."""
 
 from __future__ import annotations
 
@@ -32,6 +32,10 @@ Grouping = Annotated[
 ]
 Predictions = Annotated[
     Path | None, typer.Option(help="also dump per-item predictions here (.jsonl.gz)")
+]
+Seed = Annotated[int, typer.Option(help="bootstrap seed")]
+Harness = Annotated[
+    Path | None, typer.Option(help="JevBench checkout: the hard items' gold distributions")
 ]
 
 
@@ -243,9 +247,7 @@ def eval_v15(
         list[Path] | None,
         typer.Option(help="fit per-type temperatures on these dumps (a calibration pool)"),
     ] = None,
-    harness: Annotated[
-        Path | None, typer.Option(help="JevBench checkout: the hard items' gold distributions")
-    ] = None,
+    harness: Harness = None,
     abstention: Abstention = "off",
     band: Band = (0.2, 0.8),
     snap: SnapOpt = "nearest",
@@ -254,6 +256,13 @@ def eval_v15(
     noul_temperature: NoulTemperature = 1.0,
     score_temperature: ScoreTemperature = 1.0,
     sweep: Annotated[bool, typer.Option(help="also sweep the policy knobs one at a time")] = False,
+    bootstrap: Annotated[
+        int, typer.Option(help="item-bootstrap resamples for 95% intervals (0: off; e.g. 2000)")
+    ] = 0,
+    seed: Seed = 0,
+    diagnostics: Annotated[
+        bool, typer.Option(help="also print the calibration diagnostics (smECE, AURC, ...)")
+    ] = False,
     out: Out = None,
 ) -> None:
     """JevBench v1.5 Intelligence and Calibration (per type and tier) of per-item
@@ -282,11 +291,72 @@ def eval_v15(
         policy=policy,
         gold_probs=v15.harness_gold_probs(harness) if harness else None,
         with_sweep=sweep,
+        bootstrap=bootstrap,
+        seed=seed,
     )
     full = {"temperatures": temperatures, "pool_fit": fit, "reports": reports}
     if out:
         write_json(out, full)
-    echo_json({name: {k: v15.headline(r[k]) for k in ("calibrated", "policy") if k in r}
+    brief = {}
+    for name, r in reports.items():
+        brief[name] = {k: v15.headline(r[k]) for k in ("calibrated", "policy") if k in r}
+        if "bootstrap" in r:
+            brief[name]["ci95"] = {
+                k: {m: None if v["lo"] is None else [round(v["lo"], 2), round(v["hi"], 2)]
+                    for m, v in ci.items()}
+                for k, ci in r["bootstrap"].items() if k in ("calibrated", "policy")
+            }  # fmt: skip
+        if diagnostics:
+            brief[name]["calibration_diagnostics"] = r["calibration_diagnostics"]
+    echo_json(brief)
+
+
+def eval_compare(
+    predictions: Annotated[list[Path], typer.Argument(help="run A's prediction dumps")],
+    against: Annotated[
+        list[Path],
+        typer.Option(
+            help="run B's dumps of the same names, or a directory holding them (repeatable)"
+        ),
+    ],
+    harness: Harness = None,
+    abstention: Abstention = "off",
+    band: Band = (0.2, 0.8),
+    snap: SnapOpt = "nearest",
+    commit_margin: CommitMargin = 0.0,
+    commit_eps: CommitEps = 0.0,
+    noul_temperature: NoulTemperature = 1.0,
+    score_temperature: ScoreTemperature = 1.0,
+    bootstrap: Annotated[int, typer.Option(help="paired item-bootstrap resamples")] = 2000,
+    seed: Seed = 0,
+    out: Out = None,
+) -> None:
+    """Paired A − B of the v1.5 headline numbers on the items both runs answered (matched
+    by id), per dump name: the difference, its 95% bootstrap interval and P(A > B); each
+    run's dumps with their own probabilities, and under the serving policy if one is given
+    (docs/official-eval.md#statistical-rigour)."""
+    from tjev.eval import v15
+    from tjev.eval import v15_stats as stats
+
+    if bootstrap < 1:
+        raise typer.BadParameter("--bootstrap must be positive")
+    policy = serving_policy(
+        abstention, band, snap, commit_margin, commit_eps, noul_temperature, score_temperature
+    )
+    reports = stats.compare_dumps(predictions, against, policy=policy,
+                                  gold_probs=v15.harness_gold_probs(harness) if harness else None,
+                                  n=bootstrap, seed=seed)  # fmt: skip
+    if out:
+        write_json(out, reports)
+
+    def brief(metrics: dict) -> dict:
+        return {m: None if v["diff"] is None else
+                {"diff": round(v["diff"], 2), "ci95": [round(v["lo"], 2), round(v["hi"], 2)],
+                 "p_a_gt_b": round(v["p_a_gt_b"], 3)}
+                for m, v in metrics.items()}  # fmt: skip
+
+    echo_json({name: {k: r[k] for k in ("n_common", "only_a", "only_b")}
+               | {k: brief(r[k]) for k in ("calibrated", "policy") if k in r}
                for name, r in reports.items()})  # fmt: skip
 
 
@@ -325,4 +395,5 @@ def register(app: typer.Typer) -> None:
     app.command("eval-base")(eval_base)
     app.command("eval-official")(eval_official)
     app.command("eval-v15")(eval_v15)
+    app.command("eval-compare")(eval_compare)
     app.command()(post)
