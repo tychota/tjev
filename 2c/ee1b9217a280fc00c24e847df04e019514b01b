@@ -1,0 +1,31 @@
+tests/train/test_step_options.py
+  s_c37b0508beebe6::t_79db5362be1c50 265-294
+src/tjev/train/loop.py
+  s_c37b0508beebe6::t_1889d73138b0e6 122
+src/tjev/train/objective.py
+  s_c37b0508beebe6::t_1889d73138b0e6 105-117,171,206-208
+tests/train/test_calib_loss.py
+  s_c37b0508beebe6::t_1bd9f0dce7d939 267-296
+src/tjev/train/step.py
+  s_c37b0508beebe6::t_1889d73138b0e6 160-161
+src/tjev/campaign/plan.py
+  s_c37b0508beebe6::t_79db5362be1c50 646-652
+src/tjev/config/schema.py
+  s_c37b0508beebe6::t_1889d73138b0e6 266-272,285-286
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2cee1b9217a280fc00c24e847df04e019514b01b",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
