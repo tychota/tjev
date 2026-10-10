@@ -1,0 +1,25 @@
+scripts/mix_np.py
+  s_c37b0508beebe6::t_26334866cba4de 1-254
+  s_c37b0508beebe6::t_69df08636fba84 255-333
+scripts/build_mix_v75_np.sh
+  s_c37b0508beebe6::t_bd0e6b9d32f1b9 1-114
+  s_c37b0508beebe6::t_d12688c15f4677 115-117
+src/tjev/cli/data.py
+  s_c37b0508beebe6::t_d1f78ded9c67f2 22-28,244,279,322-323,356
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3027c9923fe032347bced4b8f8161f78ad2619d3",
+  "prompts": {},
+  "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
