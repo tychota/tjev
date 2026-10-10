@@ -79,7 +79,9 @@ class LoadedRun:
     """A run's config, adapters (selected step by default) and a jitted eval step.
 
     ``compute`` / ``dtype`` override the run's (e.g. fp32 XLA reference kernels for parity
-    references); the adapters and their placement are unchanged."""
+    references); the adapters and their placement are unchanged. ``weights``: "raw" or
+    "ema" adapters of the step (default: what ``selection.json`` names for the selected
+    step, else the raw adapters)."""
 
     def __init__(
         self,
@@ -88,6 +90,7 @@ class LoadedRun:
         *,
         compute: ComputeSpec | None = None,
         dtype: str | None = None,
+        weights: str | None = None,
     ):
         self.dir = Path(run_dir)
         saved = json.loads((self.dir / "config.json").read_text(encoding="utf-8"))
@@ -107,6 +110,10 @@ class LoadedRun:
             chosen = json.loads(selection.read_text()) if selection.exists() else {}
             step = chosen.get("step")
             self.weights = chosen.get("weights", "raw")
+        if weights is not None:
+            if weights not in ("raw", "ema"):
+                raise ValueError(f"weights must be 'raw' or 'ema', not {weights!r}")
+            self.weights = weights
         ckpt = Checkpoints(self.dir / "checkpoints")
         latest = ckpt.latest()
         self.step: int = step if step is not None else (latest if latest is not None else -1)

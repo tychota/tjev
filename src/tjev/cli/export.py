@@ -1,4 +1,4 @@
-"""``tjev export`` and ``tjev mlx convert | check | calibrate | eval``."""
+"""``tjev export``, ``tjev soup`` and ``tjev mlx convert | check | calibrate | eval``."""
 
 from __future__ import annotations
 
@@ -30,6 +30,35 @@ def export(
     echo_json(
         run_export(run, out, step=step, merged=merged, reference=reference, jevbench=jevbench)
     )
+
+
+def soup(
+    members: Annotated[
+        list[str], typer.Argument(help="RUN[@STEP][:ema] ... (ema: the EMA adapters)")
+    ],
+    out: Annotated[Path, typer.Option(help="the soup's run directory (must not exist)")],
+    greedy: Annotated[
+        bool, typer.Option(help="greedy soup: keep a member only if the held-out metric improves")
+    ] = False,
+    select_on: Annotated[
+        list[Path] | None,
+        typer.Option(help="greedy: held-out data (JSONL files / directories, never JevBench)"),
+    ] = None,
+    metric: Annotated[str, typer.Option(help="greedy: nll-cal | nll | accuracy")] = "nll-cal",
+    orders: Orders = 1,
+    noul_order: NoulOrderOpt = "shuffled",
+) -> None:
+    """Weight-space average of LoRA runs (the mean ΔW, exact at rank Σ r_i) as a run
+    directory that `tjev post` / `tjev eval` / `tjev export` take."""
+    from tjev.eval.soup import soup as make_soup
+
+    if greedy and not select_on:
+        raise typer.BadParameter("--greedy needs --select-on")
+    on = (
+        (select_on[0] if len(select_on) == 1 else list(select_on)) if greedy and select_on else None
+    )
+    echo_json(make_soup(members, out, greedy_on=on, metric=metric, orders=orders,
+                        noul_order=noul_order_value(noul_order)))  # fmt: skip
 
 
 @mlx_app.command()
@@ -108,4 +137,5 @@ def evaluate(
 
 def register(app: typer.Typer) -> None:
     app.command()(export)
+    app.command()(soup)
     app.add_typer(mlx_app, name="mlx")

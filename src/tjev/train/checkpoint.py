@@ -80,6 +80,13 @@ class Checkpoints:
             items["ema"] = ocp.args.StandardSave(_flat(ema))
         self.manager.save(step, args=ocp.args.Composite(**items))
 
+    def save_adapters(self, step: int, lora, meta: dict) -> None:
+        """The adapters and meta of ``step`` only (no optimizer state; e.g. a weight-space
+        soup, :mod:`tjev.eval.soup`): what :meth:`restore_lora` reads back."""
+        self.manager.save(step, args=ocp.args.Composite(
+            lora=ocp.args.StandardSave(_flat(lora)), meta=ocp.args.JsonSave(meta)))  # fmt: skip
+        self.manager.wait_until_finished()
+
     def restore(self, step: int, lora_template, opt_template):
         def abstract(tree):
             return {

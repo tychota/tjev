@@ -631,3 +631,44 @@ Metrics (`tjev.eval.metrics`):
   top-label ECE with 15 bins, overall and by type, language, family and source.
 - **Soft targets.** They count as their *expected* correctness `target[argmax p]`: a model
   that outputs the target has zero ECE.
+
+### Weight-space soups (`tjev soup`)
+
+```bash
+tjev soup runs/a runs/b@1200 runs/c:ema --out runs/soup-abc
+tjev soup runs/a runs/b runs/c --out runs/soup-greedy --greedy \
+    --select-on data/mix-v7.5/heldout-select.jsonl [--metric nll-cal|nll|accuracy]
+tjev post runs/soup-abc --mix data/mix-v7.5 --jevbench data/jevbench/public.jsonl --orders 2
+```
+
+A member is `RUN[@STEP][:ema]`: a run, a step (default: the selected one) and its raw or
+EMA adapters (`checkpoints/<step>/ema`, `:raw` forces the raw ones). Each adapted
+projection of member i adds ΔW_i = s_i·A_i·B_i to the shared frozen kernel (an offset
+init's s_i·(A_i·B_i − A0_i·B0_i)); the soup adds the mean Σ_i w_i·ΔW_i, uniform
+w_i = 1/n by default. The A and B factors are **never averaged** across runs (two runs'
+factors live in unrelated bases; only their products are comparable). The mean is exact
+as one LoRA of rank R = Σ r_i, the factors concatenated:
+
+    Σ_i w_i·s_i·A_i·B_i = s·[A_1 | … | A_n]·[c_1·B_1 ; … ; c_n·B_n],   c_i = w_i·s_i / s
+
+with s = 1 (rsLoRA, α = √R); the gate projections take their own Σ as `gate_rank`, a
+`gate_full` kernel the mean kernel. The members must share the base snapshot (its
+identity), the prompt template, `lora.targets` and `gate_full` (an error otherwise); their
+ranks may differ. A legacy residual-init run (kernel W − s·A0·B0) is refused.
+
+The soup is written as a run directory (`config.json` with the soup's LoRA spec,
+`vocab.json`, `checkpoints/0/lora`, `soup.json`: members, steps, weights and the greedy
+log), so `tjev post`, `tjev eval`, `tjev calibrate` and `tjev export` (PEFT adapters at
+rank R, or the merged snapshot W + mean ΔW) take it like a trained run. Its checkpoint
+identity fingerprints the members' checkpoints and weights: it is calibrated on its own
+(`tjev post`), never with a member's temperatures. Serving cost: the adapter of rank Σ r_i
+(an unmerged serve pays n× a member's adapter matmuls; the merged export pays nothing).
+
+`--greedy` (Wortsman et al., arXiv 2203.05482): the members ranked by their own metric on
+the `--select-on` data, each added (uniform weights over the kept ones) only if the soup
+scores strictly better. The default metric `nll-cal` is the NLL after per-type
+temperatures fitted on that data itself (a member is not judged on what one scalar per
+type removes); `nll` is raw, `accuracy` the top-label accuracy. Every candidate is scored
+in one model at rank Σ r_i over all members (a dropped member's B block is zero), one
+compiled eval step. Select on held-out data (`heldout-select.jsonl`, a calibration
+split), never on JevBench or the reporting sets.
