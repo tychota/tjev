@@ -1,19 +1,26 @@
 tests/train/test_step_options.py
   s_d1d39e59a20c39::t_95bc4566535b96 265-287,289-294
   s_d1d39e59a20c39::t_3d1e0710c97c90 288
+  s_c37b0508beebe6::t_79db5362be1c50 265-287,289-294
 src/tjev/config/schema.py
   s_d1d39e59a20c39::t_95bc4566535b96 266-272,285-286
+  s_c37b0508beebe6::t_1889d73138b0e6 266-272,285-286
 src/tjev/train/objective.py
   s_d1d39e59a20c39::t_95bc4566535b96 105-117,171,206-208
+  s_c37b0508beebe6::t_1889d73138b0e6 105-117,171,206-208
 tests/train/test_calib_loss.py
   s_d1d39e59a20c39::t_fae790ef6b0d78 291-293
   s_d1d39e59a20c39::t_95bc4566535b96 267-290,294-297
+  s_c37b0508beebe6::t_1bd9f0dce7d939 267-290,294-297
 src/tjev/train/step.py
   s_d1d39e59a20c39::t_95bc4566535b96 160-161
+  s_c37b0508beebe6::t_1889d73138b0e6 160-161
 docs/training.md
   s_d1d39e59a20c39::t_116e91e693e2c4 407
 src/tjev/train/loop.py
   s_d1d39e59a20c39::t_1d6919bc81b570 122
+  s_c37b0508beebe6::t_1889d73138b0e6 122
+  s_c37b0508beebe6::t_db5b7d58adefb2 333
 ---
 {
   "schema_version": "authorship/3.0.0",
@@ -21,6 +28,14 @@ src/tjev/train/loop.py
   "base_commit_sha": "dfb8ca19dac74bec416052948be0fdf3ffbd126a",
   "prompts": {},
   "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    },
     "s_d1d39e59a20c39": {
       "agent_id": {
         "tool": "claude",
