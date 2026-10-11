@@ -1,0 +1,31 @@
+src/tjev/train/optim.py
+  s_d1d39e59a20c39::t_95bc4566535b96 30,47-85,186-190,193-195,203-210,305-306,317-319,328-335,337-338,342
+tests/train/test_train.py
+  s_d1d39e59a20c39::t_95bc4566535b96 197-207,456,485-486
+docs/training.md
+  s_d1d39e59a20c39::t_0927b299154db7 32,410-411
+tests/train/test_optim.py
+  s_d1d39e59a20c39::t_95bc4566535b96 166-222,224-307
+  s_d1d39e59a20c39::t_253947bb1a120e 223
+src/tjev/config/schema.py
+  s_d1d39e59a20c39::t_95bc4566535b96 237-243
+src/tjev/train/loop.py
+  s_d1d39e59a20c39::t_95bc4566535b96 28,64,117,334-335,344-355
+  s_d1d39e59a20c39::t_f41617c18f8198 356-357
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6a62204bc27a8570c000b03b30a2e9833fc400ff",
+  "prompts": {},
+  "sessions": {
+    "s_d1d39e59a20c39": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d316479f-0782-47eb-a003-087da5c19333",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
