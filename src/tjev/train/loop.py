@@ -119,7 +119,7 @@ IDENTITY_NEW_DEFAULTS = {
     "loss": {"label_smoothing": 0.0, "smooth_sources": [], "kl_base_weight": 0.0,
              "kl_sources": [], "hard_targets": False, "cogcalib_weight": 0.0,
              "cogcalib_threshold": 0.0, "cogcalib_quantile": 0.0, "cogcalib_ema": 0.9,
-             "teacher_mix": 0.0, "teacher_gate": 0.6},
+             "teacher_mix": 0.0, "teacher_gate": 0.6, "cogcalib_gate": "running"},
 }  # fmt: skip
 
 

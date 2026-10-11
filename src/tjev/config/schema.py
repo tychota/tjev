@@ -263,6 +263,13 @@ class LossSpec:
     cogcalib_threshold: float = 0.0
     cogcalib_quantile: float = 0.0
     cogcalib_ema: float = 0.9
+    # Which NLL decides "already known": "running", the NLL of the model being trained (its
+    # familiar set shrinks toward nothing as it learns: the running threshold fell to ~0.001
+    # nats at the end of a 4B 5000-step run); "base", the paper's familiarity: the NLL of the
+    # BASE model (adapters at 0, one extra forward per microbatch, no backward), a fixed
+    # property of each row, its threshold the running quantile of the base NLLs (or
+    # cogcalib_threshold). The penalty always acts on the trained model's entropy.
+    cogcalib_gate: Literal["running", "base"] = "running"
     # Gated teacher soft targets: on a row whose teacher (Item.teacher: plumb teacher_probs,
     # decider teacher_p) puts ≥ teacher_gate on a non-gold letter, the training target is
     # (1 − λ)·t + λ·teacher, λ = teacher_mix (t one-hot: (1 − λ)·one-hot(gold) + λ·teacher);
@@ -275,6 +282,8 @@ class LossSpec:
             raise ValueError("loss.cogcalib_weight must be ≥ 0")
         if not 0 <= self.cogcalib_quantile < 1:
             raise ValueError("loss.cogcalib_quantile must be in [0, 1)")
+        if self.cogcalib_gate not in ("running", "base"):
+            raise ValueError("loss.cogcalib_gate must be running or base")
         if not 0 <= self.cogcalib_ema < 1:
             raise ValueError("loss.cogcalib_ema must be in [0, 1)")
         if self.cogcalib_weight and not (self.cogcalib_quantile or self.cogcalib_threshold > 0):

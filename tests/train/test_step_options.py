@@ -262,3 +262,33 @@ def test_cogcalib_running_threshold_and_teacher_mix_in_the_step(snapshot):
     b = off(trained, tx0.init(trained), frozen, batch)
     for x, y in zip(jax.tree.leaves(a), jax.tree.leaves(b), strict=True):
         assert np.asarray(x).tobytes() == np.asarray(y).tobytes()
+
+
+def test_cogcalib_base_gate_in_the_step(snapshot):
+    """cogcalib_gate=base: the step runs the base forward (adapters at 0, no backward) and the
+    running threshold is the quantile of the BASE model's slot NLLs, whatever the adapters."""
+    from tjev.train.objective import loss_sums
+    from tjev.train.optim import cogcalib_state
+
+    graphdef, lora, frozen = split_model(_model(snapshot))
+    trained = _perturb_b(lora, 0.5)
+    batch = _batch(accum=3)
+    spec = LossSpec(cogcalib_weight=0.3, cogcalib_quantile=0.6, cogcalib_ema=0.5,
+                    cogcalib_gate="base")  # fmt: skip
+    optim = OptimSpec(lr=1e-3, warmup_steps=0)
+    tx = make_optimizer(optim, 10, spec)
+    step = jax.jit(make_train_step(graphdef, tx, brier_weight=0.1, slots_per_step=8.0,
+                                   optim=optim, loss=spec))  # fmt: skip
+    nll = []
+    for i in range(3):
+        mb = jax.tree.map(lambda x, i=i: x[i], batch)
+        base = forward_logits(graphdef, trained, frozen, mb, base=True)
+        nll.append(loss_sums(base, mb, brier_weight=0.1, slot_nll=True)[1]["slot_nll"])
+    want = float(jnp.nanquantile(jnp.stack(nll), 0.6))
+    new, opt1, _ = step(trained, tx.init(trained), frozen, batch)
+    assert float(cogcalib_state(opt1).threshold) == pytest.approx(want, rel=1e-5)
+    _, opt2, m2 = step(new, opt1, frozen, batch)
+    assert 0.0 < float(m2["cogcalib_frac"]) < 1.0 and float(m2["cogcalib_term"]) < 0.0
+    # the base NLLs do not move with the adapters: the quantile of step 2 is step 1's
+    assert float(cogcalib_state(opt2).threshold) == pytest.approx(want, rel=1e-5)
+    assert all(bool(jnp.isfinite(v).all()) for v in jax.tree.leaves(m2))

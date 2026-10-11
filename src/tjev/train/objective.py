@@ -102,6 +102,19 @@ def cogcalib_gate(nll: jax.Array, threshold: float | jax.Array) -> jax.Array:
     return (nll <= threshold).astype(jnp.float32)
 
 
+def gate_nll(spec: LossSpec, nll: jax.Array, base_logits: jax.Array | None,
+             batch: Batch) -> jax.Array:  # fmt: skip
+    """The per-slot NLL CogCalib gates on: the trained model's (``cogcalib_gate=running``),
+    or the base model's against the same target (``base``; constant, no gradient)."""
+    if spec.cogcalib_gate != "base":
+        return nll
+    if base_logits is None:
+        raise ValueError("loss.cogcalib_gate=base: the step passes no base logits")
+    base = jax.lax.stop_gradient(masked_log_softmax(base_logits, batch.label_mask))
+    p_base = jnp.where(batch.label_mask, jnp.exp(base), 0.0)
+    return soft_ce_brier(base, p_base, batch.target)[0]
+
+
 def soft_ce_brier(
     logp: jax.Array, probs: jax.Array, target: jax.Array
 ) -> tuple[jax.Array, jax.Array]:
@@ -155,7 +168,7 @@ def slot_losses(
         out = out + spec.kl_base_weight * (kl if kl_on is None else kl_on * kl)
     if spec.cogcalib_weight:
         t = spec.cogcalib_threshold if cogcalib_threshold is None else cogcalib_threshold
-        on = extras["cogcalib_on"] = cogcalib_gate(nll, t)
+        on = extras["cogcalib_on"] = cogcalib_gate(gate_nll(spec, nll, base_logits, batch), t)
         extras["cogcalib"] = spec.cogcalib_weight * on * -entropy(logp, probs)
         out = out + extras["cogcalib"]
     # expected correctness under a soft target (== argmax match for one-hot): eval.metrics
@@ -190,6 +203,7 @@ def loss_sums(
     for key in ("teacher_on", "cogcalib_on", "cogcalib"):  # slots gated, the penalty added
         if key in extras:
             sums[key] = jnp.sum(w * extras[key])
-    if slot_nll:
-        sums["slot_nll"] = jnp.where(w > 0, nll, jnp.nan)
+    if slot_nll:  # the NLL the gate compares (the base model's with cogcalib_gate=base)
+        g = gate_nll(loss or LossSpec(), nll, base_logits, batch)
+        sums["slot_nll"] = jnp.where(w > 0, g, jnp.nan)
     return sums["loss"], sums

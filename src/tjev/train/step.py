@@ -157,7 +157,8 @@ def make_train_step(
     selection (None: every source). ``dropout`` > 0: the step is
     ``step(lora, opt_state, frozen, batch, key)``."""
     spec = loss or LossSpec()
-    kl = bool(spec.kl_base_weight)
+    # the base model's letters: for the KL, and for CogCalib's base familiarity gate
+    kl = bool(spec.kl_base_weight) or bool(spec.cogcalib_weight and spec.cogcalib_gate == "base")
     adaptive = spec.cogcalib_adaptive
 
     def micro_loss(lora, frozen, batch, key=None, base_logits=None, threshold=None):

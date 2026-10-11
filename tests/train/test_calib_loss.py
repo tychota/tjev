@@ -264,3 +264,34 @@ def test_the_running_threshold_lives_in_the_optimizer_state():
     replaced = with_cogcalib(new, s2)
     assert float(cogcalib_state(replaced).threshold) == float(s2.threshold)
     assert jax.tree.structure(replaced) == jax.tree.structure(opt)
+
+
+def test_base_gate_uses_the_base_models_nll_and_keeps_the_penalty_on_the_trained_model():
+    """cogcalib_gate=base: the gate compares the BASE model's slot NLL (the paper's fixed
+    familiarity) with t; the penalty is still the trained model's −H; without base logits
+    it refuses; the running quantile then reads the base NLLs."""
+    batch = _batch(seed=3)
+    logits, base = _logits(seed=4), _logits(seed=5)
+    t = float(np.median(np.asarray(_slot_nll(base, batch))))
+    spec = LossSpec(cogcalib_weight=0.3, cogcalib_threshold=t, cogcalib_gate="base")
+    _, sums = loss_sums(logits, batch, brier_weight=0.0, loss=spec, base_logits=base,
+                        slot_nll=True)  # fmt: skip
+    on = np.asarray(cogcalib_gate(_slot_nll(base, batch), t))
+    w = np.asarray(batch.weight)
+    assert np.isclose(float(sums["cogcalib_on"]), float((w * on).sum()))
+    logp = masked_log_softmax(logits, batch.label_mask)
+    probs = jnp.where(batch.label_mask, jnp.exp(logp), 0.0)
+    pen = 0.3 * on * -np.asarray(entropy(logp, probs))
+    assert np.isclose(float(sums["cogcalib"]), float((w * pen).sum()), atol=1e-5)
+    base_nll = np.where(w > 0, np.asarray(_slot_nll(base, batch)), np.nan)
+    assert np.allclose(np.asarray(sums["slot_nll"]), base_nll, equal_nan=True)
+    # the running gate on the same inputs differs (it reads the trained model's NLL)
+    running = dataclasses.replace(spec, cogcalib_gate="running")
+    _, sums_r = loss_sums(logits, batch, brier_weight=0.0, loss=running, base_logits=base)
+    assert not np.isclose(
+        float(sums_r["cogcalib_on"]), float(sums["cogcalib_on"])
+    ) or not np.allclose(np.asarray(cogcalib_gate(_slot_nll(logits, batch), t)), on)
+    with pytest.raises(ValueError, match="base logits"):
+        loss_sums(logits, batch, brier_weight=0.0, loss=spec)
+    with pytest.raises(ValueError, match="cogcalib_gate"):
+        LossSpec(cogcalib_weight=0.3, cogcalib_quantile=0.6, cogcalib_gate="other")
