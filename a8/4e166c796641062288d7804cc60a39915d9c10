@@ -1,0 +1,27 @@
+scripts/mix_np.py
+  s_d1d39e59a20c39::t_a568c1d3f48ccb 106-110,365-366
+  s_d1d39e59a20c39::t_564a3fb007f1ba 26-77,171-363,382-393
+  s_d1d39e59a20c39::t_479d9cd23bf56a 1-25,78-105,111-170,364,367-381,394-431
+docs/data.md
+  s_d1d39e59a20c39::t_36e8760093c0cd 255-296
+scripts/build_mix_v75_np.sh
+  s_d1d39e59a20c39::t_6ee0c366ec6991 1-123
+src/tjev/cli/data.py
+  s_d1d39e59a20c39::t_81b45c05762ad0 22-28,244,279,322-323,356
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a84e166c796641062288d7804cc60a39915d9c10",
+  "prompts": {},
+  "sessions": {
+    "s_d1d39e59a20c39": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d316479f-0782-47eb-a003-087da5c19333",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
