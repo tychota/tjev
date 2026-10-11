@@ -252,6 +252,48 @@ dropped), and the largest cuts are:
 - **Planner merge.** Its `mix.yaml` is self-contained: its own train files, mixture and
   validation copy. The planner merges it over mix-v7.5's (`@rep1`).
 
+**mix-v7.5-np** is the natural-prior arm: mix-v7.5 without the yes/no rebalance (same
+sources, block shares, tiers, caps, min-epoch subsample and seed; held-out files
+byte-identical to mix-v7.5's). The benchmark cohorts are skewed (e.g. 61 yes to 7 no), so
+a balanced train prior may hurt.
+
+- **Where the rebalance was.** mix-v7.5 rebalanced nothing itself; it inherits it from
+  mix-v6 (`--rebalance-noul 0.7`: mage, mlma_en, mlma_fr, openjev, raid) and mix-v7 (its
+  new sources: forecasting, oasst2, openjev_x, scruples).
+- **How the rows come back** (`scripts/build_mix_v75_np.sh`, `scripts/mix_np.py`, Colab
+  CPU, about 4 h). mix-v6 is rebuilt (its own 63 sources) and mix-v7 re-extended from
+  mix-v6, both without the rebalance. For each of the nine sources, the seeded rebalance of
+  the rebuilt file gives the built mix's rows in order (licence fields aside), so the
+  dropped rows are exactly those. oasst2 is the exception: today's post-pass keeps 3
+  majority rows more, so the dropped rows are located by the seeded draw itself (it picks
+  positions in the majority list): 2,819 of 2,851 are restored, the 32 in the three
+  ambiguous gaps are not. mix-v7-np (mix-v7 with those files, its rows byte for byte) then
+  goes through `extend-v75 --no-rebalance-noul` and the mix-v7.5 tiered derive.
+- **Planner merge.** Self-contained `mix.yaml`, merged over mix-v7.5's (`@np`); the
+  checkpoint-selection set `heldout-select.jsonl` stays mix-v7.5's.
+
+- **Drift since the mix-v7.5 build.** Of mix-v7.5-pre's 121 train files, 104 came back
+  byte for byte. Besides the nine sources, eight did not:
+  - compar:IA / lmarena / community alignment, social_chem and tasksource_jev: upstream
+    datasets updated since the build;
+  - jev_distractor: it is derived from the base rows, which now include the restored ones.
+
+  These eight keep mix-v7.5's train files, with their weights unchanged
+  (`np_frozen_from_v75` in the manifest). Today's cleaning also unescapes `&#x200B;` in
+  scruples, so its rows that mix-v7.5 trains on take mix-v7.5's lines (313 rows).
+- **Held-out files.** All 122 files are mix-v7.5's, byte for byte (sha256), and no train
+  state equals a held-out state.
+- **Yes-share of the noul train rows** (final files, mix-v7.5 → np): raid 70.0 → 97.3%,
+  mlma_en 70.0 → 82.6%, mlma_fr 70.0 → 75.5%, mage 70.0 → 73.4%, oasst2 29.9 → 8.2%,
+  scruples 30.0 → 24.5%, openjev_x 30.0 → 25.5%, forecasting 30.0 → 27.7%, openjev
+  30.0 → 28.8%. Over all noul rows the share is 44.5% → 44.6%.
+- **Mixture.** Block shares, French (22.4%) and the tiers are unchanged, on 672,640
+  unique rows (mix-v7.5: 672,075). The restored rows move a few weights inside their
+  blocks (n^0.5): raid 0.50 → 0.61% of the mix, mlma_en 0.26 → 0.31%, mage
+  0.65 → 0.61%. Each source's epochs at 5,000 steps are within 0.02 of mix-v7.5's
+  (tier B 0.96–1.00, decider 1.86, certo 1.72). At 2,500 steps they are within 0.01,
+  except jev_fr_pilot (200 rows: 1.03 → 0.93).
+
 ### Mixture (5,000 steps, best_fit)
 
 | block | share | sources |

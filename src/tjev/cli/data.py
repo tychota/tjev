@@ -19,6 +19,13 @@ RebalanceNoul = Annotated[
         "outside [1-R, R] down to R (e.g. 0.7)"
     ),
 ]
+NoRebalanceNoul = Annotated[
+    bool,
+    typer.Option(
+        "--no-rebalance-noul",
+        help="mix-v7.5-np: no yes/no rebalance (natural label priors; overrides --rebalance-noul)",
+    ),
+]
 MaxLoss = Annotated[
     float, typer.Option(help="largest share of a source's train rows the rebalance may drop")
 ]
@@ -234,6 +241,7 @@ def extend(
     scale: float = 1.0,
     seed: int = 0,
     rebalance_noul: RebalanceNoul = 0.7,
+    no_rebalance_noul: NoRebalanceNoul = False,
     max_loss: MaxLoss = 0.6,
     max_epochs: MaxEpochs = 2.0,
     preserve_blocks: PreserveBlocks = True,
@@ -268,7 +276,7 @@ def extend(
         tokenizer=tokenizer or find_tokenizer(),
         seed=seed,
         scale=scale,
-        rebalance_noul=rebalance_noul,
+        rebalance_noul=None if no_rebalance_noul else rebalance_noul,
         max_loss=max_loss,
         max_epochs=max_epochs,
         preserve_blocks=preserve_blocks,
@@ -311,6 +319,8 @@ def extend_v75(
         Path | None, typer.Option(help="tokenizer folder (default: ~/tjev-work/models/Qwen3.5-*)")
     ] = None,
     seed: int = 0,
+    rebalance_noul: RebalanceNoul = 0.7,
+    no_rebalance_noul: NoRebalanceNoul = False,
     max_epochs: MaxEpochs = 2.0,
     steps: int = 5000,
     tokens_per_step: int = 65536,
@@ -343,6 +353,7 @@ def extend_v75(
         jevbench_public=jevbench_public,
         tokenizer=tokenizer or find_tokenizer(),
         seed=seed,
+        rebalance_noul=None if no_rebalance_noul else rebalance_noul,
         max_epochs=max_epochs,
         references=() if refs == ["none"] else (refs or V7_REFERENCES),
         steps=steps,
