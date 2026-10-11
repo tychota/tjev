@@ -2,12 +2,21 @@ scripts/mix_np.py
   s_d1d39e59a20c39::t_a568c1d3f48ccb 106-110,365-366
   s_d1d39e59a20c39::t_564a3fb007f1ba 26-77,171-363,382-393
   s_d1d39e59a20c39::t_479d9cd23bf56a 1-25,78-105,111-170,364,367-381,394-431
+  s_c37b0508beebe6::t_26334866cba4de 1-15,18-25,27-74,78-105,107-108,111-170,175-227,297-309,314-331
+  s_c37b0508beebe6::t_69df08636fba84 332-343,348-349,358-359,364,367-381,394-411,415-422,425-431
+  s_c37b0508beebe6::t_886bb56145696a 16-17,228-243,247-255,258-296,412-414,423-424
 docs/data.md
   s_d1d39e59a20c39::t_36e8760093c0cd 255-296
+  s_c37b0508beebe6::t_b6025c0cf3a067 255-274,296
+  s_c37b0508beebe6::t_107a7013f72d0b 275-295
 scripts/build_mix_v75_np.sh
   s_d1d39e59a20c39::t_6ee0c366ec6991 1-123
+  s_c37b0508beebe6::t_bd0e6b9d32f1b9 1-14,16-83,89-120
+  s_c37b0508beebe6::t_d12688c15f4677 121-123
+  s_c37b0508beebe6::t_35a815270d2d0c 15,84-88
 src/tjev/cli/data.py
   s_d1d39e59a20c39::t_81b45c05762ad0 22-28,244,279,322-323,356
+  s_c37b0508beebe6::t_d1f78ded9c67f2 22-28,244,279,322-323,356
 ---
 {
   "schema_version": "authorship/3.0.0",
@@ -15,6 +24,14 @@ src/tjev/cli/data.py
   "base_commit_sha": "a84e166c796641062288d7804cc60a39915d9c10",
   "prompts": {},
   "sessions": {
+    "s_c37b0508beebe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7650dd0-4c82-4a0e-a414-a7a38c2d9a3f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    },
     "s_d1d39e59a20c39": {
       "agent_id": {
         "tool": "claude",
