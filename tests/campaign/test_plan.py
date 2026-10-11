@@ -699,6 +699,25 @@ def test_reg_calibration_arms_run_at_the_rank16_rate(tmp_path):
     assert cfgs["sweep-reg-4b-rank16-cogcalib-s0"].optim.lr == pytest.approx(2.4e-5 * 2, rel=1e-2)
 
 
+def test_reg_optimizer_arms_on_the_cc0_1_q0_6_base(tmp_path):
+    """β2 raised in the cooldown and LoRA+ (B at 8x): rank16-cc0.1-q0.6 otherwise, at its
+    rate (A's), final-length (post=full, EMA)."""
+    arms = ("rank16-cc0.1-q0.6", "rank16-cc0.1-q0.6-b2cool", "rank16-cc0.1-q0.6-loraplus8")
+    c = _campaign(tmp_path, hardware="v6e1", stage="reg", final_sizes=("2B",), horizon=2500,
+                  arms=(*arms, "nocentre"), wandb={"campaign": "c1"})  # fmt: skip
+    jobs = parse_lines(planner.plan("sweep", c), c.runs)
+    assert [j.name for j in jobs] == [f"sweep-reg-2b-{a}-s0" for a in arms]
+    assert all(j.post == "full" and not j.after for j in jobs)
+    base, b2cool, loraplus = (_config(j) for j in jobs)
+    for cfg in (b2cool, loraplus):
+        assert cfg.lora.rank == 16 and cfg.optim.lr == base.optim.lr
+        assert cfg.loss.cogcalib_weight == 0.1 and cfg.loss.cogcalib_quantile == 0.6
+        assert cfg.optim.ema_decay == 0.999 and cfg.train.steps == 2500
+    assert (base.optim.cooldown_b2, base.optim.loraplus_ratio) == (0.0, 1.0)
+    assert (b2cool.optim.cooldown_b2, b2cool.optim.loraplus_ratio) == (0.9999, 1.0)
+    assert (loraplus.optim.cooldown_b2, loraplus.optim.loraplus_ratio) == (0.0, 8.0)
+
+
 def test_reg_cogcalib_strength_arms_on_2b_at_a_final_length(tmp_path):
     """The CogCalib sweep: off, the decided 0.1 / q0.3, 0.3 / q0.6, 1.0 / q0.6, all r16 at
     the same rate (paired with each other, no centre), on 2B at a 2500-step horizon: a

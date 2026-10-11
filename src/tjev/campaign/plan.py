@@ -623,6 +623,68 @@ REG_ARMS = {
     "rank16-cc1.0-q0.6": Arm(
         ("lora.rank=16", "loss.cogcalib_weight=1.0", "loss.cogcalib_quantile=0.6")
     ),
+    # the CogCalib grid around the 2B sweep's best arm (0.3 / q0.6: JevBench 66.9 vs 59.1 at
+    # 0.1 / q0.3, tjev-cc-sweep): its seed 1, each knob alone, and the weight / gate neighbours
+    "rank16-cc0.3-q0.6-seed1": Arm(
+        ("lora.rank=16", "loss.cogcalib_weight=0.3", "loss.cogcalib_quantile=0.6", "train.seed=1")
+    ),
+    "rank16-cc0.1-q0.6": Arm(
+        ("lora.rank=16", "loss.cogcalib_weight=0.1", "loss.cogcalib_quantile=0.6")
+    ),
+    "rank16-cc0.3-q0.3": Arm(
+        ("lora.rank=16", "loss.cogcalib_weight=0.3", "loss.cogcalib_quantile=0.3")
+    ),
+    "rank16-cc0.5-q0.6": Arm(
+        ("lora.rank=16", "loss.cogcalib_weight=0.5", "loss.cogcalib_quantile=0.6")
+    ),
+    "rank16-cc0.3-q0.8": Arm(
+        ("lora.rank=16", "loss.cogcalib_weight=0.3", "loss.cogcalib_quantile=0.8")
+    ),
+    "rank16-cc0.2-q0.6": Arm(
+        ("lora.rank=16", "loss.cogcalib_weight=0.2", "loss.cogcalib_quantile=0.6")
+    ),
+    # the grid's best (0.1 / q0.6: score .454, per-type T 1.05-1.21) on a second seed
+    # the other finalist (0.2 / q0.6: T 1.02, validation-v7 I +1.8 over 0.1 / q0.6) on seed 1
+    "rank16-cc0.2-q0.6-seed1": Arm(
+        ("lora.rank=16", "loss.cogcalib_weight=0.2", "loss.cogcalib_quantile=0.6", "train.seed=1")
+    ),
+    "rank16-cc0.1-q0.6-seed1": Arm(
+        ("lora.rank=16", "loss.cogcalib_weight=0.1", "loss.cogcalib_quantile=0.6", "train.seed=1")
+    ),
+    # the same on the natural-prior sibling mix <mix>-np (no yes/no rebalance; data agent)
+    "rank16-cc0.1-q0.6-np": Arm(
+        ("lora.rank=16", "loss.cogcalib_weight=0.1", "loss.cogcalib_quantile=0.6", "@np")
+    ),
+    # optimizer levers on the same arm: Adam's β2 raised to 0.9999 in the WSD cooldown (b2
+    # 0.999 before: a longer second-moment average while the rate decays), and LoRA+ (Hayou et
+    # al. 2024: the B factors' rate 8x the A factors', A at the arm's rate)
+    "rank16-cc0.1-q0.6-b2cool": Arm(
+        (
+            "lora.rank=16",
+            "loss.cogcalib_weight=0.1",
+            "loss.cogcalib_quantile=0.6",
+            "optim.cooldown_b2=0.9999",
+        )
+    ),
+    "rank16-cc0.1-q0.6-loraplus8": Arm(
+        (
+            "lora.rank=16",
+            "loss.cogcalib_weight=0.1",
+            "loss.cogcalib_quantile=0.6",
+            "optim.loraplus_ratio=8",
+        )
+    ),
+    # the paper's familiarity gate (CogCalib, ACL 2025): the BASE model's NLL decides which
+    # rows are "known" (fixed), not the trained model's (whose gate collapses as it learns);
+    # one extra base forward per microbatch (~+1/3 of a step)
+    "rank16-cc0.3-q0.6-base": Arm(
+        (
+            "lora.rank=16",
+            "loss.cogcalib_weight=0.3",
+            "loss.cogcalib_quantile=0.6",
+            "loss.cogcalib_gate=base",
+        )
+    ),
     # Kev's gated teacher targets: (1 − 0.5)·gold + 0.5·teacher where a teacher puts ≥ 0.6 on
     # another letter (plumb / decider rows that carry a teacher), at r16. No mix-v6 row passes
     # the gate (decider drops its disagreeing questions): it needs a mix that keeps them
