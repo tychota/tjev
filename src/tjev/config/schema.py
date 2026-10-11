@@ -234,6 +234,13 @@ class OptimSpec:
     # update, d = min(ema_decay, (1 + t)/(10 + t)) (the usual warmup: early steps would
     # otherwise keep the init's weight). The full evals score it too (eval_ema/*)
     ema_decay: float = 0.0
+    # > 0 (AdamW): Adam's β2 in the WSD cooldown (the last decay_fraction of the steps),
+    # e.g. 0.9999; b2 before. The optimizer state is the same, so a cooldown branch can
+    # start from a stable-phase checkpoint of a run without it. 0: off
+    cooldown_b2: float = 0.0
+    # LoRA+ (Hayou et al. 2024): the B factors' rate is this times the A factors' (lr);
+    # 1: off
+    loraplus_ratio: float = 1.0
 
 
 @dataclass(frozen=True)

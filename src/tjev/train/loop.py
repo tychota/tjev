@@ -25,6 +25,7 @@ import threading
 import time
 from collections import defaultdict
 from collections.abc import Iterator, Sequence
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -60,7 +61,7 @@ from tjev.train.checkpoint import Checkpoints
 from tjev.train.health import HealthMonitor
 from tjev.train.log import MetricLogger
 from tjev.train.objective import loss_sums, source_table
-from tjev.train.optim import ema_params, make_optimizer, schedule, unit_schedule
+from tjev.train.optim import cooldown_start, ema_params, make_optimizer, schedule, unit_schedule
 from tjev.train.step import (
     jit_eval_step,
     jit_train_step,
@@ -113,7 +114,7 @@ IDENTITY_NEW_DEFAULTS = {
         "gate_full": False,
         "dropout": 0.0,
     },
-    "optim": {"ema_decay": 0.0},
+    "optim": {"ema_decay": 0.0, "cooldown_b2": 0.0, "loraplus_ratio": 1.0},
     "train": {"packing": "bucket"},
     # a section added later: left out of the identity whole while every field is default
     "loss": {"label_smoothing": 0.0, "smooth_sources": [], "kl_base_weight": 0.0,
@@ -329,15 +330,29 @@ def branch_source(cfg: RunConfig, identity: dict) -> tuple[Path, int]:
     path, _, step_text = cfg.train.branch_from.rpartition("@")
     source, step = Path(path), int(step_text)
     saved = json.loads((source / "config.json").read_text(encoding="utf-8"))
-    if saved["identity"] != identity:
-        raise ValueError(f"branch_from {source}: a different training (identity mismatch)")
     theirs_cfg = from_dict(saved["config"])
+    if saved["identity"] != identity and not _cooldown_only(cfg, theirs_cfg, step, saved, identity):
+        raise ValueError(f"branch_from {source}: a different training (identity mismatch)")
     theirs = schedule(theirs_cfg.optim, theirs_cfg.train.steps)
     ours = schedule(cfg.optim, cfg.train.steps)
     at = np.arange(step + 1)
     if not np.allclose(np.asarray(theirs(at)), np.asarray(ours(at)), rtol=1e-6, atol=0):
         raise ValueError(f"branch_from {source}@{step}: learning rates differ before the branch")
     return source, step
+
+
+def _cooldown_only(cfg: RunConfig, theirs: RunConfig, step: int, saved: dict,
+                   identity: dict) -> bool:  # fmt: skip
+    """Whether the branch differs from its source only in ``optim.cooldown_b2`` and branches
+    before either's cooldown, where β2 is ``b2`` in both: the same training up to ``step``
+    (the optimizer state has the same structure either way)."""
+    if theirs.optim.cooldown_b2 == cfg.optim.cooldown_b2:
+        return False
+    as_theirs = replace(cfg, optim=replace(cfg.optim, cooldown_b2=theirs.optim.cooldown_b2))
+    if saved["identity"] != run_identity(as_theirs, identity["model"]):
+        return False
+    return step <= min(cooldown_start(cfg.optim, cfg.train.steps),
+                       cooldown_start(theirs.optim, theirs.train.steps))  # fmt: skip
 
 
 def code_version() -> str:

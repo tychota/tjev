@@ -27,7 +27,7 @@ def schedule(spec: OptimSpec, steps: int) -> optax.Schedule:
     warmup = min(spec.warmup_steps, max(steps - 1, 1))
     peak, floor = spec.lr, spec.lr * spec.final_lr_fraction
     decay = max(1, int(spec.decay_fraction * steps))
-    stable = max(0, steps - warmup - decay)
+    stable = cooldown_start(spec, steps) - warmup
     cooldown: optax.Schedule
     if spec.decay_shape == "sqrt":
 
@@ -42,6 +42,45 @@ def schedule(spec: OptimSpec, steps: int) -> optax.Schedule:
         [optax.linear_schedule(0.0, peak, warmup), optax.constant_schedule(peak), cooldown],
         [warmup, warmup + stable],
     )
+
+
+def cooldown_start(spec: OptimSpec, steps: int) -> int:
+    """The first (0-based) step of the WSD cooldown: the schedule's last ``decay_fraction``."""
+    warmup = min(spec.warmup_steps, max(steps - 1, 1))
+    decay = max(1, int(spec.decay_fraction * steps))
+    return warmup + max(0, steps - warmup - decay)
+
+
+def scale_by_adam_cooldown_b2(b1: float, b2: float, cooldown_b2: float, start: int,
+                              eps: float) -> optax.GradientTransformation:  # fmt: skip
+    """optax.scale_by_adam with β2 = ``b2`` on the first ``start`` updates and
+    ``cooldown_b2`` after (β2 raised in the WSD cooldown: a longer second-moment average
+    while the rate decays). Its state is optax's ScaleByAdamState, so a checkpoint of either
+    restores into the other (a resume, or a cooldown branch off a stable phase). The second
+    moment's bias correction is 1 − Π β2 over the updates so far (b2^min(t, start) ·
+    cooldown_b2^max(t − start, 0)), not 1 − β2^t: switching β2 does not rescale it."""
+    base = optax.scale_by_adam(b1=b1, b2=b2, eps=eps)
+
+    def cooled(updates, state):
+        t = optax.safe_increment(state.count)
+        mu = optax.tree.update_moment(updates, state.mu, b1, 1)
+        nu = optax.tree.update_moment_per_elem_norm(updates, state.nu, cooldown_b2, 2)
+        mu_hat = optax.tree.bias_correction(mu, b1, t)
+        after = (t - start).astype(jnp.float32)
+        prod = jnp.float32(b2) ** start * jnp.float32(cooldown_b2) ** after
+        nu_hat = jax.tree.map(lambda v: v / (1 - prod).astype(v.dtype), nu)
+        updates = jax.tree.map(lambda m, v: m / (jnp.sqrt(v) + eps), mu_hat, nu_hat)
+        nu = optax.tree.cast_like(nu, state.nu)
+        return updates, optax.ScaleByAdamState(count=t, mu=mu, nu=nu)
+
+    def update(updates, state, params=None):
+        # before the cooldown: optax's own update, op for op (a branch off a run without
+        # cooldown_b2 trains bitwise what the run trained up to its branch step)
+        del params
+        inside = optax.safe_increment(state.count) > start  # 0-based step t − 1 ≥ start
+        return jax.lax.cond(inside, cooled, lambda u, s: base.update(u, s), updates, state)
+
+    return optax.GradientTransformation(base.init, update)
 
 
 # Polar Express (Amsel et al. 2025, arXiv 2505.16932): per-step minimax degree-5 polynomials,
@@ -144,10 +183,16 @@ def unit_schedule(spec: OptimSpec, steps: int) -> optax.Schedule:
     return schedule(dataclasses.replace(spec, lr=1.0), steps)
 
 
-def scale_by_peak(peak: float) -> optax.GradientTransformation:
+def _named(path, *names: str) -> bool:
+    return any(getattr(k, "key", getattr(k, "name", None)) in names for k in path)
+
+
+def scale_by_peak(peak: float, b_ratio: float = 1.0) -> optax.GradientTransformation:
     """Multiply the update by the peak learning rate, held as an array in the optimizer
     state (not a compile-time constant): runs that differ only in their rate (a sweep's
-    grid) compile to the same program and share the persistent compilation cache."""
+    grid) compile to the same program and share the persistent compilation cache.
+    ``b_ratio`` ≠ 1 (LoRA+, Hayou et al. 2024, arXiv 2402.12354): the B factors' rate is
+    ``b_ratio`` times the A factors' (a compile-time constant; the state is unchanged)."""
 
     def init(params):
         del params
@@ -155,7 +200,14 @@ def scale_by_peak(peak: float) -> optax.GradientTransformation:
 
     def update(updates, state, params=None):
         del params
-        return jax.tree.map(lambda u: u * state.peak.astype(u.dtype), updates), state
+        if b_ratio == 1.0:
+            return jax.tree.map(lambda u: u * state.peak.astype(u.dtype), updates), state
+        b_peak = state.peak * jnp.float32(b_ratio)
+
+        def scale(path, u):
+            return u * (b_peak if _named(path, "lora_b") else state.peak).astype(u.dtype)
+
+        return jax.tree_util.tree_map_with_path(scale, updates), state
 
     return optax.GradientTransformation(init, update)
 
@@ -250,11 +302,8 @@ def decay_mask(params) -> Any:
     """Weight decay on the LoRA factors only: a ``lora.gate_full`` kernel is the base weight
     itself, and decaying it pulls it to 0, not to the base."""
 
-    def keep(path, _):
-        return any(getattr(k, "key", getattr(k, "name", None)) in ("lora_a", "lora_b")
-                   for k in path)  # fmt: skip
-
-    return jax.tree_util.tree_map_with_path(keep, params)
+    return jax.tree_util.tree_map_with_path(lambda path, _: _named(path, "lora_a", "lora_b"),
+                                            params)  # fmt: skip
 
 
 def make_optimizer(spec: OptimSpec, steps: int,
@@ -265,7 +314,9 @@ def make_optimizer(spec: OptimSpec, steps: int,
     decoupled weight decay applies to the LoRA factors only (:func:`decay_mask`; Muon's
     applies to its matrix parameters, a gate_full kernel included); ``ema_decay`` adds
     :func:`track_ema` last (it sees the final update); a running CogCalib threshold
-    (``loss.cogcalib_quantile``) adds :func:`track_cogcalib` after it."""
+    (``loss.cogcalib_quantile``) adds :func:`track_cogcalib` after it. ``cooldown_b2``
+    (AdamW only) raises β2 in the cooldown (:func:`scale_by_adam_cooldown_b2`, the same
+    state); ``loraplus_ratio`` scales the B factors' rate (:func:`scale_by_peak`)."""
     lr = unit_schedule(spec, steps)
     clip = {
         "global": [optax.clip_by_global_norm(spec.clip_norm)],
@@ -274,13 +325,21 @@ def make_optimizer(spec: OptimSpec, steps: int,
     }[spec.clip_mode]
     if spec.name == "adamw":
         mask = {"mask": decay_mask} if spec.weight_decay else {}
-        base = optax.adamw(lr, b1=spec.b1, b2=spec.b2, eps=spec.eps,
-                           weight_decay=spec.weight_decay, **mask)  # fmt: skip
+        if spec.cooldown_b2:  # optax.adamw's chain, its Adam stage replaced: the same state
+            adam = scale_by_adam_cooldown_b2(spec.b1, spec.b2, spec.cooldown_b2,
+                                             cooldown_start(spec, steps), spec.eps)  # fmt: skip
+            base = optax.chain(adam, optax.add_decayed_weights(spec.weight_decay, mask.get("mask")),
+                               optax.scale_by_learning_rate(lr))  # fmt: skip
+        else:
+            base = optax.adamw(lr, b1=spec.b1, b2=spec.b2, eps=spec.eps,
+                               weight_decay=spec.weight_decay, **mask)  # fmt: skip
     else:
+        if spec.cooldown_b2:
+            raise ValueError("optim.cooldown_b2 is implemented for AdamW only")
         base = _muon(spec, lr)
     ema = [track_ema(spec.ema_decay)] if spec.ema_decay else []
     calib = [track_cogcalib()] if loss is not None and loss.cogcalib_adaptive else []
-    return optax.chain(*clip, base, scale_by_peak(spec.lr), *ema, *calib)
+    return optax.chain(*clip, base, scale_by_peak(spec.lr, spec.loraplus_ratio), *ema, *calib)
 
 
 def clip_stats(spec: OptimSpec, norm: jax.Array, opt_state) -> dict[str, jax.Array]:

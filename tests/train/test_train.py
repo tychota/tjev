@@ -194,6 +194,17 @@ def test_branch_from_equals_the_standalone_shorter_run(setup):
     late = f"{setup / 'runs' / 'br-long'}@4"  # step 4 is stable in the long run, decayed here
     with pytest.raises(ValueError, match="learning rates differ"):
         train(tiny_config(setup, "br-late", 4, **wsd, **{"train.branch_from": late}))
+    # β2 raised in the cooldown only: a branch off the stable phase of a run without it is
+    # that standalone run (same optimizer state structure, β2 = b2 up to the branch step;
+    # the two programs compile differently, so fp32 rounding, ~1e-6 at this 3e-3 rate)
+    b2cool = {**wsd, "optim.cooldown_b2": 0.9999}
+    train(tiny_config(setup, "br-short-b2", 4, **b2cool))
+    train(tiny_config(setup, "br-branch-b2", 4, **b2cool, **{"train.branch_from": branch}))
+    assert_same_adapters(lora_at(setup, "br-short-b2", 4), lora_at(setup, "br-branch-b2", 4),
+                         rtol=1e-4, atol=1e-5)  # fmt: skip
+    wd = {**b2cool, "optim.weight_decay": 0.1, "train.branch_from": branch}
+    with pytest.raises(ValueError, match="identity mismatch"):  # other fields still differ
+        train(tiny_config(setup, "br-b2-wd", 4, **wd))
 
 
 def test_selection_is_the_calibrated_nll_with_the_heldout_set(setup):
@@ -442,6 +453,7 @@ def test_default_identity_is_unchanged_by_the_new_fields():
     cfg = load_config(overrides=["model.path=/nowhere"])
     raw = cfg.to_dict()
     del raw["loss"], raw["lora"]["dropout"], raw["optim"]["ema_decay"]
+    del raw["optim"]["cooldown_b2"], raw["optim"]["loraplus_ratio"]
     for key in ("tail_fraction", "checkpoint_tail_every", "full_eval_every",
                 "full_eval_tail_every", "quick_eval_tail_every", "keep_steps", "keep_every",
                 "keep_from", "keep_tail", "select_on", "select_ema"):  # fmt: skip
@@ -470,6 +482,8 @@ def test_default_identity_is_unchanged_by_the_new_fields():
     for override in (
         "loss.label_smoothing=0.1",
         "optim.ema_decay=0.999",
+        "optim.cooldown_b2=0.9999",
+        "optim.loraplus_ratio=8",
         "lora.dropout=0.1",
         "loss.kl_base_weight=0.1",
         "loss.hard_targets=true",

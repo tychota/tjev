@@ -163,3 +163,145 @@ def test_rate_is_not_compiled_in():
         return jax.jit(step).lower(params, tx.init(params), params).as_text()
 
     assert text(1e-4) == text(3.5e-5)
+
+
+def _grads(params, key):
+    return jax.tree.map(lambda x: jax.random.normal(key, x.shape), params)
+
+
+def _today(spec: OptimSpec, steps: int):
+    """make_optimizer as it was before cooldown_b2 / loraplus_ratio (AdamW, global clip)."""
+    import optax
+
+    from tjev.train.optim import decay_mask, scale_by_peak, unit_schedule
+
+    mask = {"mask": decay_mask} if spec.weight_decay else {}
+    return optax.chain(
+        optax.clip_by_global_norm(spec.clip_norm),
+        optax.adamw(unit_schedule(spec, steps), b1=spec.b1, b2=spec.b2, eps=spec.eps,
+                    weight_decay=spec.weight_decay, **mask),
+        scale_by_peak(spec.lr),
+    )  # fmt: skip
+
+
+LORA = {"lora_a": jnp.full((2, 16, 4), 0.1), "lora_b": jnp.full((2, 4, 8), 0.05)}
+
+
+@pytest.mark.parametrize("wd", [0.0, 0.1])
+def test_cooldown_b2_and_loraplus_off_are_todays_optimizer_bitwise(wd):
+    import optax
+
+    spec = OptimSpec(lr=3e-4, warmup_steps=2, weight_decay=wd)
+    ours, today = make_optimizer(spec, 10), _today(spec, 10)
+    p1 = p2 = LORA
+    s1, s2 = ours.init(LORA), today.init(LORA)
+    for k in jax.random.split(jax.random.key(0), 10):
+        g = _grads(LORA, k)
+        u1, s1 = ours.update(g, s1, p1)
+        u2, s2 = today.update(g, s2, p2)
+        p1, p2 = optax.apply_updates(p1, u1), optax.apply_updates(p2, u2)
+    for x, y in zip(jax.tree.leaves((p1, s1)), jax.tree.leaves((p2, s2)), strict=True):
+        np.testing.assert_array_equal(x, y)
+
+
+def test_cooldown_b2_state_has_the_same_structure():
+    """A checkpoint of a run without cooldown_b2 restores into one with it (a cooldown
+    branch off the stable phase), and the other way round."""
+    for wd in (0.0, 0.1):
+        spec = OptimSpec(weight_decay=wd, ema_decay=0.99)
+        plain = make_optimizer(spec, 10).init(LORA)
+        cool = make_optimizer(replace(spec, cooldown_b2=0.9999), 10).init(LORA)
+        assert jax.tree.structure(plain) == jax.tree.structure(cool)
+        assert [x.shape for x in jax.tree.leaves(plain)] == [x.shape for x in jax.tree.leaves(cool)]
+        lora8 = make_optimizer(replace(spec, loraplus_ratio=8.0), 10).init(LORA)
+        assert jax.tree.structure(plain) == jax.tree.structure(lora8)
+
+
+def test_cooldown_b2_is_b2_before_the_cooldown_and_cooldown_b2_inside():
+    import optax
+
+    from tjev.train.optim import cooldown_start
+
+    steps = 10
+    spec = OptimSpec(lr=1e-3, warmup_steps=2, decay_fraction=0.3, clip_mode="none",
+                     cooldown_b2=0.9999)  # fmt: skip
+    start = cooldown_start(spec, steps)
+    assert start == 7  # the last 3 steps, where the rate decays
+    sched = schedule(spec, steps)
+    assert float(sched(start - 1)) == pytest.approx(spec.lr)
+    assert float(sched(start + 1)) < spec.lr
+    tx = make_optimizer(spec, steps)
+    state = tx.init(LORA)
+    nu = jax.tree.map(jnp.zeros_like, LORA)
+    weight = 0.0  # Σ of the second moment's weights: 1 − Π β2
+    for t, k in enumerate(jax.random.split(jax.random.key(1), steps)):
+        g = _grads(LORA, k)
+        beta2 = 0.9999 if t >= start else 0.999
+        nu = jax.tree.map(lambda v, x, b=beta2: b * v + (1 - b) * x * x, nu, g)
+        weight = beta2 * weight + (1 - beta2)
+        _, state = tx.update(g, state, LORA)
+        adam = next(s for s in jax.tree.leaves(state, is_leaf=lambda x: isinstance(
+            x, optax.ScaleByAdamState)) if isinstance(s, optax.ScaleByAdamState))  # fmt: skip
+        for x, y in zip(jax.tree.leaves(adam.nu), jax.tree.leaves(nu), strict=True):
+            np.testing.assert_allclose(x, y, rtol=1e-4)
+    # bias correction by Π β2: a constant gradient's normalised update stays 1 across the switch
+    from tjev.train.optim import scale_by_adam_cooldown_b2
+
+    adam_tx = scale_by_adam_cooldown_b2(0.9, 0.999, 0.9999, 3, eps=0.0)
+    s = adam_tx.init(LORA)
+    g = jax.tree.map(jnp.ones_like, LORA)
+    for _ in range(8):
+        u, s = adam_tx.update(g, s)
+        for x in jax.tree.leaves(u):
+            np.testing.assert_allclose(x, 1.0, rtol=1e-4)
+
+
+def test_cooldown_b2_equal_to_b2_matches_optax_adam():
+    import optax
+
+    from tjev.train.optim import scale_by_adam_cooldown_b2
+
+    ours, theirs = scale_by_adam_cooldown_b2(0.9, 0.999, 0.999, 3, 1e-8), optax.scale_by_adam()
+    s1, s2 = ours.init(LORA), theirs.init(LORA)
+    for k in jax.random.split(jax.random.key(2), 6):
+        g = _grads(LORA, k)
+        u1, s1 = ours.update(g, s1)
+        u2, s2 = theirs.update(g, s2)
+        for x, y in zip(jax.tree.leaves((u1, s1)), jax.tree.leaves((u2, s2)), strict=True):
+            np.testing.assert_allclose(x, y, rtol=1e-4)
+
+
+def test_cooldown_b2_is_adamw_only():
+    with pytest.raises(ValueError, match="AdamW only"):
+        make_optimizer(OptimSpec(name="muon", cooldown_b2=0.9999), 10)
+
+
+@pytest.mark.parametrize("name", ["adamw", "muon"])
+def test_loraplus_scales_the_b_factors_rate_only(name):
+    spec = OptimSpec(name=name, lr=3e-4, warmup_steps=0, clip_mode="none", weight_decay=0.1)
+    one, eight = make_optimizer(spec, 10), make_optimizer(replace(spec, loraplus_ratio=8.0), 10)
+    s1, s8 = one.init(LORA), eight.init(LORA)
+    for k in jax.random.split(jax.random.key(3), 3):
+        g = _grads(LORA, k)
+        u1, s1 = one.update(g, s1, LORA)
+        u8, s8 = eight.update(g, s8, LORA)
+        np.testing.assert_array_equal(u8["lora_a"], u1["lora_a"])
+        np.testing.assert_allclose(u8["lora_b"], 8.0 * u1["lora_b"], rtol=1e-6)
+
+
+def test_cooldown_b2_before_the_cooldown_is_optax_adam_bitwise():
+    """Up to the cooldown, the same update op for op as optax.scale_by_adam: a branch off a
+    run without cooldown_b2 continues it bitwise."""
+    import optax
+
+    from tjev.train.optim import scale_by_adam_cooldown_b2
+
+    ours, theirs = scale_by_adam_cooldown_b2(0.9, 0.999, 0.9999, 4, 1e-8), optax.scale_by_adam()
+    s1, s2 = ours.init(LORA), theirs.init(LORA)
+    step1, step2 = jax.jit(ours.update), jax.jit(theirs.update)
+    for k in jax.random.split(jax.random.key(4), 4):
+        g = _grads(LORA, k)
+        u1, s1 = step1(g, s1)
+        u2, s2 = step2(g, s2)
+        for x, y in zip(jax.tree.leaves((u1, s1)), jax.tree.leaves((u2, s2)), strict=True):
+            np.testing.assert_array_equal(x, y)
