@@ -1,0 +1,33 @@
+tests/train/test_step_options.py
+  s_d1d39e59a20c39::t_95bc4566535b96 265-287,289-294
+  s_d1d39e59a20c39::t_3d1e0710c97c90 288
+src/tjev/config/schema.py
+  s_d1d39e59a20c39::t_95bc4566535b96 266-272,285-286
+src/tjev/train/objective.py
+  s_d1d39e59a20c39::t_95bc4566535b96 105-117,171,206-208
+tests/train/test_calib_loss.py
+  s_d1d39e59a20c39::t_fae790ef6b0d78 291-293
+  s_d1d39e59a20c39::t_95bc4566535b96 267-290,294-297
+src/tjev/train/step.py
+  s_d1d39e59a20c39::t_95bc4566535b96 160-161
+docs/training.md
+  s_d1d39e59a20c39::t_116e91e693e2c4 407
+src/tjev/train/loop.py
+  s_d1d39e59a20c39::t_1d6919bc81b570 122
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "dfb8ca19dac74bec416052948be0fdf3ffbd126a",
+  "prompts": {},
+  "sessions": {
+    "s_d1d39e59a20c39": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d316479f-0782-47eb-a003-087da5c19333",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Tycho Tatitscheff <tychot@bam.tech>"
+    }
+  }
+}
